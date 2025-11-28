@@ -24,10 +24,10 @@ const tools = [
               properties: {
                 type: { 
                   type: "string", 
-                  enum: ["header", "paragraph", "card", "list", "quote"], 
-                  description: "The type of the block." 
+                  enum: ["header", "paragraph", "card", "list", "quote", "image"], 
+                  description: "The type of the block. Use 'image' for suggested image positions." 
                 },
-                content: { type: "string", description: "The main text content of the block." },
+                content: { type: "string", description: "The main text content. For images, this is the description/prompt." },
                 title: { type: "string", description: "Title for card or header blocks." },
                 items: { 
                   type: "array", 
@@ -36,8 +36,8 @@ const tools = [
                 },
                 style: { 
                   type: "string", 
-                  enum: ["default", "primary", "warning", "quote"], 
-                  description: "Visual style style." 
+                  enum: ["default", "primary", "warning", "quote", "red", "blue", "purple", "orange", "gold"], 
+                  description: "Visual style color." 
                 }
               },
               required: ["type", "content"]
@@ -51,26 +51,45 @@ const tools = [
 ];
 
 export const generateArticleStructureDeepSeek = async (
-  topic: string,
-  apiKey: string
+  input: string,
+  apiKey: string,
+  isFormattingMode: boolean = false
 ): Promise<GenerationResult> => {
   if (!apiKey) {
     throw new Error("DeepSeek API Key is required.");
   }
 
-  const prompt = `
-    You are a professional WeChat Official Account editor known for creating visually engaging "Xiumi-style" articles.
-    Your task is to write a high-quality article about: "${topic}".
-    
-    Structure the article using the 'layout_article' tool with the following guidelines:
-    - **Visual Variety**: Do NOT just use paragraphs. You MUST use 'card' blocks for key takeaways, important summaries, or interesting facts.
-    - **Headers**: Use clear headers to break up sections.
-    - **Lists**: Use lists for steps or bullet points.
-    - **Cards**: Use the 'card' type frequently to create styled boxes for emphasis.
-    - **Tone**: Professional, engaging, and suitable for mobile reading.
-    
-    Call the function 'layout_article' to return the result.
-  `;
+  let prompt = "";
+  if (isFormattingMode) {
+      prompt = `
+        You are a professional WeChat Official Account editor.
+        Your task is to format the input text into a rich WeChat article structure using the 'layout_article' tool.
+        
+        Guidelines:
+        - **Content**: Keep the original text's meaning.
+        - **Colors**: Assign colorful styles (red, blue, purple, orange) to headers and cards to make it pretty.
+        - **Structure**: Use 'card' blocks for emphasis.
+        
+        Input Text:
+        """
+        ${input}
+        """
+        
+        Call the function 'layout_article' to return the formatted result.
+      `;
+  } else {
+      prompt = `
+        You are a professional WeChat Official Account editor known for creating visually engaging "Xiumi-style" articles.
+        Your task is to write a high-quality article about: "${input}".
+        
+        Structure the article using the 'layout_article' tool with the following guidelines:
+        - **Visual Variety**: Use 'card' blocks frequently for key takeaways.
+        - **Colors**: You MUST use specific colors ('red', 'blue', 'orange', 'purple', 'gold') for different Cards and Headers.
+        - **Images**: Insert 'image' blocks where appropriate. Set the content to a description of the image (e.g., "A photo of...") so the user knows what to put there.
+        
+        Call the function 'layout_article' to return the result.
+      `;
+  }
 
   try {
     const response = await fetch(BASE_URL, {
@@ -82,7 +101,7 @@ export const generateArticleStructureDeepSeek = async (
       body: JSON.stringify({
         model: "deepseek-chat",
         messages: [
-          { role: "system", content: "You are a helpful assistant that writes WeChat articles." },
+          { role: "system", content: "You are a helpful assistant that writes WeChat articles with colorful layouts." },
           { role: "user", content: prompt }
         ],
         tools: tools,
@@ -110,11 +129,10 @@ export const generateArticleStructureDeepSeek = async (
             title: args.title || "Untitled Article",
             digest: args.digest || "No summary available.",
             blocks,
-            sources: [] // DeepSeek does not support search grounding in this endpoint
+            sources: [] 
         };
     }
 
-    // Fallback if model didn't call tool properly
     throw new Error("DeepSeek failed to generate structured content. Please try again.");
 
   } catch (error) {

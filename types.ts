@@ -13,7 +13,7 @@ export interface ArticleBlock {
   type: BlockType;
   content: string; // Text content or Image URL
   title?: string; // For Card/Header
-  style?: 'default' | 'primary' | 'warning' | 'quote';
+  style?: 'default' | 'primary' | 'warning' | 'quote' | 'red' | 'blue' | 'purple' | 'orange' | 'gold';
   items?: string[]; // For List
 }
 

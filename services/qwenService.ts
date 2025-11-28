@@ -24,10 +24,10 @@ const tools = [
               properties: {
                 type: { 
                   type: "string", 
-                  enum: ["header", "paragraph", "card", "list", "quote"], 
-                  description: "The type of the block." 
+                  enum: ["header", "paragraph", "card", "list", "quote", "image"], 
+                  description: "The type of the block. Use 'image' for suggested image placeholders." 
                 },
-                content: { type: "string", description: "The main text content of the block." },
+                content: { type: "string", description: "The main text content. For images, provide a description." },
                 title: { type: "string", description: "Title for card or header blocks." },
                 items: { 
                   type: "array", 
@@ -36,8 +36,8 @@ const tools = [
                 },
                 style: { 
                   type: "string", 
-                  enum: ["default", "primary", "warning", "quote"], 
-                  description: "Visual style style." 
+                  enum: ["default", "primary", "warning", "quote", "red", "blue", "purple", "orange", "gold"], 
+                  description: "Visual style color." 
                 }
               },
               required: ["type", "content"]
@@ -51,30 +51,51 @@ const tools = [
 ];
 
 export const generateArticleStructureQwen = async (
-  topic: string,
+  input: string,
   apiKey: string,
   useSearch: boolean,
-  imageContext: string = ""
+  imageContext: string = "",
+  isFormattingMode: boolean = false
 ): Promise<GenerationResult> => {
   if (!apiKey) {
     throw new Error("DashScope API Key is required for Qwen.");
   }
 
-  const prompt = `
-    You are a professional WeChat Official Account editor known for creating visually engaging "Xiumi-style" articles.
-    Your task is to write a high-quality article about: "${topic}".
-    
-    ${imageContext ? `Context from uploaded image: ${imageContext}` : ''}
-    
-    Structure the article using the 'layout_article' tool with the following guidelines:
-    - **Visual Variety**: Do NOT just use paragraphs. You MUST use 'card' blocks for key takeaways, important summaries, or interesting facts.
-    - **Headers**: Use clear headers to break up sections.
-    - **Lists**: Use lists for steps or bullet points.
-    - **Cards**: Use the 'card' type frequently to create styled boxes for emphasis.
-    - **Tone**: Professional, engaging, and suitable for mobile reading.
-    
-    Call the function 'layout_article' to return the result.
-  `;
+  let prompt = "";
+  if (isFormattingMode) {
+      prompt = `
+        You are a professional WeChat Official Account editor.
+        Your task is to take the provided text and format it into a structured WeChat article layout.
+        
+        Guidelines:
+        - **Formatting**: Improve readability.
+        - **Visuals**: Use 'card' blocks for important summaries.
+        - **Colors**: Assign varied colors (red, blue, purple, orange) to sections to make it visually interesting.
+        
+        Input Text:
+        """
+        ${input}
+        """
+        
+        ${imageContext ? `Context from uploaded image: ${imageContext}` : ''}
+        
+        Call the function 'layout_article' to return the result.
+      `;
+  } else {
+      prompt = `
+        You are a professional WeChat Official Account editor known for creating visually engaging "Xiumi-style" articles.
+        Your task is to write a high-quality article about: "${input}".
+        
+        ${imageContext ? `Context from uploaded image: ${imageContext}` : ''}
+        
+        Structure the article using the 'layout_article' tool with the following guidelines:
+        - **Visual Variety**: Do NOT just use paragraphs. You MUST use 'card' blocks.
+        - **Colors**: Use colors like 'red', 'blue', 'orange', 'purple', 'gold' for Cards and Headers.
+        - **Images**: Insert 'image' blocks. Content should be a description (e.g., "A neon city street").
+        
+        Call the function 'layout_article' to return the result.
+      `;
+  }
 
   try {
     const response = await fetch(BASE_URL, {
@@ -86,14 +107,12 @@ export const generateArticleStructureQwen = async (
       body: JSON.stringify({
         model: "qwen-plus",
         messages: [
-          { role: "system", content: "You are a helpful assistant that writes WeChat articles." },
+          { role: "system", content: "You are a helpful assistant that writes WeChat articles with colorful layouts." },
           { role: "user", content: prompt }
         ],
         tools: tools,
         tool_choice: "auto",
-        // Enable search if requested. DashScope compatible endpoint may support this via specific params or default behavior for plus model.
-        // Explicit parameter for DashScope search in OpenAI compatible mode is sometimes passed via extra body keys.
-        enable_search: useSearch 
+        enable_search: useSearch && !isFormattingMode
       })
     });
 
@@ -117,7 +136,7 @@ export const generateArticleStructureQwen = async (
             title: args.title || "Untitled Article",
             digest: args.digest || "No summary available.",
             blocks,
-            sources: [] // Qwen via this endpoint doesn't standardized grounding metadata in the OpenAI format yet
+            sources: [] 
         };
     }
 

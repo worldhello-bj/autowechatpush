@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { generateArticleStructure, analyzeImage, generateSpeech, GenerationResult } from '../services/geminiService';
 import { generateArticleStructureDeepSeek } from '../services/deepSeekService';
@@ -23,17 +24,88 @@ const dataURLtoBlob = (dataurl: string): Blob => {
     return new Blob([u8arr], { type: mime });
 }
 
+// --- Helper: Create Default Cover Image (Canvas) ---
+const createDefaultCoverBlob = (titleText: string = "AI Article"): Promise<Blob> => {
+    return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        // WeChat cover ratio is roughly 2.35:1 (900x383 is a standard safe size)
+        canvas.width = 900;
+        canvas.height = 383; 
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+             // 1. Create a nice gradient background (Emerald Green theme)
+             const gradient = ctx.createLinearGradient(0, 0, 900, 383);
+             gradient.addColorStop(0, '#10b981'); // Emerald 500
+             gradient.addColorStop(1, '#047857'); // Emerald 700
+             ctx.fillStyle = gradient;
+             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+             // 2. Add decorative pattern/border
+             ctx.lineWidth = 8;
+             ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+             ctx.strokeRect(20, 20, 860, 343);
+
+             // 3. Add Article Title
+             ctx.fillStyle = '#ffffff';
+             ctx.textAlign = 'center';
+             ctx.textBaseline = 'middle';
+             
+             // Dynamic font sizing based on title length
+             const fontSize = titleText.length > 15 ? 48 : 64;
+             ctx.font = `bold ${fontSize}px "Noto Sans SC", sans-serif`;
+             
+             // Simple truncation if text is extremely long
+             const displayTitle = titleText.length > 25 ? titleText.substring(0, 25) + '...' : titleText;
+             
+             // Shadow for text
+             ctx.shadowColor = "rgba(0,0,0,0.3)";
+             ctx.shadowBlur = 10;
+             ctx.shadowOffsetX = 2;
+             ctx.shadowOffsetY = 2;
+
+             ctx.fillText(displayTitle, 450, 160);
+             
+             // 4. Add App Name / Footer text
+             ctx.font = '30px sans-serif';
+             ctx.shadowBlur = 0; // Reset shadow
+             ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+             ctx.fillText('WeChat AI Publisher', 450, 240);
+        }
+        
+        // Export as JPEG (WeChat requires JPG/PNG)
+        canvas.toBlob((blob) => {
+             resolve(blob || new Blob());
+        }, 'image/jpeg', 0.9);
+    });
+}
+
+// --- Helper: Color Mapping ---
+const getStyleColors = (style?: string) => {
+  switch(style) {
+      case 'red': return { main: '#fa5151', bg: '#fff0f0', border: '#ffc2c2' };
+      case 'blue': return { main: '#3498db', bg: '#f0f8ff', border: '#cce6ff' };
+      case 'purple': return { main: '#9b59b6', bg: '#fbf2ff', border: '#e8ccec' };
+      case 'orange': return { main: '#f39c12', bg: '#fef5e6', border: '#fdebd0' };
+      case 'gold': return { main: '#d4af37', bg: '#fcf8e3', border: '#f7ecb5' };
+      case 'warning': return { main: '#e6a23c', bg: '#fdf6ec', border: '#faecd8' };
+      case 'quote': return { main: '#888888', bg: '#f7f7f7', border: '#cccccc' };
+      default: return { main: '#07c160', bg: '#f6fffa', border: '#e0f2e9' }; // Default Green
+  }
+}
+
 // --- Helper: Convert Blocks to WeChat-compatible HTML ---
 const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
   if (!blocks || blocks.length === 0) return '';
   
   return blocks.map(block => {
+    const colors = getStyleColors(block.style);
+
     switch (block.type) {
       case BlockType.HEADER:
         return `
           <section style="margin: 20px 0 10px 0; text-align: left;">
             <section style="display: flex; align-items: center;">
-               <section style="width: 4px; height: 18px; background-color: #07c160; border-radius: 2px; margin-right: 8px;"></section>
+               <section style="width: 4px; height: 18px; background-color: ${colors.main}; border-radius: 2px; margin-right: 8px;"></section>
                <section style="font-size: 18px; font-weight: bold; color: #333;">${block.content}</section>
             </section>
           </section>
@@ -46,33 +118,47 @@ const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
         `;
       case BlockType.QUOTE:
         return `
-          <section style="margin: 20px 0; padding: 15px; background-color: #f7f7f7; border-left: 4px solid #07c160; border-radius: 0 4px 4px 0;">
+          <section style="margin: 20px 0; padding: 15px; background-color: ${colors.bg}; border-left: 4px solid ${colors.main}; border-radius: 0 4px 4px 0;">
             <section style="font-size: 15px; color: #666; font-style: italic; line-height: 1.6;">${block.content}</section>
           </section>
         `;
       case BlockType.CARD:
         return `
-          <section style="margin: 20px 0; padding: 20px; border: 1px solid #e0f2e9; background-color: #f6fffa; border-radius: 8px; box-shadow: 0 2px 4px rgba(7, 193, 96, 0.1);">
-            ${block.title ? `<section style="font-size: 16px; font-weight: bold; color: #07c160; margin-bottom: 8px;">${block.title}</section>` : ''}
+          <section style="margin: 20px 0; padding: 20px; border: 1px solid ${colors.border}; background-color: ${colors.bg}; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0, 0.05);">
+            ${block.title ? `<section style="font-size: 16px; font-weight: bold; color: ${colors.main}; margin-bottom: 8px;">${block.title}</section>` : ''}
             <section style="font-size: 14px; color: #555; line-height: 1.6;">${block.content}</section>
           </section>
         `;
       case BlockType.LIST:
         const listItems = block.items?.map(item => `
           <section style="display: flex; align-items: flex-start; margin-bottom: 8px;">
-            <section style="width: 6px; height: 6px; background-color: #07c160; border-radius: 50%; margin-top: 9px; margin-right: 10px; flex-shrink: 0;"></section>
+            <section style="width: 6px; height: 6px; background-color: ${colors.main}; border-radius: 50%; margin-top: 9px; margin-right: 10px; flex-shrink: 0;"></section>
             <section style="font-size: 16px; color: #444; line-height: 1.6;">${item}</section>
           </section>
         `).join('') || '';
         return `<section style="margin: 15px 0;">${listItems}</section>`;
       case BlockType.IMAGE:
-        const imgSrc = block.content.startsWith('http') ? block.content : `https://picsum.photos/600/350?random=${block.id}`;
-        return `
-          <section style="margin: 20px 0; text-align: center;">
-            <img src="${imgSrc}" style="width: 100%; height: auto; border-radius: 6px; display: block;" />
-            ${block.title ? `<section style="font-size: 12px; color: #888; margin-top: 8px;">${block.title}</section>` : ''}
-          </section>
-        `;
+        // Logic: If it starts with http/data, it's a real image. Otherwise, it's a suggested placeholder description.
+        const isUrl = block.content.startsWith('http') || block.content.startsWith('data:');
+        
+        if (isUrl) {
+           return `
+            <section style="margin: 20px 0; text-align: center;">
+              <img src="${block.content}" style="width: 100%; height: auto; border-radius: 6px; display: block;" />
+              ${block.title ? `<section style="font-size: 12px; color: #888; margin-top: 8px;">${block.title}</section>` : ''}
+            </section>
+          `;
+        } else {
+           // Placeholder for suggested image
+           return `
+            <section style="margin: 20px 0; padding: 30px 20px; border: 2px dashed #ddd; background-color: #fafafa; border-radius: 8px; text-align: center; color: #999;">
+               <section style="font-size: 24px; margin-bottom: 10px;">📷</section>
+               <section style="font-weight: bold; font-size: 14px; margin-bottom: 5px; color: #666;">Suggested Image</section>
+               <section style="font-size: 13px;">"${block.content}"</section>
+               ${block.title ? `<section style="font-size: 12px; color: #aaa; margin-top: 5px;">Caption: ${block.title}</section>` : ''}
+            </section>
+           `;
+        }
       default:
         return '';
     }
@@ -92,6 +178,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   const [loading, setLoading] = useState(false);
   const [analyzingImage, setAnalyzingImage] = useState(false);
   const [useSearch, setUseSearch] = useState(true);
+  const [isFormattingMode, setIsFormattingMode] = useState(false); // NEW Toggle
   const [imageContext, setImageContext] = useState<string>('');
   const [uploadedImagePreview, setUploadedImagePreview] = useState<string | null>(null);
   
@@ -127,7 +214,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
 
   const handleGenerate = async () => {
     if (!topic.trim()) {
-        onError("Please enter a topic");
+        onError(isFormattingMode ? "Please enter the text you want to format." : "Please enter a topic.");
         return;
     }
     setLoading(true);
@@ -137,13 +224,13 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       
       if (aiProvider === AIProvider.DEEPSEEK) {
         if (!deepSeekApiKey) throw new Error("DeepSeek API Key is missing. Please configure it in Settings.");
-        result = await generateArticleStructureDeepSeek(topic, deepSeekApiKey);
+        result = await generateArticleStructureDeepSeek(topic, deepSeekApiKey, isFormattingMode);
       } else if (aiProvider === AIProvider.QWEN) {
         if (!dashScopeApiKey) throw new Error("DashScope API Key is missing. Please configure it in Settings.");
-        result = await generateArticleStructureQwen(topic, dashScopeApiKey, useSearch, imageContext);
+        result = await generateArticleStructureQwen(topic, dashScopeApiKey, useSearch, imageContext, isFormattingMode);
       } else {
         // Default to Google
-        result = await generateArticleStructure(topic, useSearch, imageContext, googleApiKey);
+        result = await generateArticleStructure(topic, useSearch, imageContext, googleApiKey, isFormattingMode);
       }
 
       setArticleTitle(result.title);
@@ -255,12 +342,24 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
          const token = await getAccessToken(wechatCreds);
          
          let thumb_media_id = ""; 
+         
          if (uploadedImagePreview) {
+             // Case 1: User uploaded an image explicitly
              const imageBlob = dataURLtoBlob(uploadedImagePreview);
              thumb_media_id = await uploadImage(token, imageBlob);
          } else {
-             console.warn("No cover image found, attempting to upload default or simulate.");
-             thumb_media_id = "MEDIA_ID_PLACEHOLDER_NO_IMAGE"; 
+             // Case 2: No image, generate a default one via Canvas
+             console.log("No user cover image. Generating default cover...");
+             try {
+                // Generate a Blob from canvas with the current article title
+                const defaultBlob = await createDefaultCoverBlob(articleTitle);
+                // Upload this generated image to WeChat to get a valid ID
+                thumb_media_id = await uploadImage(token, defaultBlob);
+                console.log("Generated cover uploaded successfully. Media ID:", thumb_media_id);
+             } catch (err: any) {
+                console.error("Failed to upload generated cover:", err);
+                throw new Error("Failed to generate and upload default cover image. Please try uploading an image manually.");
+             }
          }
 
          const payload = {
@@ -278,7 +377,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
          };
          
          const result = await saveDraft(token, payload);
-         alert(`Success! Article saved to WeChat Draft Box.\nMedia ID: ${result.media_id || 'Simulated'}`);
+         alert(`Success! Article saved to WeChat Draft Box.\nMedia ID: ${result.media_id}`);
 
      } catch (e: any) {
          onError(e.message || "Failed to publish to WeChat");
@@ -441,7 +540,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                       </ul>
                       <h4>3. Publishing</h4>
                       <ul>
-                          <li>Generate content with AI.</li>
+                          <li>Generate content with AI (or format existing text).</li>
                           <li>Edit visually in the right panel.</li>
                           <li>Save draft locally if needed.</li>
                           <li>Click "Publish to WeChat" to send to Draft Box.</li>
@@ -481,23 +580,46 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
 
         {/* Input Section */}
         <div className="space-y-4">
+            
+            {/* Mode Switcher */}
+            <div className="flex bg-gray-100 p-1 rounded-lg">
+                <button 
+                    onClick={() => setIsFormattingMode(false)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition ${!isFormattingMode ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    <span className="material-icons text-sm">auto_awesome</span>
+                    Create New
+                </button>
+                <button 
+                    onClick={() => setIsFormattingMode(true)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition ${isFormattingMode ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    <span className="material-icons text-sm">format_paint</span>
+                    Format Existing
+                </button>
+            </div>
+
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Topic / Prompt</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {isFormattingMode ? 'Paste Text to Format' : 'Topic / Prompt'}
+                </label>
                 <textarea 
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
-                    placeholder="e.g. Write a guide about traveling to Kyoto in Autumn..."
+                    placeholder={isFormattingMode 
+                        ? "Paste your article content here. The AI will format it into a rich WeChat layout..." 
+                        : "e.g. Write a guide about traveling to Kyoto in Autumn..."}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent min-h-[120px]"
                 />
             </div>
 
             <div className="flex gap-4 items-center flex-wrap">
-                <label className={`flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 transition ${aiProvider === AIProvider.DEEPSEEK ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:bg-gray-100'}`}>
+                <label className={`flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 transition ${aiProvider === AIProvider.DEEPSEEK || isFormattingMode ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:bg-gray-100'}`}>
                     <input 
                         type="checkbox" 
                         checked={useSearch} 
                         onChange={(e) => setUseSearch(e.target.checked)}
-                        disabled={aiProvider === AIProvider.DEEPSEEK}
+                        disabled={aiProvider === AIProvider.DEEPSEEK || isFormattingMode}
                         className="rounded text-green-600 focus:ring-green-500 w-4 h-4"
                     />
                     <span className="text-sm font-medium text-gray-700">
@@ -540,11 +662,12 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                 {loading ? (
                     <>
                         <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        Generating...
+                        {isFormattingMode ? 'Formatting...' : 'Generating...'}
                     </>
                 ) : (
                     <>
-                        <span className="material-icons">auto_awesome</span> Generate Article
+                        <span className="material-icons">{isFormattingMode ? 'brush' : 'auto_awesome'}</span> 
+                        {isFormattingMode ? 'Format Article' : 'Generate Article'}
                     </>
                 )}
             </button>
@@ -568,7 +691,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       </div>
 
       {/* Right Panel: Preview & Edit */}
-      <div className="w-full lg:w-1/2 bg-gray-100 p-8 flex flex-col items-center justify-center relative">
+      <div className="w-full lg:w-1/2 bg-gray-100 p-8 flex flex-col items-center justify-center relative overflow-y-auto">
          <div className="absolute top-4 right-4 flex gap-2">
             <button 
                 onClick={handleTTS}
@@ -581,7 +704,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
          </div>
 
          {/* Phone Mockup with HTML Editor */}
-         <div className="w-[375px] h-[700px] bg-white rounded-[3rem] border-8 border-gray-900 shadow-2xl overflow-hidden relative flex flex-col">
+         <div className="w-[390px] h-[844px] bg-white rounded-[3.5rem] border-[12px] border-gray-900 shadow-2xl overflow-hidden relative flex flex-col shrink-0">
             {/* Status Bar */}
             <div className="h-6 bg-white w-full flex justify-between items-center px-6 pt-2 z-10 shrink-0">
                 <span className="text-[10px] font-bold">9:41</span>

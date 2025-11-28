@@ -26,11 +26,11 @@ const layoutArticleFunction: FunctionDeclaration = {
         items: {
           type: Type.OBJECT,
           properties: {
-            type: { type: Type.STRING, enum: ['header', 'paragraph', 'card', 'list', 'quote'], description: 'The type of the block.' },
-            content: { type: Type.STRING, description: 'The main text content of the block.' },
+            type: { type: Type.STRING, enum: ['header', 'paragraph', 'card', 'list', 'quote', 'image'], description: 'The type of the block. Use "image" to suggest where an image should go.' },
+            content: { type: Type.STRING, description: 'The main text content. For "image" type, provide a visual description of what image should be placed here.' },
             title: { type: Type.STRING, description: 'Title for card or header blocks.' },
             items: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'List items if type is list.' },
-            style: { type: Type.STRING, enum: ['default', 'primary', 'warning', 'quote'], description: 'Visual style style.' }
+            style: { type: Type.STRING, enum: ['default', 'primary', 'warning', 'quote', 'red', 'blue', 'purple', 'orange', 'gold'], description: 'Visual color style. Use varied colors for different sections.' }
           },
           required: ['type', 'content']
         }
@@ -69,32 +69,56 @@ export interface GenerationResult {
 }
 
 export const generateArticleStructure = async (
-  topic: string,
+  input: string,
   useSearch: boolean,
   imageContext: string = "",
-  apiKey?: string
+  apiKey?: string,
+  isFormattingMode: boolean = false
 ): Promise<GenerationResult> => {
   const modelId = 'gemini-2.5-flash';
   
-  const prompt = `
-    You are a professional WeChat Official Account editor known for creating visually engaging "Xiumi-style" articles.
-    Your task is to write a high-quality article about: "${topic}".
-    
-    ${imageContext ? `Context from uploaded image: ${imageContext}` : ''}
-    
-    Structure the article using the 'layout_article' tool with the following guidelines:
-    - **Visual Variety**: Do NOT just use paragraphs. You MUST use 'card' blocks for key takeaways, important summaries, or interesting facts.
-    - **Headers**: Use clear headers to break up sections.
-    - **Lists**: Use lists for steps or bullet points.
-    - **Content**: If the topic requires current information, use the provided Search tool (if available) to get facts.
-    - **Cards**: Use the 'card' type frequently to create styled boxes for emphasis.
-    - **Tone**: Professional, engaging, and suitable for mobile reading.
-    
-    RETURN ONLY THE FUNCTION CALL.
-  `;
+  let prompt = "";
+
+  if (isFormattingMode) {
+    prompt = `
+      You are a professional WeChat Official Account editor. 
+      Your task is to take the provided raw text and format it into a structured WeChat article layout using the 'layout_article' tool.
+      
+      Guidelines:
+      - **Content Fidelity**: Preserve the original meaning.
+      - **Structure**: Identify sections and add Headers.
+      - **Visuals**: Convert key points into 'card' blocks.
+      - **Colors**: Assign different 'style' colors (blue, red, orange, purple, gold) to cards and headers to distinguish sections.
+      
+      Input Text to Format:
+      """
+      ${input}
+      """
+      
+      ${imageContext ? `Context from uploaded image (incorporate if relevant): ${imageContext}` : ''}
+      
+      RETURN ONLY THE FUNCTION CALL.
+    `;
+  } else {
+    prompt = `
+      You are a professional WeChat Official Account editor known for creating visually engaging "Xiumi-style" articles.
+      Your task is to write a high-quality article about: "${input}".
+      
+      ${imageContext ? `Context from uploaded image: ${imageContext}` : ''}
+      
+      Structure the article using the 'layout_article' tool with the following guidelines:
+      - **Visual Variety**: Do NOT just use paragraphs. You MUST use 'card' blocks for key takeaways.
+      - **Colors**: You MUST use specific colors ('red', 'blue', 'orange', 'purple', 'gold') for different Cards and Headers. Do not just use default.
+      - **Images**: Insert 'image' blocks where appropriate. For the content, write a PROMPT describing the image (e.g., "A chart showing growth" or "A happy family in a park"). Do not provide URLs.
+      - **Headers**: Use clear headers.
+      - **Lists**: Use lists for steps.
+      
+      RETURN ONLY THE FUNCTION CALL.
+    `;
+  }
 
   const tools: any[] = [{ functionDeclarations: [layoutArticleFunction] }];
-  if (useSearch) {
+  if (useSearch && !isFormattingMode) {
     tools.push({ googleSearch: {} });
   }
 
@@ -105,7 +129,7 @@ export const generateArticleStructure = async (
       contents: prompt,
       config: {
         tools: tools,
-        systemInstruction: "You are a creative WeChat editor assistant. You love using rich text formatting, especially styled cards/boxes, to make articles look beautiful.",
+        systemInstruction: "You are a creative WeChat editor. You love using bright colors (blue, red, gold, purple) in your layouts to make them pop.",
         temperature: 0.7,
       }
     });
@@ -122,7 +146,6 @@ export const generateArticleStructure = async (
     }
 
     // Handle Function Call
-    // The model might function call in the first part or subsequent parts
     const parts = response.candidates?.[0]?.content?.parts || [];
     const callPart = parts.find(p => p.functionCall);
 
@@ -141,7 +164,6 @@ export const generateArticleStructure = async (
       };
     }
 
-    // Fallback if no function call
     throw new Error("The model did not return a valid article layout. Please try again.");
 
   } catch (error) {

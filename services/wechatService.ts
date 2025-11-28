@@ -1,41 +1,49 @@
 import { WeChatCredentials, WechatPayload } from '../types';
 
-// NOTE: In a production environment, requests to api.weixin.qq.com MUST be routed through a backend server
-// because WeChat does not support CORS (Cross-Origin Resource Sharing) for browser-direct calls.
-// If you are testing locally, you may need a local proxy (e.g. Vite proxy) or a browser extension to bypass CORS.
-const PROXY_URL = ''; 
+// Use local proxy path to handle CORS and logging on the server side
+// The server (server.js or Vite) will rewrite this to https://api.weixin.qq.com/cgi-bin
+const BASE_API = '/api/wechat';
 
 /**
  * Get Access Token
  * Doc: https://developers.weixin.qq.com/doc/offiaccount/Basic_Information/Get_access_token.html
  */
 export const getAccessToken = async (creds: WeChatCredentials): Promise<string> => {
-  const url = `${PROXY_URL}https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${creds.appId}&secret=${creds.appSecret}`;
+  const url = `${BASE_API}/token?grant_type=client_credential&appid=${creds.appId}&secret=${creds.appSecret}`;
   
+  console.log(`[WeChat Client] 🔵 Requesting Access Token...`);
+  console.log(`[WeChat Client] URL: ${url}`);
+
   try {
     const response = await fetch(url);
+    console.log(`[WeChat Client] Status: ${response.status}`);
+    
     const data = await response.json();
+    console.log(`[WeChat Client] Response Body:`, data);
     
     if (data.errcode) {
+      console.error(`[WeChat Client] 🔴 API Error: ${data.errcode} - ${data.errmsg}`);
       throw new Error(`WeChat API Error (${data.errcode}): ${data.errmsg}`);
     }
     
     return data.access_token;
   } catch (error) {
-    console.error("Failed to get access token", error);
-    // Specific error for browser environments
-    throw new Error("Network/CORS Error: Unable to connect to WeChat API. If running in a browser, you need a proxy server. Check the User Guide.");
+    console.error("[WeChat Client] 🔴 Network/System Error:", error);
+    throw new Error("Network/CORS Error: Unable to connect to WeChat API. Check server logs.");
   }
 };
 
 /**
  * Upload Permanent Material (Image)
- * Required for article cover images (thumb_media_id).
  * Doc: https://developers.weixin.qq.com/doc/offiaccount/Asset_Management/Adding_Permanent_Assets.html
  */
 export const uploadImage = async (token: string, imageBlob: Blob): Promise<string> => {
-    const url = `${PROXY_URL}https://api.weixin.qq.com/cgi-bin/material/add_material?access_token=${token}&type=image`;
+    const url = `${BASE_API}/material/add_material?access_token=${token}&type=image`;
     
+    console.log(`[WeChat Client] 🔵 Uploading Image...`);
+    console.log(`[WeChat Client] URL: ${url}`);
+    console.log(`[WeChat Client] Image Size: ${imageBlob.size} bytes`);
+
     const formData = new FormData();
     formData.append('media', imageBlob, 'cover.jpg');
 
@@ -45,7 +53,9 @@ export const uploadImage = async (token: string, imageBlob: Blob): Promise<strin
             body: formData
         });
 
+        console.log(`[WeChat Client] Status: ${response.status}`);
         const data = await response.json();
+        console.log(`[WeChat Client] Response Body:`, data);
         
         if (data.errcode) {
              throw new Error(`Image Upload Error (${data.errcode}): ${data.errmsg}`);
@@ -53,24 +63,21 @@ export const uploadImage = async (token: string, imageBlob: Blob): Promise<strin
         
         return data.media_id;
     } catch (error) {
-        console.error("Image upload failed:", error);
-        
-        // --- DEMO MODE FALLBACK ---
-        // Since we cannot easily upload files from a purely client-side demo due to CORS/Proxy issues,
-        // we simulate a success for the user experience if the network call fails.
-        console.warn("Falling back to simulated media_id due to network error.");
-        return "MEDIA_ID_SIMULATION_" + Date.now();
+        console.error("[WeChat Client] 🔴 Image upload failed:", error);
+        throw error;
     }
 };
 
 /**
  * Save Draft
- * Adds the article to the "Draft Box" (草稿箱) in WeChat Admin.
  * Doc: https://developers.weixin.qq.com/doc/offiaccount/Draft_Box/Add_draft.html
  */
 export const saveDraft = async (token: string, payload: WechatPayload): Promise<any> => {
-  const url = `${PROXY_URL}https://api.weixin.qq.com/cgi-bin/draft/add?access_token=${token}`;
+  const url = `${BASE_API}/draft/add?access_token=${token}`;
   
+  console.log(`[WeChat Client] 🔵 Saving Draft...`);
+  console.log(`[WeChat Client] URL: ${url}`);
+
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -80,19 +87,16 @@ export const saveDraft = async (token: string, payload: WechatPayload): Promise<
       body: JSON.stringify(payload)
     });
     
+    console.log(`[WeChat Client] Status: ${response.status}`);
     const data = await response.json();
+    console.log(`[WeChat Client] Response Body:`, data);
+
     if (data.errcode && data.errcode !== 0) {
       throw new Error(`WeChat Draft Error (${data.errcode}): ${data.errmsg}`);
     }
     return data;
   } catch (error) {
-    console.error("Failed to save draft", error);
-    
-    // --- DEMO MODE FALLBACK ---
-    if ((error as Error).message.includes("CORS") || (error as Error).message.includes("Network")) {
-       console.warn("Simulating successful draft save due to network restrictions.");
-       return { media_id: "DRAFT_MEDIA_" + Date.now() };
-    }
+    console.error("[WeChat Client] 🔴 Failed to save draft", error);
     throw error;
   }
 };
