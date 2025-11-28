@@ -1422,7 +1422,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       {/* Design Templates Modal Overlay */}
       {showDesignTemplates && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-pink-50 to-orange-50">
               <div className="flex items-center gap-2">
                 <span className="material-icons text-pink-600">palette</span>
@@ -1455,19 +1455,44 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                 ))}
               </div>
 
-              {/* Templates Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {/* Templates Grid with Preview */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {getTemplatesByCategory(selectedTemplateCategory).map((template) => (
                   <div 
                     key={template.id}
-                    className="p-4 border border-gray-200 rounded-xl hover:border-pink-400 hover:bg-pink-50/50 transition cursor-pointer group"
+                    className="border border-gray-200 rounded-xl hover:border-pink-400 hover:shadow-lg transition cursor-pointer group overflow-hidden"
                     onClick={() => { handleInsertTemplate(template); setShowDesignTemplates(false); }}
                   >
-                    <div className="text-base font-medium text-gray-800 mb-1">{template.nameZh}</div>
-                    <div className="text-sm text-gray-500">{template.previewZh}</div>
-                    <div className="mt-3 text-sm text-pink-500 opacity-0 group-hover:opacity-100 transition flex items-center gap-1">
-                      <span className="material-icons text-sm">add_circle</span>
-                      点击插入
+                    {/* Template Preview */}
+                    <div 
+                      className="bg-white p-4 border-b border-gray-100 min-h-[120px] flex items-center justify-center"
+                      style={{ 
+                        transform: 'scale(0.75)', 
+                        transformOrigin: 'center center',
+                        margin: '-20px -40px'
+                      }}
+                    >
+                      <div 
+                        dangerouslySetInnerHTML={{ __html: template.html }}
+                        style={{ 
+                          pointerEvents: 'none',
+                          maxWidth: '100%',
+                          overflow: 'hidden'
+                        }}
+                      />
+                    </div>
+                    {/* Template Info */}
+                    <div className="p-3 bg-gray-50 group-hover:bg-pink-50/50 transition">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-medium text-gray-800">{template.nameZh}</div>
+                          <div className="text-xs text-gray-500">{template.previewZh}</div>
+                        </div>
+                        <div className="text-pink-500 opacity-0 group-hover:opacity-100 transition flex items-center gap-1 text-xs">
+                          <span className="material-icons text-sm">add_circle</span>
+                          插入
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
