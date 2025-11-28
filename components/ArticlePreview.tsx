@@ -36,6 +36,9 @@ const getCalloutConfig = (icon?: string) => {
   }
 };
 
+// Default header level when not specified
+const DEFAULT_HEADER_LEVEL = 2;
+
 const ArticlePreview: React.FC<ArticlePreviewProps> = ({ title, author, date, blocks }) => {
   
   const renderBlock = (block: ArticleBlock) => {
@@ -44,7 +47,7 @@ const ArticlePreview: React.FC<ArticlePreviewProps> = ({ title, author, date, bl
 
     switch (block.type) {
       case BlockType.HEADER:
-        const level = Number(block.level) || 2;
+        const level = Number(block.level) || DEFAULT_HEADER_LEVEL;
         const headerSize = level === 1 ? 'text-2xl' : level === 2 ? 'text-xl' : 'text-lg';
         const barHeight = level === 1 ? 'h-7' : level === 2 ? 'h-6' : 'h-5';
         return (

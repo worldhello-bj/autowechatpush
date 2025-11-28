@@ -110,6 +110,9 @@ const getCalloutIcon = (icon?: string) => {
   }
 }
 
+// Default header level when not specified
+const DEFAULT_HEADER_LEVEL = 2;
+
 // --- Helper: Convert Blocks to WeChat-compatible HTML ---
 const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
   if (!blocks || blocks.length === 0) return '';
@@ -122,7 +125,7 @@ const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
 
     switch (block.type) {
       case BlockType.HEADER:
-        const headerLevel = Number(block.level) || 2;
+        const headerLevel = Number(block.level) || DEFAULT_HEADER_LEVEL;
         const headerFontSize = headerLevel === 1 ? '22px' : headerLevel === 2 ? '18px' : '16px';
         const headerHeight = headerLevel === 1 ? '24px' : headerLevel === 2 ? '18px' : '14px';
         const headerBarWidth = headerLevel === 1 ? '5px' : headerLevel === 2 ? '4px' : '3px';
