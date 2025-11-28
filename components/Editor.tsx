@@ -1243,10 +1243,10 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         )}
 
 
-        {/* Material Library Panel */}
+        {/* Material Library Panel - Button Only */}
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <button 
-            onClick={() => setShowMaterialLibrary(!showMaterialLibrary)}
+            onClick={() => setShowMaterialLibrary(true)}
             className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition"
           >
             <div className="flex items-center gap-2">
@@ -1254,24 +1254,14 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
               <span className="font-semibold text-gray-800">素材库</span>
               <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">NEW</span>
             </div>
-            <span className={`material-icons text-gray-500 transition-transform ${showMaterialLibrary ? 'rotate-180' : ''}`}>expand_more</span>
+            <span className="material-icons text-gray-500">open_in_new</span>
           </button>
-          
-          {showMaterialLibrary && (
-            <div className="max-h-[400px] overflow-hidden">
-              <MaterialLibrary
-                onSelectMaterial={() => {}}
-                onInsertImage={handleInsertMaterialImage}
-                onInsertText={handleInsertMaterialText}
-              />
-            </div>
-          )}
         </div>
 
-        {/* AI Tools Panel with Sliders */}
+        {/* AI Tools Panel - Button Only */}
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <button 
-            onClick={() => setShowAITools(!showAITools)}
+            onClick={() => setShowAITools(true)}
             className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100 transition"
           >
             <div className="flex items-center gap-2">
@@ -1279,40 +1269,14 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
               <span className="font-semibold text-gray-800">AI 智能工具</span>
               <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">含滑动条</span>
             </div>
-            <span className={`material-icons text-gray-500 transition-transform ${showAITools ? 'rotate-180' : ''}`}>expand_more</span>
+            <span className="material-icons text-gray-500">open_in_new</span>
           </button>
-          
-          {showAITools && (
-            <AIToolsPanel
-              settings={aiSettings}
-              onSettingsChange={setAiSettings}
-              onGenerateTitles={handleGenerateTitles}
-              onGenerateSummary={handleGenerateSummary}
-              onExtractKeywords={handleExtractKeywords}
-              onGenerateHook={handleGenerateHook}
-              onGenerateCTA={handleGenerateCTA}
-              onSuggestStyles={handleSuggestStyles}
-              onPolishContent={handlePolishContent}
-              onRewriteContent={handleRewriteContent}
-              onExpandContent={handleExpandContent}
-              onTranslate={handleTranslate}
-              titleSuggestions={titleSuggestions}
-              keywords={keywords}
-              styleSuggestions={styleSuggestions}
-              generatedHook={generatedHook}
-              generatedCTA={generatedCTA}
-              onSelectTitle={setArticleTitle}
-              onInsertHook={handleInsertHookContent}
-              onInsertCTA={handleInsertCTAContent}
-              loading={aiToolLoading}
-            />
-          )}
         </div>
 
-        {/* Design Templates Library Panel */}
+        {/* Design Templates Panel - Button Only */}
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <button 
-            onClick={() => setShowDesignTemplates(!showDesignTemplates)}
+            onClick={() => setShowDesignTemplates(true)}
             className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-pink-50 to-orange-50 hover:from-pink-100 hover:to-orange-100 transition"
           >
             <div className="flex items-center gap-2">
@@ -1320,64 +1284,8 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
               <span className="font-semibold text-gray-800">精美设计格式库</span>
               <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">25+</span>
             </div>
-            <span className={`material-icons text-gray-500 transition-transform ${showDesignTemplates ? 'rotate-180' : ''}`}>expand_more</span>
+            <span className="material-icons text-gray-500">open_in_new</span>
           </button>
-          
-          {showDesignTemplates && (
-            <div className="p-4 bg-white">
-              {/* Quick Access Buttons */}
-              <div className="mb-4">
-                <button 
-                  onClick={() => setShowTemplateModal(true)}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg font-medium hover:from-pink-600 hover:to-purple-600 transition shadow-lg flex items-center justify-center gap-2"
-                >
-                  <span className="material-icons">grid_view</span>
-                  浏览全部模板（大图预览）
-                </button>
-              </div>
-
-              {/* Category Tabs */}
-              <div className="flex flex-wrap gap-1 mb-4 pb-3 border-b border-gray-100">
-                {templateCategories.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setSelectedTemplateCategory(cat.id)}
-                    className={`text-xs px-3 py-1.5 rounded-full transition flex items-center gap-1 ${
-                      selectedTemplateCategory === cat.id 
-                        ? 'bg-pink-500 text-white' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    <span>{cat.icon}</span>
-                    <span>{cat.nameZh}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Templates Grid - Compact View */}
-              <div className="grid grid-cols-2 gap-2 max-h-[250px] overflow-y-auto">
-                {getTemplatesByCategory(selectedTemplateCategory).map((template) => (
-                  <div 
-                    key={template.id}
-                    className="p-3 border border-gray-100 rounded-lg hover:border-pink-300 hover:bg-pink-50/50 transition cursor-pointer group text-center"
-                    onClick={() => handleInsertTemplate(template)}
-                  >
-                    <div className="text-sm font-medium text-gray-800 truncate">{template.nameZh}</div>
-                    <div className="text-xs text-gray-400 truncate">{template.previewZh}</div>
-                    <div className="mt-2 text-xs text-pink-500 opacity-0 group-hover:opacity-100 transition">点击插入 →</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Usage Tip */}
-              <div className="mt-4 pt-3 border-t border-gray-100">
-                <div className="text-xs text-gray-500 flex items-center gap-1">
-                  <span className="material-icons text-sm">lightbulb</span>
-                  点击"浏览全部模板"查看精美大图预览
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -1437,6 +1345,137 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
              </button>
          </div>
       </div>
+
+      {/* Material Library Modal Overlay */}
+      {showMaterialLibrary && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div className="flex items-center gap-2">
+                <span className="material-icons text-blue-600">folder_special</span>
+                <span className="font-bold text-lg text-gray-800">素材库</span>
+              </div>
+              <button 
+                onClick={() => setShowMaterialLibrary(false)}
+                className="p-2 hover:bg-gray-200 rounded-full transition"
+              >
+                <span className="material-icons text-gray-500">close</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto">
+              <MaterialLibrary
+                onSelectMaterial={() => {}}
+                onInsertImage={(img) => { handleInsertMaterialImage(img); setShowMaterialLibrary(false); }}
+                onInsertText={(txt) => { handleInsertMaterialText(txt); setShowMaterialLibrary(false); }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Tools Modal Overlay */}
+      {showAITools && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
+              <div className="flex items-center gap-2">
+                <span className="material-icons text-purple-600">psychology</span>
+                <span className="font-bold text-lg text-gray-800">AI 智能工具</span>
+                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">含滑动条</span>
+              </div>
+              <button 
+                onClick={() => setShowAITools(false)}
+                className="p-2 hover:bg-gray-200 rounded-full transition"
+              >
+                <span className="material-icons text-gray-500">close</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              <AIToolsPanel
+                settings={aiSettings}
+                onSettingsChange={setAiSettings}
+                onGenerateTitles={handleGenerateTitles}
+                onGenerateSummary={handleGenerateSummary}
+                onExtractKeywords={handleExtractKeywords}
+                onGenerateHook={handleGenerateHook}
+                onGenerateCTA={handleGenerateCTA}
+                onSuggestStyles={handleSuggestStyles}
+                onPolishContent={handlePolishContent}
+                onRewriteContent={handleRewriteContent}
+                onExpandContent={handleExpandContent}
+                onTranslate={handleTranslate}
+                titleSuggestions={titleSuggestions}
+                keywords={keywords}
+                styleSuggestions={styleSuggestions}
+                generatedHook={generatedHook}
+                generatedCTA={generatedCTA}
+                onSelectTitle={(title) => { setArticleTitle(title); }}
+                onInsertHook={(hook) => { handleInsertHookContent(hook); }}
+                onInsertCTA={(cta) => { handleInsertCTAContent(cta); }}
+                loading={aiToolLoading}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Design Templates Modal Overlay */}
+      {showDesignTemplates && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-pink-50 to-orange-50">
+              <div className="flex items-center gap-2">
+                <span className="material-icons text-pink-600">palette</span>
+                <span className="font-bold text-lg text-gray-800">精美设计格式库</span>
+                <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">25+</span>
+              </div>
+              <button 
+                onClick={() => setShowDesignTemplates(false)}
+                className="p-2 hover:bg-gray-200 rounded-full transition"
+              >
+                <span className="material-icons text-gray-500">close</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              {/* Category Tabs */}
+              <div className="flex flex-wrap gap-2 mb-4 pb-3 border-b border-gray-100">
+                {templateCategories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedTemplateCategory(cat.id)}
+                    className={`text-sm px-4 py-2 rounded-full transition flex items-center gap-1 ${
+                      selectedTemplateCategory === cat.id 
+                        ? 'bg-pink-500 text-white' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span>{cat.icon}</span>
+                    <span>{cat.nameZh}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Templates Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {getTemplatesByCategory(selectedTemplateCategory).map((template) => (
+                  <div 
+                    key={template.id}
+                    className="p-4 border border-gray-200 rounded-xl hover:border-pink-400 hover:bg-pink-50/50 transition cursor-pointer group"
+                    onClick={() => { handleInsertTemplate(template); setShowDesignTemplates(false); }}
+                  >
+                    <div className="text-base font-medium text-gray-800 mb-1">{template.nameZh}</div>
+                    <div className="text-sm text-gray-500">{template.previewZh}</div>
+                    <div className="mt-3 text-sm text-pink-500 opacity-0 group-hover:opacity-100 transition flex items-center gap-1">
+                      <span className="material-icons text-sm">add_circle</span>
+                      点击插入
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
