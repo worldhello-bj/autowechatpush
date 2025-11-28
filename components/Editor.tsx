@@ -12,7 +12,7 @@ interface EditorProps {
 
 // --- Helper: Base64 to Blob ---
 const dataURLtoBlob = (dataurl: string): Blob => {
-    if (!dataurl || !dataurl.includes(',')) {
+    if (!dataurl || !dataurl.startsWith('data:') || !dataurl.includes(',')) {
         throw new Error('Invalid data URL format');
     }
     const arr = dataurl.split(',');
@@ -343,7 +343,9 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         try {
             setWechatCreds(JSON.parse(rawCreds));
         } catch(e) {
-            console.error("Failed to parse WeChat credentials from localStorage:", e);
+            console.error("Failed to parse WeChat credentials from localStorage. The stored value may be corrupted:", e);
+            // Clear corrupted data
+            localStorage.removeItem(CREDS_KEY);
         }
     }
 
@@ -363,12 +365,12 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
        try {
          if (audioSourceRef.current) audioSourceRef.current.stop();
        } catch (e) {
-         // Audio source may already be stopped
+         console.debug("Audio source cleanup - source may already be stopped:", e);
        }
        try {
          if (audioContextRef.current) audioContextRef.current.close();
        } catch (e) {
-         // Audio context may already be closed
+         console.debug("Audio context cleanup - context may already be closed:", e);
        }
     };
   }, []);
