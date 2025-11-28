@@ -14,7 +14,7 @@ const getAI = (apiKey?: string) => {
 
 const layoutArticleFunction: FunctionDeclaration = {
   name: 'layout_article',
-  description: 'Generates a structured layout for a WeChat article based on content.',
+  description: 'Generates a structured layout for a WeChat article based on content. Use various block types for rich formatting.',
   parameters: {
     type: Type.OBJECT,
     properties: {
@@ -22,15 +22,29 @@ const layoutArticleFunction: FunctionDeclaration = {
       digest: { type: Type.STRING, description: 'A short summary (digest) of the article.' },
       blocks: {
         type: Type.ARRAY,
-        description: 'The content blocks of the article.',
+        description: 'The content blocks of the article. Use diverse block types for visual variety.',
         items: {
           type: Type.OBJECT,
           properties: {
-            type: { type: Type.STRING, enum: ['header', 'paragraph', 'card', 'list', 'quote', 'image'], description: 'The type of the block. Use "image" to suggest where an image should go.' },
-            content: { type: Type.STRING, description: 'The main text content. For "image" type, provide a visual description of what image should be placed here.' },
-            title: { type: Type.STRING, description: 'Title for card or header blocks.' },
-            items: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'List items if type is list.' },
-            style: { type: Type.STRING, enum: ['default', 'primary', 'warning', 'quote', 'red', 'blue', 'purple', 'orange', 'gold'], description: 'Visual color style. Use varied colors for different sections.' }
+            type: { 
+              type: Type.STRING, 
+              enum: ['header', 'paragraph', 'card', 'list', 'quote', 'image', 'divider', 'code', 'callout', 'numbered_list', 'highlight', 'table'], 
+              description: 'Block type. Use "header" for section titles, "paragraph" for body text, "card" for key points, "list" for bullet points, "numbered_list" for steps, "quote" for citations, "image" for visual placeholders, "divider" for section breaks, "code" for code snippets, "callout" for important notices, "highlight" for emphasized text, "table" for structured data.' 
+            },
+            content: { type: Type.STRING, description: 'The main text content. For "image" type, provide a visual description. For "divider", this can be empty.' },
+            title: { type: Type.STRING, description: 'Title for card, header, callout, or table blocks.' },
+            items: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'List items for "list" or "numbered_list" types.' },
+            style: { 
+              type: Type.STRING, 
+              enum: ['default', 'primary', 'warning', 'quote', 'red', 'blue', 'purple', 'orange', 'gold', 'green', 'pink', 'cyan', 'gradient'], 
+              description: 'Visual color style. Use varied colors for different sections to make content visually engaging.' 
+            },
+            level: { type: Type.STRING, enum: ['1', '2', '3'], description: 'Header level as string ("1"=large, "2"=medium, "3"=small). Only for "header" type.' },
+            alignment: { type: Type.STRING, enum: ['left', 'center', 'right'], description: 'Text alignment. Useful for quotes or highlights.' },
+            language: { type: Type.STRING, description: 'Programming language for "code" blocks (e.g., "javascript", "python").' },
+            icon: { type: Type.STRING, enum: ['info', 'warning', 'success', 'error', 'tip', 'note'], description: 'Icon type for "callout" blocks.' },
+            rows: { type: Type.ARRAY, items: { type: Type.ARRAY, items: { type: Type.STRING } }, description: 'Table data rows for "table" type. Each row is an array of cell values.' },
+            headers: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Table header row for "table" type.' }
           },
           required: ['type', 'content']
         }
@@ -86,9 +100,11 @@ export const generateArticleStructure = async (
       
       Guidelines:
       - **Content Fidelity**: Preserve the original meaning.
-      - **Structure**: Identify sections and add Headers.
-      - **Visuals**: Convert key points into 'card' blocks.
-      - **Colors**: Assign different 'style' colors (blue, red, orange, purple, gold) to cards and headers to distinguish sections.
+      - **Structure**: Identify sections and add Headers with appropriate levels (1 for main, 2 for sub, 3 for minor).
+      - **Visuals**: Convert key points into 'card' blocks, use 'highlight' for important phrases.
+      - **Colors**: Assign different 'style' colors (blue, red, orange, purple, gold, green, pink, cyan, gradient) to cards and headers to distinguish sections.
+      - **Rich Formatting**: Use 'callout' for important notices, 'divider' between major sections, 'numbered_list' for steps, 'table' for structured data.
+      - **Code**: Use 'code' blocks with appropriate language for any code snippets.
       
       Input Text to Format:
       """
@@ -107,11 +123,14 @@ export const generateArticleStructure = async (
       ${imageContext ? `Context from uploaded image: ${imageContext}` : ''}
       
       Structure the article using the 'layout_article' tool with the following guidelines:
-      - **Visual Variety**: Do NOT just use paragraphs. You MUST use 'card' blocks for key takeaways.
-      - **Colors**: You MUST use specific colors ('red', 'blue', 'orange', 'purple', 'gold') for different Cards and Headers. Do not just use default.
+      - **Visual Variety**: Do NOT just use paragraphs. You MUST use 'card' blocks for key takeaways, 'highlight' for important points.
+      - **Colors**: You MUST use specific colors ('red', 'blue', 'orange', 'purple', 'gold', 'green', 'pink', 'cyan', 'gradient') for different Cards and Headers. Do not just use default.
       - **Images**: Insert 'image' blocks where appropriate. For the content, write a PROMPT describing the image (e.g., "A chart showing growth" or "A happy family in a park"). Do not provide URLs.
-      - **Headers**: Use clear headers.
-      - **Lists**: Use lists for steps.
+      - **Headers**: Use clear headers with levels (1 for main sections, 2 for subsections, 3 for minor titles).
+      - **Lists**: Use 'list' for bullet points, 'numbered_list' for steps or ordered items.
+      - **Rich Elements**: Use 'divider' to separate major sections, 'callout' for important tips/warnings/info, 'code' for code snippets with language specified.
+      - **Tables**: Use 'table' blocks with headers and rows for structured data comparisons.
+      - **Quotes**: Use 'quote' for citations or testimonials with center alignment for impact.
       
       RETURN ONLY THE FUNCTION CALL.
     `;

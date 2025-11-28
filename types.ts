@@ -5,7 +5,13 @@ export enum BlockType {
   IMAGE = 'image',
   CARD = 'card',
   LIST = 'list',
-  QUOTE = 'quote'
+  QUOTE = 'quote',
+  DIVIDER = 'divider',
+  CODE = 'code',
+  CALLOUT = 'callout',
+  NUMBERED_LIST = 'numbered_list',
+  HIGHLIGHT = 'highlight',
+  TABLE = 'table'
 }
 
 export interface ArticleBlock {
@@ -13,8 +19,14 @@ export interface ArticleBlock {
   type: BlockType;
   content: string; // Text content or Image URL
   title?: string; // For Card/Header
-  style?: 'default' | 'primary' | 'warning' | 'quote' | 'red' | 'blue' | 'purple' | 'orange' | 'gold';
-  items?: string[]; // For List
+  style?: 'default' | 'primary' | 'warning' | 'quote' | 'red' | 'blue' | 'purple' | 'orange' | 'gold' | 'green' | 'pink' | 'cyan' | 'gradient';
+  items?: string[]; // For List/Numbered List
+  level?: 1 | 2 | 3 | '1' | '2' | '3'; // For Header (h1, h2, h3) - accepts number or string
+  alignment?: 'left' | 'center' | 'right'; // For text alignment
+  language?: string; // For Code blocks
+  icon?: 'info' | 'warning' | 'success' | 'error' | 'tip' | 'note'; // For Callout
+  rows?: string[][]; // For Table
+  headers?: string[]; // For Table headers
 }
 
 export interface Article {

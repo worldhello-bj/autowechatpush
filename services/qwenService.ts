@@ -10,7 +10,7 @@ const tools = [
     type: "function",
     function: {
       name: "layout_article",
-      description: "Generates a structured layout for a WeChat article based on content.",
+      description: "Generates a structured layout for a WeChat article based on content. Use various block types for rich formatting.",
       parameters: {
         type: "object",
         properties: {
@@ -18,27 +18,33 @@ const tools = [
           digest: { type: "string", description: "A short summary (digest) of the article." },
           blocks: {
             type: "array",
-            description: "The content blocks of the article.",
+            description: "The content blocks of the article. Use diverse block types for visual variety.",
             items: {
               type: "object",
               properties: {
                 type: { 
                   type: "string", 
-                  enum: ["header", "paragraph", "card", "list", "quote", "image"], 
-                  description: "The type of the block. Use 'image' for suggested image placeholders." 
+                  enum: ["header", "paragraph", "card", "list", "quote", "image", "divider", "code", "callout", "numbered_list", "highlight", "table"], 
+                  description: "Block type. Use 'header' for section titles, 'paragraph' for body text, 'card' for key points, 'list' for bullets, 'numbered_list' for steps, 'quote' for citations, 'image' for visual placeholders, 'divider' for section breaks, 'code' for code snippets, 'callout' for notices, 'highlight' for emphasized text, 'table' for structured data." 
                 },
-                content: { type: "string", description: "The main text content. For images, provide a description." },
-                title: { type: "string", description: "Title for card or header blocks." },
+                content: { type: "string", description: "The main text content. For images, provide a description. For divider, this can be empty." },
+                title: { type: "string", description: "Title for card, header, callout, or table blocks." },
                 items: { 
                   type: "array", 
                   items: { type: "string" }, 
-                  description: "List items if type is list." 
+                  description: "List items for 'list' or 'numbered_list' types." 
                 },
                 style: { 
                   type: "string", 
-                  enum: ["default", "primary", "warning", "quote", "red", "blue", "purple", "orange", "gold"], 
-                  description: "Visual style color." 
-                }
+                  enum: ["default", "primary", "warning", "quote", "red", "blue", "purple", "orange", "gold", "green", "pink", "cyan", "gradient"], 
+                  description: "Visual style color. Use varied colors for different sections." 
+                },
+                level: { type: "number", enum: [1, 2, 3], description: "Header level (1=large, 2=medium, 3=small). Only for 'header' type." },
+                alignment: { type: "string", enum: ["left", "center", "right"], description: "Text alignment." },
+                language: { type: "string", description: "Programming language for 'code' blocks." },
+                icon: { type: "string", enum: ["info", "warning", "success", "error", "tip", "note"], description: "Icon type for 'callout' blocks." },
+                rows: { type: "array", items: { type: "array", items: { type: "string" } }, description: "Table data rows for 'table' type." },
+                headers: { type: "array", items: { type: "string" }, description: "Table header row for 'table' type." }
               },
               required: ["type", "content"]
             }
@@ -68,9 +74,11 @@ export const generateArticleStructureQwen = async (
         Your task is to take the provided text and format it into a structured WeChat article layout.
         
         Guidelines:
-        - **Formatting**: Improve readability.
-        - **Visuals**: Use 'card' blocks for important summaries.
-        - **Colors**: Assign varied colors (red, blue, purple, orange) to sections to make it visually interesting.
+        - **Formatting**: Improve readability with proper structure.
+        - **Visuals**: Use 'card' blocks for important summaries, 'highlight' for key phrases.
+        - **Colors**: Assign varied colors (red, blue, purple, orange, green, pink, cyan, gradient) to sections to make it visually interesting.
+        - **Rich Elements**: Use 'divider' between major sections, 'callout' for important notices, 'numbered_list' for steps, 'table' for structured data.
+        - **Headers**: Use header levels (1, 2, 3) for proper hierarchy.
         
         Input Text:
         """
@@ -89,9 +97,12 @@ export const generateArticleStructureQwen = async (
         ${imageContext ? `Context from uploaded image: ${imageContext}` : ''}
         
         Structure the article using the 'layout_article' tool with the following guidelines:
-        - **Visual Variety**: Do NOT just use paragraphs. You MUST use 'card' blocks.
-        - **Colors**: Use colors like 'red', 'blue', 'orange', 'purple', 'gold' for Cards and Headers.
+        - **Visual Variety**: Do NOT just use paragraphs. You MUST use 'card' blocks, 'highlight' for emphasis.
+        - **Colors**: Use colors like 'red', 'blue', 'orange', 'purple', 'gold', 'green', 'pink', 'cyan', 'gradient' for Cards and Headers.
         - **Images**: Insert 'image' blocks. Content should be a description (e.g., "A neon city street").
+        - **Rich Elements**: Use 'divider' between sections, 'callout' for tips/info/warnings, 'numbered_list' for steps, 'table' for data.
+        - **Headers**: Use header levels (1=main, 2=sub, 3=minor) for hierarchy.
+        - **Code**: Use 'code' blocks with language for any code snippets.
         
         Call the function 'layout_article' to return the result.
       `;
