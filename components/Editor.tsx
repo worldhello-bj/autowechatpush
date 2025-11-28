@@ -46,6 +46,8 @@ import {
   rewriteContentQwen
 } from '../services/qwenService';
 import HtmlEditor from './HtmlEditor';
+import MaterialLibrary from './MaterialLibrary';
+import AIToolsPanel, { AISettings, DEFAULT_AI_SETTINGS } from './AIToolsPanel';
 import { ArticleBlock, GroundingSource, WeChatCredentials, BlockType, AIProvider } from '../types';
 import { getAccessToken, saveDraft, uploadImage } from '../services/wechatService';
 import { 
@@ -379,6 +381,12 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   // Template Preview Modal State
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<DesignTemplate | null>(null);
+
+  // Material Library Panel State
+  const [showMaterialLibrary, setShowMaterialLibrary] = useState(false);
+
+  // AI Settings State (with sliders)
+  const [aiSettings, setAiSettings] = useState<AISettings>(DEFAULT_AI_SETTINGS);
 
   // --- Handlers ---
 
@@ -843,6 +851,38 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     setHtmlContent(newContent);
   };
 
+  // --- Material Library Handlers ---
+  const handleInsertMaterialImage = (imageDataUrl: string) => {
+    const imgHtml = `
+      <section style="margin: 20px 0; text-align: center;">
+        <img src="${imageDataUrl}" style="max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
+      </section>
+    `;
+    const separator = htmlContent.trim() ? '\n' : '';
+    setHtmlContent(htmlContent + separator + imgHtml);
+  };
+
+  const handleInsertMaterialText = (text: string) => {
+    const safeText = escapeHtml(text);
+    const textHtml = `<p style="font-size: 16px; line-height: 1.8; color: #444;">${safeText}</p>`;
+    const separator = htmlContent.trim() ? '\n' : '';
+    setHtmlContent(htmlContent + separator + textHtml);
+  };
+
+  // --- Insert Hook Handler ---
+  const handleInsertHookContent = (hook: string) => {
+    const safeHook = escapeHtml(hook);
+    const newContent = `<p style="font-size: 16px; line-height: 1.8; color: #444; font-style: italic; background: #f8f4ff; padding: 16px; border-radius: 8px; border-left: 4px solid #9b59b6;">${safeHook}</p>` + htmlContent;
+    setHtmlContent(newContent);
+  };
+
+  // --- Insert CTA Handler ---
+  const handleInsertCTAContent = (cta: string) => {
+    const safeCTA = escapeHtml(cta);
+    const newContent = htmlContent + `<p style="font-size: 16px; line-height: 1.8; color: #444; text-align: center; margin-top: 24px; padding: 16px; background: #fff0f0; border-radius: 8px; border: 1px solid #ffc2c2;">${safeCTA}</p>`;
+    setHtmlContent(newContent);
+  };
+
   useEffect(() => {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (raw) {
@@ -1202,7 +1242,33 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
             </div>
         )}
 
-        {/* AI Tools Panel */}
+
+        {/* Material Library Panel */}
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <button 
+            onClick={() => setShowMaterialLibrary(!showMaterialLibrary)}
+            className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition"
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-icons text-blue-600">folder_special</span>
+              <span className="font-semibold text-gray-800">素材库</span>
+              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">NEW</span>
+            </div>
+            <span className={`material-icons text-gray-500 transition-transform ${showMaterialLibrary ? 'rotate-180' : ''}`}>expand_more</span>
+          </button>
+          
+          {showMaterialLibrary && (
+            <div className="max-h-[400px] overflow-hidden">
+              <MaterialLibrary
+                onSelectMaterial={() => {}}
+                onInsertImage={handleInsertMaterialImage}
+                onInsertText={handleInsertMaterialText}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* AI Tools Panel with Sliders */}
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <button 
             onClick={() => setShowAITools(!showAITools)}
@@ -1210,275 +1276,36 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
           >
             <div className="flex items-center gap-2">
               <span className="material-icons text-purple-600">psychology</span>
-              <span className="font-semibold text-gray-800">AI Creative Tools</span>
-              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">NEW</span>
+              <span className="font-semibold text-gray-800">AI 智能工具</span>
+              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">含滑动条</span>
             </div>
             <span className={`material-icons text-gray-500 transition-transform ${showAITools ? 'rotate-180' : ''}`}>expand_more</span>
           </button>
           
           {showAITools && (
-            <div className="p-4 bg-white space-y-4">
-              {/* Loading Indicator */}
-              {aiToolLoading && (
-                <div className="flex items-center justify-center py-2 text-purple-600">
-                  <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span className="text-sm">Processing...</span>
-                </div>
-              )}
-
-              {/* Title Suggestions */}
-              <div className="border-b border-gray-100 pb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                    <span className="material-icons text-sm text-orange-500">title</span>
-                    Title Suggestions
-                  </h4>
-                  <button
-                    onClick={handleGenerateTitles}
-                    disabled={aiToolLoading}
-                    className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded hover:bg-orange-200 disabled:opacity-50"
-                  >
-                    Generate
-                  </button>
-                </div>
-                {titleSuggestions.length > 0 && (
-                  <div className="space-y-1">
-                    {titleSuggestions.map((title, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setArticleTitle(title)}
-                        className="w-full text-left text-xs p-2 bg-orange-50 hover:bg-orange-100 rounded border border-orange-100 transition truncate"
-                      >
-                        {title}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Summary & Keywords */}
-              <div className="flex gap-2 border-b border-gray-100 pb-4">
-                <button
-                  onClick={handleGenerateSummary}
-                  disabled={aiToolLoading}
-                  className="flex-1 flex items-center justify-center gap-1 text-xs bg-blue-100 text-blue-700 px-3 py-2 rounded hover:bg-blue-200 disabled:opacity-50"
-                >
-                  <span className="material-icons text-sm">summarize</span>
-                  Auto Summary
-                </button>
-                <button
-                  onClick={handleExtractKeywords}
-                  disabled={aiToolLoading}
-                  className="flex-1 flex items-center justify-center gap-1 text-xs bg-green-100 text-green-700 px-3 py-2 rounded hover:bg-green-200 disabled:opacity-50"
-                >
-                  <span className="material-icons text-sm">sell</span>
-                  Extract Keywords
-                </button>
-              </div>
-
-              {/* Keywords Display */}
-              {keywords.length > 0 && (
-                <div className="flex flex-wrap gap-1 border-b border-gray-100 pb-4">
-                  {keywords.map((kw, idx) => (
-                    <span key={idx} className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded-full border border-green-100">
-                      {kw}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Hook Generation */}
-              <div className="border-b border-gray-100 pb-4">
-                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
-                  <span className="material-icons text-sm text-purple-500">psychology</span>
-                  Generate Opening Hook
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {(['question', 'story', 'statistic', 'quote', 'surprising'] as const).map((style) => (
-                    <button
-                      key={style}
-                      onClick={() => handleGenerateHook(style)}
-                      disabled={aiToolLoading}
-                      className="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded hover:bg-purple-100 disabled:opacity-50 capitalize"
-                    >
-                      {style}
-                    </button>
-                  ))}
-                </div>
-                {generatedHook && (
-                  <div className="mt-2 p-2 bg-purple-50 rounded text-xs text-gray-700 border border-purple-100">
-                    {generatedHook}
-                    <button
-                      onClick={() => {
-                        const safeHook = escapeHtml(generatedHook);
-                        const newContent = `<p style="font-size: 16px; line-height: 1.8; color: #444; font-style: italic; background: #f8f4ff; padding: 16px; border-radius: 8px; border-left: 4px solid #9b59b6;">${safeHook}</p>` + htmlContent;
-                        setHtmlContent(newContent);
-                      }}
-                      className="block mt-2 text-purple-600 hover:underline"
-                    >
-                      + Insert at beginning
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* CTA Generation */}
-              <div className="border-b border-gray-100 pb-4">
-                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
-                  <span className="material-icons text-sm text-red-500">campaign</span>
-                  Generate Call-to-Action
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {(['subscribe', 'share', 'comment', 'action', 'reflection'] as const).map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => handleGenerateCTA(type)}
-                      disabled={aiToolLoading}
-                      className="text-xs bg-red-50 text-red-700 px-2 py-1 rounded hover:bg-red-100 disabled:opacity-50 capitalize"
-                    >
-                      {type}
-                    </button>
-                  ))}
-                </div>
-                {generatedCTA && (
-                  <div className="mt-2 p-2 bg-red-50 rounded text-xs text-gray-700 border border-red-100">
-                    {generatedCTA}
-                    <button
-                      onClick={() => {
-                        const safeCTA = escapeHtml(generatedCTA);
-                        const newContent = htmlContent + `<p style="font-size: 16px; line-height: 1.8; color: #444; text-align: center; margin-top: 24px; padding: 16px; background: #fff0f0; border-radius: 8px; border: 1px solid #ffc2c2;">${safeCTA}</p>`;
-                        setHtmlContent(newContent);
-                      }}
-                      className="block mt-2 text-red-600 hover:underline"
-                    >
-                      + Insert at end
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Style Suggestions */}
-              <div className="border-b border-gray-100 pb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                    <span className="material-icons text-sm text-pink-500">palette</span>
-                    Style Suggestions
-                  </h4>
-                  <button
-                    onClick={handleSuggestStyles}
-                    disabled={aiToolLoading}
-                    className="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded hover:bg-pink-200 disabled:opacity-50"
-                  >
-                    Analyze
-                  </button>
-                </div>
-                {styleSuggestions.length > 0 && (
-                  <div className="space-y-2">
-                    {styleSuggestions.map((s, idx) => (
-                      <div key={idx} className="p-2 bg-pink-50 rounded text-xs border border-pink-100">
-                        <div className="font-medium text-pink-800 capitalize">{s.style}</div>
-                        <div className="text-gray-600 mt-1">{s.reason}</div>
-                        <div className="flex gap-1 mt-2">
-                          {s.colorScheme.map((color, cidx) => (
-                            <span key={cidx} className="px-2 py-0.5 bg-white rounded border text-gray-600">
-                              {color}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="text-pink-600 mt-1 italic">Mood: {s.mood}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Content Polish */}
-              <div className="border-b border-gray-100 pb-4">
-                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
-                  <span className="material-icons text-sm text-cyan-500">auto_fix_high</span>
-                  Polish Content
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {(['professional', 'casual', 'formal', 'creative'] as const).map((tone) => (
-                    <button
-                      key={tone}
-                      onClick={() => handlePolishContent(tone)}
-                      disabled={aiToolLoading}
-                      className="text-xs bg-cyan-50 text-cyan-700 px-2 py-1 rounded hover:bg-cyan-100 disabled:opacity-50 capitalize"
-                    >
-                      {tone}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Rewrite Content */}
-              <div className="border-b border-gray-100 pb-4">
-                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
-                  <span className="material-icons text-sm text-indigo-500">refresh</span>
-                  Rewrite Style
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {(['humorous', 'serious', 'inspirational', 'educational', 'conversational'] as const).map((style) => (
-                    <button
-                      key={style}
-                      onClick={() => handleRewriteContent(style)}
-                      disabled={aiToolLoading}
-                      className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-100 disabled:opacity-50 capitalize"
-                    >
-                      {style}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Expand Content */}
-              <div className="border-b border-gray-100 pb-4">
-                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
-                  <span className="material-icons text-sm text-amber-500">unfold_more</span>
-                  Expand Content
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {(['detailed', 'examples', 'storytelling'] as const).map((style) => (
-                    <button
-                      key={style}
-                      onClick={() => handleExpandContent(style)}
-                      disabled={aiToolLoading}
-                      className="text-xs bg-amber-50 text-amber-700 px-2 py-1 rounded hover:bg-amber-100 disabled:opacity-50 capitalize"
-                    >
-                      {style}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Translation */}
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
-                  <span className="material-icons text-sm text-teal-500">translate</span>
-                  Translate
-                </h4>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleTranslate('zh')}
-                    disabled={aiToolLoading}
-                    className="flex-1 text-xs bg-teal-50 text-teal-700 px-3 py-2 rounded hover:bg-teal-100 disabled:opacity-50"
-                  >
-                    → 中文
-                  </button>
-                  <button
-                    onClick={() => handleTranslate('en')}
-                    disabled={aiToolLoading}
-                    className="flex-1 text-xs bg-teal-50 text-teal-700 px-3 py-2 rounded hover:bg-teal-100 disabled:opacity-50"
-                  >
-                    → English
-                  </button>
-                </div>
-              </div>
-            </div>
+            <AIToolsPanel
+              settings={aiSettings}
+              onSettingsChange={setAiSettings}
+              onGenerateTitles={handleGenerateTitles}
+              onGenerateSummary={handleGenerateSummary}
+              onExtractKeywords={handleExtractKeywords}
+              onGenerateHook={handleGenerateHook}
+              onGenerateCTA={handleGenerateCTA}
+              onSuggestStyles={handleSuggestStyles}
+              onPolishContent={handlePolishContent}
+              onRewriteContent={handleRewriteContent}
+              onExpandContent={handleExpandContent}
+              onTranslate={handleTranslate}
+              titleSuggestions={titleSuggestions}
+              keywords={keywords}
+              styleSuggestions={styleSuggestions}
+              generatedHook={generatedHook}
+              generatedCTA={generatedCTA}
+              onSelectTitle={setArticleTitle}
+              onInsertHook={handleInsertHookContent}
+              onInsertCTA={handleInsertCTAContent}
+              loading={aiToolLoading}
+            />
           )}
         </div>
 
