@@ -97,16 +97,16 @@ const getStyleColors = (style?: string) => {
   }
 }
 
-// --- Helper: Get Callout Icon ---
+// --- Helper: Get Callout Icon (using styled symbols for better design) ---
 const getCalloutIcon = (icon?: string) => {
   switch(icon) {
-      case 'info': return { emoji: 'ℹ️', color: '#3498db', bg: '#f0f8ff' };
-      case 'warning': return { emoji: '⚠️', color: '#f39c12', bg: '#fef5e6' };
-      case 'success': return { emoji: '✅', color: '#07c160', bg: '#f6fffa' };
-      case 'error': return { emoji: '❌', color: '#fa5151', bg: '#fff0f0' };
-      case 'tip': return { emoji: '💡', color: '#d4af37', bg: '#fcf8e3' };
-      case 'note': return { emoji: '📝', color: '#9b59b6', bg: '#fbf2ff' };
-      default: return { emoji: 'ℹ️', color: '#3498db', bg: '#f0f8ff' };
+      case 'info': return { symbol: 'i', color: '#3498db', bg: '#f0f8ff' };
+      case 'warning': return { symbol: '!', color: '#f39c12', bg: '#fef5e6' };
+      case 'success': return { symbol: '✓', color: '#07c160', bg: '#f6fffa' };
+      case 'error': return { symbol: '×', color: '#fa5151', bg: '#fff0f0' };
+      case 'tip': return { symbol: '★', color: '#d4af37', bg: '#fcf8e3' };
+      case 'note': return { symbol: '¶', color: '#9b59b6', bg: '#fbf2ff' };
+      default: return { symbol: 'i', color: '#3498db', bg: '#f0f8ff' };
   }
 }
 
@@ -187,8 +187,12 @@ const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
         } else {
            return `
             <section style="margin: 20px 0; padding: 30px 20px; border: 2px dashed #ddd; background-color: #fafafa; border-radius: 8px; text-align: center; color: #999;">
-               <section style="font-size: 24px; margin-bottom: 10px;">📷</section>
-               <section style="font-weight: bold; font-size: 14px; margin-bottom: 5px; color: #666;">Suggested Image</section>
+               <section style="width: 48px; height: 48px; margin: 0 auto 12px; border: 2px solid #ccc; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                 <section style="width: 20px; height: 16px; border: 2px solid #999; border-radius: 2px; position: relative;">
+                   <section style="width: 6px; height: 6px; background: #999; border-radius: 50%; position: absolute; top: 2px; right: 2px;"></section>
+                 </section>
+               </section>
+               <section style="font-weight: 600; font-size: 14px; margin-bottom: 5px; color: #666;">Suggested Image</section>
                <section style="font-size: 13px;">"${block.content}"</section>
                ${block.title ? `<section style="font-size: 12px; color: #aaa; margin-top: 5px;">Caption: ${block.title}</section>` : ''}
             </section>
@@ -213,7 +217,7 @@ const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
         return `
           <section style="margin: 20px 0; padding: 16px 20px; background-color: ${calloutConfig.bg}; border-left: 4px solid ${calloutConfig.color}; border-radius: 0 8px 8px 0;">
             <section style="display: flex; align-items: flex-start;">
-              <section style="font-size: 18px; margin-right: 12px; flex-shrink: 0;">${calloutConfig.emoji}</section>
+              <section style="width: 24px; height: 24px; border-radius: 50%; background-color: ${calloutConfig.color}; color: #fff; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center; margin-right: 12px; flex-shrink: 0;">${calloutConfig.symbol}</section>
               <section>
                 ${block.title ? `<section style="font-size: 15px; font-weight: bold; color: ${calloutConfig.color}; margin-bottom: 6px;">${block.title}</section>` : ''}
                 <section style="font-size: 14px; color: #555; line-height: 1.6;">${block.content}</section>

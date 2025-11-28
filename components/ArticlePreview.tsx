@@ -23,16 +23,16 @@ const getStyleClass = (style?: string) => {
   }
 };
 
-// Helper to get callout icon and colors
+// Helper to get callout icon and colors (using styled symbols for better design)
 const getCalloutConfig = (icon?: string) => {
   switch(icon) {
-    case 'info': return { emoji: 'ℹ️', bg: 'bg-blue-50', border: 'border-blue-400', text: 'text-blue-700' };
-    case 'warning': return { emoji: '⚠️', bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-700' };
-    case 'success': return { emoji: '✅', bg: 'bg-green-50', border: 'border-green-400', text: 'text-green-700' };
-    case 'error': return { emoji: '❌', bg: 'bg-red-50', border: 'border-red-400', text: 'text-red-700' };
-    case 'tip': return { emoji: '💡', bg: 'bg-yellow-50', border: 'border-yellow-400', text: 'text-yellow-700' };
-    case 'note': return { emoji: '📝', bg: 'bg-purple-50', border: 'border-purple-400', text: 'text-purple-700' };
-    default: return { emoji: 'ℹ️', bg: 'bg-blue-50', border: 'border-blue-400', text: 'text-blue-700' };
+    case 'info': return { symbol: 'i', bg: 'bg-blue-50', border: 'border-blue-400', text: 'text-blue-700', iconBg: 'bg-blue-500' };
+    case 'warning': return { symbol: '!', bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-700', iconBg: 'bg-orange-500' };
+    case 'success': return { symbol: '✓', bg: 'bg-green-50', border: 'border-green-400', text: 'text-green-700', iconBg: 'bg-green-500' };
+    case 'error': return { symbol: '×', bg: 'bg-red-50', border: 'border-red-400', text: 'text-red-700', iconBg: 'bg-red-500' };
+    case 'tip': return { symbol: '★', bg: 'bg-yellow-50', border: 'border-yellow-400', text: 'text-yellow-700', iconBg: 'bg-yellow-500' };
+    case 'note': return { symbol: '¶', bg: 'bg-purple-50', border: 'border-purple-400', text: 'text-purple-700', iconBg: 'bg-purple-500' };
+    default: return { symbol: 'i', bg: 'bg-blue-50', border: 'border-blue-400', text: 'text-blue-700', iconBg: 'bg-blue-500' };
   }
 };
 
@@ -131,7 +131,7 @@ const ArticlePreview: React.FC<ArticlePreviewProps> = ({ title, author, date, bl
         return (
           <div key={block.id} className={`mx-4 my-6 p-4 ${calloutConfig.bg} border-l-4 ${calloutConfig.border} rounded-r-lg`}>
             <div className="flex items-start">
-              <span className="text-lg mr-3 flex-shrink-0">{calloutConfig.emoji}</span>
+              <span className={`w-6 h-6 rounded-full ${calloutConfig.iconBg} text-white text-sm font-bold flex items-center justify-center mr-3 flex-shrink-0`}>{calloutConfig.symbol}</span>
               <div>
                 {block.title && <h4 className={`font-semibold ${calloutConfig.text} mb-1`}>{block.title}</h4>}
                 <p className="text-gray-700 text-sm leading-relaxed">{block.content}</p>
