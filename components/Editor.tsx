@@ -375,6 +375,10 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   const [showDesignTemplates, setShowDesignTemplates] = useState(false);
   const [selectedTemplateCategory, setSelectedTemplateCategory] = useState<DesignTemplate['category']>('header');
   const templateCategories = getCategories();
+  
+  // Template Preview Modal State
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<DesignTemplate | null>(null);
 
   // --- Handlers ---
 
@@ -975,6 +979,93 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
           </div>
       )}
 
+      {/* Design Template Gallery Modal */}
+      {showTemplateModal && (
+          <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+                  {/* Modal Header */}
+                  <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-gradient-to-r from-pink-50 to-purple-50">
+                      <div>
+                          <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                              <span className="material-icons text-pink-500">palette</span>
+                              精美设计格式库
+                          </h3>
+                          <p className="text-sm text-gray-500 mt-1">点击任意模板即可插入到文章中</p>
+                      </div>
+                      <button onClick={() => setShowTemplateModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition">
+                          <span className="material-icons text-gray-400">close</span>
+                      </button>
+                  </div>
+                  
+                  {/* Category Tabs */}
+                  <div className="flex gap-2 p-4 bg-gray-50 border-b border-gray-100 overflow-x-auto">
+                      {templateCategories.map((cat) => (
+                          <button
+                              key={cat.id}
+                              onClick={() => setSelectedTemplateCategory(cat.id)}
+                              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition whitespace-nowrap ${
+                                  selectedTemplateCategory === cat.id 
+                                      ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg' 
+                                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                              }`}
+                          >
+                              <span className="text-lg">{cat.icon}</span>
+                              <span>{cat.nameZh}</span>
+                          </button>
+                      ))}
+                  </div>
+                  
+                  {/* Templates Grid */}
+                  <div className="flex-1 overflow-y-auto p-5">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {getTemplatesByCategory(selectedTemplateCategory).map((template) => (
+                              <div 
+                                  key={template.id}
+                                  className="border border-gray-200 rounded-xl overflow-hidden hover:border-pink-300 hover:shadow-lg transition-all cursor-pointer group"
+                                  onClick={() => {
+                                      handleInsertTemplate(template);
+                                      setShowTemplateModal(false);
+                                  }}
+                              >
+                                  {/* Template Info */}
+                                  <div className="p-4 bg-white border-b border-gray-100">
+                                      <div className="flex items-center justify-between">
+                                          <div>
+                                              <h4 className="font-bold text-gray-800">{template.nameZh}</h4>
+                                              <p className="text-xs text-gray-500 mt-1">{template.previewZh}</p>
+                                          </div>
+                                          <span className="text-xs bg-pink-100 text-pink-600 px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition font-medium">
+                                              点击插入
+                                          </span>
+                                      </div>
+                                  </div>
+                                  {/* Live Preview - Safe: template.html is from internal trusted source */}
+                                  <div 
+                                      className="p-4 bg-gray-50 min-h-[100px] flex items-center justify-center"
+                                      dangerouslySetInnerHTML={{ __html: template.html }}
+                                  />
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+                  
+                  {/* Modal Footer */}
+                  <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
+                      <div className="text-sm text-gray-500 flex items-center gap-2">
+                          <span className="material-icons text-lg text-pink-400">lightbulb</span>
+                          模板插入后可在右侧预览中编辑内容
+                      </div>
+                      <button 
+                          onClick={() => setShowTemplateModal(false)}
+                          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                      >
+                          关闭
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {/* Left Panel: Controls */}
       <div className="w-full lg:w-1/2 p-6 flex flex-col gap-6 overflow-y-auto bg-white border-r border-gray-200">
         <div className="flex justify-between items-start">
@@ -1400,13 +1491,24 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
             <div className="flex items-center gap-2">
               <span className="material-icons text-pink-600">palette</span>
               <span className="font-semibold text-gray-800">精美设计格式库</span>
-              <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">NEW</span>
+              <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">25+</span>
             </div>
             <span className={`material-icons text-gray-500 transition-transform ${showDesignTemplates ? 'rotate-180' : ''}`}>expand_more</span>
           </button>
           
           {showDesignTemplates && (
             <div className="p-4 bg-white">
+              {/* Quick Access Buttons */}
+              <div className="mb-4">
+                <button 
+                  onClick={() => setShowTemplateModal(true)}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg font-medium hover:from-pink-600 hover:to-purple-600 transition shadow-lg flex items-center justify-center gap-2"
+                >
+                  <span className="material-icons">grid_view</span>
+                  浏览全部模板（大图预览）
+                </button>
+              </div>
+
               {/* Category Tabs */}
               <div className="flex flex-wrap gap-1 mb-4 pb-3 border-b border-gray-100">
                 {templateCategories.map((cat) => (
@@ -1425,29 +1527,17 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                 ))}
               </div>
 
-              {/* Templates Grid */}
-              <div className="space-y-3 max-h-[300px] overflow-y-auto">
+              {/* Templates Grid - Compact View */}
+              <div className="grid grid-cols-2 gap-2 max-h-[250px] overflow-y-auto">
                 {getTemplatesByCategory(selectedTemplateCategory).map((template) => (
                   <div 
                     key={template.id}
-                    className="p-3 border border-gray-100 rounded-lg hover:border-pink-200 hover:bg-pink-50/50 transition cursor-pointer group"
+                    className="p-3 border border-gray-100 rounded-lg hover:border-pink-300 hover:bg-pink-50/50 transition cursor-pointer group text-center"
                     onClick={() => handleInsertTemplate(template)}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <div className="text-sm font-medium text-gray-800">{template.nameZh}</div>
-                        <div className="text-xs text-gray-500">{template.previewZh}</div>
-                      </div>
-                      <button className="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition">
-                        插入
-                      </button>
-                    </div>
-                    {/* Mini Preview - Safe: template.html is from internal trusted source (designTemplates.ts) */}
-                    <div 
-                      className="text-xs p-2 bg-white border border-gray-100 rounded overflow-hidden max-h-[60px]"
-                      style={{ transform: 'scale(0.8)', transformOrigin: 'top left', width: '125%' }}
-                      dangerouslySetInnerHTML={{ __html: template.html.slice(0, 500) }}
-                    />
+                    <div className="text-sm font-medium text-gray-800 truncate">{template.nameZh}</div>
+                    <div className="text-xs text-gray-400 truncate">{template.previewZh}</div>
+                    <div className="mt-2 text-xs text-pink-500 opacity-0 group-hover:opacity-100 transition">点击插入 →</div>
                   </div>
                 ))}
               </div>
@@ -1455,8 +1545,8 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
               {/* Usage Tip */}
               <div className="mt-4 pt-3 border-t border-gray-100">
                 <div className="text-xs text-gray-500 flex items-center gap-1">
-                  <span className="material-icons text-sm">info</span>
-                  点击模板即可插入到文章末尾，然后在预览中编辑内容
+                  <span className="material-icons text-sm">lightbulb</span>
+                  点击"浏览全部模板"查看精美大图预览
                 </div>
               </div>
             </div>
