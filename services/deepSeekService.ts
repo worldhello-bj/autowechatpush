@@ -151,3 +151,470 @@ export const generateArticleStructureDeepSeek = async (
     throw error;
   }
 };
+
+// --- Helper for DeepSeek API calls ---
+const callDeepSeekAPI = async (apiKey: string, messages: any[], temperature: number = 0.7): Promise<string> => {
+  const response = await fetch(BASE_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: "deepseek-chat",
+      messages,
+      temperature
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(`DeepSeek API Error: ${err.error?.message || response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
+};
+
+// --- New AI Methods for Design Richness ---
+
+/**
+ * Generate multiple attractive title suggestions for an article
+ */
+export const generateTitleSuggestionsDeepSeek = async (
+  content: string,
+  count: number = 5,
+  apiKey: string
+): Promise<string[]> => {
+  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+
+  try {
+    const text = await callDeepSeekAPI(apiKey, [
+      { role: "system", content: "You are a creative content writer specializing in catchy headlines." },
+      { role: "user", content: `
+        Based on the following article content, generate ${count} attractive and engaging title suggestions suitable for a WeChat Official Account article.
+        
+        Requirements:
+        - Each title should be unique and capture different angles of the content
+        - Titles should be catchy, clickable, and suitable for Chinese social media
+        - Include a mix of styles: informative, emotional, question-based, and surprising
+        - Keep titles concise (preferably under 30 characters)
+        
+        Article Content:
+        """
+        ${content.slice(0, 2000)}
+        """
+        
+        Return ONLY a JSON array of title strings, like: ["Title 1", "Title 2", ...]
+      ` }
+    ], 0.8);
+
+    const match = text.match(/\[[\s\S]*\]/);
+    if (match) {
+      return JSON.parse(match[0]);
+    }
+    return [];
+  } catch (error) {
+    console.error("DeepSeek title generation failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Generate a concise summary/digest for an article
+ */
+export const generateSummaryDeepSeek = async (
+  content: string,
+  maxLength: number = 120,
+  apiKey: string
+): Promise<string> => {
+  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+
+  try {
+    const text = await callDeepSeekAPI(apiKey, [
+      { role: "system", content: "You are an expert at creating concise, compelling article summaries." },
+      { role: "user", content: `
+        Generate a concise and engaging summary for the following article content.
+        The summary should be suitable as a WeChat article digest/description.
+        
+        Requirements:
+        - Maximum ${maxLength} characters
+        - Capture the main essence of the article
+        - Make it compelling to encourage readers to click
+        - Write in the same language as the content
+        
+        Article Content:
+        """
+        ${content.slice(0, 3000)}
+        """
+        
+        Return ONLY the summary text, nothing else.
+      ` }
+    ], 0.5);
+
+    return text.trim();
+  } catch (error) {
+    console.error("DeepSeek summary generation failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Expand a paragraph or section with more details
+ */
+export const expandContentDeepSeek = async (
+  content: string,
+  style: 'detailed' | 'examples' | 'storytelling' = 'detailed',
+  apiKey: string
+): Promise<string> => {
+  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+
+  const stylePrompts = {
+    detailed: 'Add more detailed explanations, facts, and depth to the content.',
+    examples: 'Expand with concrete examples, case studies, and practical applications.',
+    storytelling: 'Expand using storytelling techniques, anecdotes, and narrative elements.'
+  };
+
+  try {
+    const text = await callDeepSeekAPI(apiKey, [
+      { role: "system", content: "You are a skilled content writer who excels at expanding ideas." },
+      { role: "user", content: `
+        Expand the following content while maintaining its core message and tone.
+        
+        Expansion Style: ${stylePrompts[style]}
+        
+        Original Content:
+        """
+        ${content}
+        """
+        
+        Requirements:
+        - Expand to approximately 2-3x the original length
+        - Maintain the original voice and style
+        - Add valuable information, not just filler
+        - Keep it suitable for a WeChat article
+        
+        Return ONLY the expanded content, nothing else.
+      ` }
+    ], 0.7);
+
+    return text.trim() || content;
+  } catch (error) {
+    console.error("DeepSeek content expansion failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Polish and improve content style and grammar
+ */
+export const polishContentDeepSeek = async (
+  content: string,
+  tone: 'professional' | 'casual' | 'formal' | 'creative' = 'professional',
+  apiKey: string
+): Promise<string> => {
+  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+
+  const toneDescriptions = {
+    professional: 'professional, clear, and authoritative',
+    casual: 'friendly, conversational, and approachable',
+    formal: 'formal, academic, and scholarly',
+    creative: 'creative, vivid, and engaging with literary flair'
+  };
+
+  try {
+    const text = await callDeepSeekAPI(apiKey, [
+      { role: "system", content: "You are an expert editor skilled at polishing and improving content." },
+      { role: "user", content: `
+        Polish and improve the following content while making it sound more ${toneDescriptions[tone]}.
+        
+        Original Content:
+        """
+        ${content}
+        """
+        
+        Requirements:
+        - Fix any grammar or spelling errors
+        - Improve sentence structure and flow
+        - Enhance word choice for better impact
+        - Maintain the original meaning
+        - Keep approximately the same length
+        
+        Return ONLY the polished content, nothing else.
+      ` }
+    ], 0.5);
+
+    return text.trim() || content;
+  } catch (error) {
+    console.error("DeepSeek content polish failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Extract keywords from content for SEO purposes
+ */
+export const extractKeywordsDeepSeek = async (
+  content: string,
+  count: number = 10,
+  apiKey: string
+): Promise<string[]> => {
+  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+
+  try {
+    const text = await callDeepSeekAPI(apiKey, [
+      { role: "system", content: "You are an SEO expert skilled at identifying key terms and phrases." },
+      { role: "user", content: `
+        Extract the ${count} most important keywords or key phrases from the following content.
+        These keywords should be useful for SEO and content tagging.
+        
+        Content:
+        """
+        ${content.slice(0, 3000)}
+        """
+        
+        Requirements:
+        - Include both single words and short phrases
+        - Focus on topics, themes, and important concepts
+        - Prioritize by relevance and search potential
+        
+        Return ONLY a JSON array of keyword strings, like: ["keyword1", "keyword2", ...]
+      ` }
+    ], 0.3);
+
+    const match = text.match(/\[[\s\S]*\]/);
+    if (match) {
+      return JSON.parse(match[0]);
+    }
+    return [];
+  } catch (error) {
+    console.error("DeepSeek keyword extraction failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Translate content between Chinese and English
+ */
+export const translateContentDeepSeek = async (
+  content: string,
+  targetLanguage: 'zh' | 'en',
+  apiKey: string
+): Promise<string> => {
+  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+
+  const targetLangName = targetLanguage === 'zh' ? 'Chinese (Simplified)' : 'English';
+
+  try {
+    const text = await callDeepSeekAPI(apiKey, [
+      { role: "system", content: "You are an expert translator fluent in both Chinese and English." },
+      { role: "user", content: `
+        Translate the following content to ${targetLangName}.
+        
+        Content:
+        """
+        ${content}
+        """
+        
+        Requirements:
+        - Provide a natural, fluent translation
+        - Maintain the original tone and style
+        - Preserve any formatting markers if present
+        - Adapt idioms and expressions appropriately
+        
+        Return ONLY the translated content, nothing else.
+      ` }
+    ], 0.3);
+
+    return text.trim() || content;
+  } catch (error) {
+    console.error("DeepSeek translation failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Suggest visual styles based on content theme
+ */
+export interface StyleSuggestion {
+  style: string;
+  reason: string;
+  colorScheme: string[];
+  mood: string;
+}
+
+export const suggestStylesDeepSeek = async (
+  content: string,
+  apiKey: string
+): Promise<StyleSuggestion[]> => {
+  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+
+  try {
+    const text = await callDeepSeekAPI(apiKey, [
+      { role: "system", content: "You are a design expert skilled at visual styling for articles." },
+      { role: "user", content: `
+        Analyze the following article content and suggest appropriate visual styles for a WeChat article.
+        
+        Content:
+        """
+        ${content.slice(0, 2000)}
+        """
+        
+        Return a JSON array with 3 style suggestions. Each suggestion should have:
+        - style: The main style name (e.g., "professional", "playful", "elegant", "tech", "nature")
+        - reason: Brief explanation of why this style fits
+        - colorScheme: Array of 3-4 recommended colors (use names like "blue", "red", "gold", etc.)
+        - mood: The overall mood this style conveys
+        
+        Available colors: red, blue, purple, orange, gold, green, pink, cyan, gradient
+        
+        Return ONLY a valid JSON array like:
+        [{"style": "...", "reason": "...", "colorScheme": ["...", "..."], "mood": "..."}, ...]
+      ` }
+    ], 0.6);
+
+    const match = text.match(/\[[\s\S]*\]/);
+    if (match) {
+      return JSON.parse(match[0]);
+    }
+    return [];
+  } catch (error) {
+    console.error("DeepSeek style suggestion failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Generate an engaging article opening/hook
+ */
+export const generateHookDeepSeek = async (
+  topic: string,
+  style: 'question' | 'story' | 'statistic' | 'quote' | 'surprising' = 'question',
+  apiKey: string
+): Promise<string> => {
+  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+
+  const styleDescriptions = {
+    question: 'Start with a thought-provoking question that engages the reader',
+    story: 'Begin with a short, compelling anecdote or mini-story',
+    statistic: 'Open with a surprising or impactful statistic or fact',
+    quote: 'Start with an inspiring or relevant quote',
+    surprising: 'Begin with a surprising or counterintuitive statement'
+  };
+
+  try {
+    const text = await callDeepSeekAPI(apiKey, [
+      { role: "system", content: "You are a creative writer skilled at writing engaging article openings." },
+      { role: "user", content: `
+        Generate an engaging article opening/hook for an article about: "${topic}"
+        
+        Style: ${styleDescriptions[style]}
+        
+        Requirements:
+        - Keep it concise (2-4 sentences)
+        - Make it immediately captivating
+        - Create curiosity to continue reading
+        - Suitable for WeChat article audience
+        
+        Return ONLY the opening paragraph, nothing else.
+      ` }
+    ], 0.8);
+
+    return text.trim();
+  } catch (error) {
+    console.error("DeepSeek hook generation failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Generate a compelling call-to-action for article ending
+ */
+export const generateCTADeepSeek = async (
+  articleContext: string,
+  ctaType: 'subscribe' | 'share' | 'comment' | 'action' | 'reflection' = 'share',
+  apiKey: string
+): Promise<string> => {
+  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+
+  const ctaDescriptions = {
+    subscribe: 'Encourage readers to follow/subscribe to the account',
+    share: 'Encourage readers to share the article with others',
+    comment: 'Encourage readers to leave comments and engage in discussion',
+    action: 'Encourage readers to take a specific action related to the content',
+    reflection: 'End with a reflective thought or question for the reader to ponder'
+  };
+
+  try {
+    const text = await callDeepSeekAPI(apiKey, [
+      { role: "system", content: "You are a marketing expert skilled at writing compelling calls-to-action." },
+      { role: "user", content: `
+        Generate a compelling call-to-action ending for an article with this context:
+        """
+        ${articleContext.slice(0, 1000)}
+        """
+        
+        CTA Type: ${ctaDescriptions[ctaType]}
+        
+        Requirements:
+        - Keep it natural and not too salesy
+        - Make it relevant to the article content
+        - Be warm and engaging
+        - 2-3 sentences maximum
+        
+        Return ONLY the CTA text, nothing else.
+      ` }
+    ], 0.7);
+
+    return text.trim();
+  } catch (error) {
+    console.error("DeepSeek CTA generation failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Rewrite content in a different style or perspective
+ */
+export const rewriteContentDeepSeek = async (
+  content: string,
+  newStyle: 'humorous' | 'serious' | 'inspirational' | 'educational' | 'conversational',
+  apiKey: string
+): Promise<string> => {
+  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+
+  const styleDescriptions = {
+    humorous: 'witty, playful, with appropriate humor and light-hearted tone',
+    serious: 'serious, thoughtful, with gravitas and depth',
+    inspirational: 'uplifting, motivational, with emotional resonance',
+    educational: 'informative, clear, with structured explanations',
+    conversational: 'friendly, casual, as if talking to a friend'
+  };
+
+  try {
+    const text = await callDeepSeekAPI(apiKey, [
+      { role: "system", content: "You are a versatile writer skilled at adapting content to different styles." },
+      { role: "user", content: `
+        Rewrite the following content in a ${styleDescriptions[newStyle]} style.
+        
+        Original Content:
+        """
+        ${content}
+        """
+        
+        Requirements:
+        - Completely transform the tone and style
+        - Keep the core message and facts intact
+        - Maintain approximately the same length
+        - Make it suitable for WeChat article format
+        
+        Return ONLY the rewritten content, nothing else.
+      ` }
+    ], 0.8);
+
+    return text.trim() || content;
+  } catch (error) {
+    console.error("DeepSeek content rewrite failed:", error);
+    throw error;
+  }
+};

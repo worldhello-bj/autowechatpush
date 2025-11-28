@@ -1,8 +1,50 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { generateArticleStructure, analyzeImage, generateSpeech, GenerationResult } from '../services/geminiService';
-import { generateArticleStructureDeepSeek } from '../services/deepSeekService';
-import { generateArticleStructureQwen, analyzeImageQwen, generateSpeechQwen } from '../services/qwenService';
+import { 
+  generateArticleStructure, 
+  analyzeImage, 
+  generateSpeech, 
+  GenerationResult,
+  generateTitleSuggestions,
+  generateSummary,
+  expandContent,
+  polishContent,
+  extractKeywords,
+  translateContent,
+  suggestStyles,
+  generateHook,
+  generateCTA,
+  rewriteContent,
+  StyleSuggestion
+} from '../services/geminiService';
+import { 
+  generateArticleStructureDeepSeek,
+  generateTitleSuggestionsDeepSeek,
+  generateSummaryDeepSeek,
+  expandContentDeepSeek,
+  polishContentDeepSeek,
+  extractKeywordsDeepSeek,
+  translateContentDeepSeek,
+  suggestStylesDeepSeek,
+  generateHookDeepSeek,
+  generateCTADeepSeek,
+  rewriteContentDeepSeek
+} from '../services/deepSeekService';
+import { 
+  generateArticleStructureQwen, 
+  analyzeImageQwen, 
+  generateSpeechQwen,
+  generateTitleSuggestionsQwen,
+  generateSummaryQwen,
+  expandContentQwen,
+  polishContentQwen,
+  extractKeywordsQwen,
+  translateContentQwen,
+  suggestStylesQwen,
+  generateHookQwen,
+  generateCTAQwen,
+  rewriteContentQwen
+} from '../services/qwenService';
 import HtmlEditor from './HtmlEditor';
 import { ArticleBlock, GroundingSource, WeChatCredentials, BlockType, AIProvider } from '../types';
 import { getAccessToken, saveDraft, uploadImage } from '../services/wechatService';
@@ -301,6 +343,15 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   // Draft State
   const [foundDraft, setFoundDraft] = useState(false);
 
+  // AI Tools Panel State
+  const [showAITools, setShowAITools] = useState(false);
+  const [aiToolLoading, setAiToolLoading] = useState(false);
+  const [titleSuggestions, setTitleSuggestions] = useState<string[]>([]);
+  const [keywords, setKeywords] = useState<string[]>([]);
+  const [styleSuggestions, setStyleSuggestions] = useState<StyleSuggestion[]>([]);
+  const [generatedHook, setGeneratedHook] = useState('');
+  const [generatedCTA, setGeneratedCTA] = useState('');
+
   // --- Handlers ---
 
   const handleGenerate = async () => {
@@ -506,6 +557,254 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   const handleConfigSave = () => {
       localStorage.setItem(CREDS_KEY, JSON.stringify(wechatCreds));
       setShowConfig(false);
+  };
+
+  // --- AI Tools Handlers ---
+  
+  const getPlainTextContent = () => {
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = htmlContent;
+    return tempDiv.textContent || tempDiv.innerText || "";
+  };
+
+  const handleGenerateTitles = async () => {
+    const content = getPlainTextContent();
+    if (content.length < 50) {
+      onError("Please generate some article content first.");
+      return;
+    }
+    setAiToolLoading(true);
+    try {
+      let titles: string[] = [];
+      if (aiProvider === AIProvider.DEEPSEEK) {
+        titles = await generateTitleSuggestionsDeepSeek(content, 5, deepSeekApiKey);
+      } else if (aiProvider === AIProvider.QWEN) {
+        titles = await generateTitleSuggestionsQwen(content, 5, dashScopeApiKey);
+      } else {
+        titles = await generateTitleSuggestions(content, 5, googleApiKey);
+      }
+      setTitleSuggestions(titles);
+    } catch (e: any) {
+      onError(e.message || "Failed to generate titles");
+    } finally {
+      setAiToolLoading(false);
+    }
+  };
+
+  const handleGenerateSummary = async () => {
+    const content = getPlainTextContent();
+    if (content.length < 50) {
+      onError("Please generate some article content first.");
+      return;
+    }
+    setAiToolLoading(true);
+    try {
+      let summary: string = "";
+      if (aiProvider === AIProvider.DEEPSEEK) {
+        summary = await generateSummaryDeepSeek(content, 120, deepSeekApiKey);
+      } else if (aiProvider === AIProvider.QWEN) {
+        summary = await generateSummaryQwen(content, 120, dashScopeApiKey);
+      } else {
+        summary = await generateSummary(content, 120, googleApiKey);
+      }
+      setArticleDigest(summary);
+    } catch (e: any) {
+      onError(e.message || "Failed to generate summary");
+    } finally {
+      setAiToolLoading(false);
+    }
+  };
+
+  const handleExtractKeywords = async () => {
+    const content = getPlainTextContent();
+    if (content.length < 50) {
+      onError("Please generate some article content first.");
+      return;
+    }
+    setAiToolLoading(true);
+    try {
+      let kws: string[] = [];
+      if (aiProvider === AIProvider.DEEPSEEK) {
+        kws = await extractKeywordsDeepSeek(content, 10, deepSeekApiKey);
+      } else if (aiProvider === AIProvider.QWEN) {
+        kws = await extractKeywordsQwen(content, 10, dashScopeApiKey);
+      } else {
+        kws = await extractKeywords(content, 10, googleApiKey);
+      }
+      setKeywords(kws);
+    } catch (e: any) {
+      onError(e.message || "Failed to extract keywords");
+    } finally {
+      setAiToolLoading(false);
+    }
+  };
+
+  const handleSuggestStyles = async () => {
+    const content = getPlainTextContent();
+    if (content.length < 50) {
+      onError("Please generate some article content first.");
+      return;
+    }
+    setAiToolLoading(true);
+    try {
+      let styles: StyleSuggestion[] = [];
+      if (aiProvider === AIProvider.DEEPSEEK) {
+        styles = await suggestStylesDeepSeek(content, deepSeekApiKey);
+      } else if (aiProvider === AIProvider.QWEN) {
+        styles = await suggestStylesQwen(content, dashScopeApiKey);
+      } else {
+        styles = await suggestStyles(content, googleApiKey);
+      }
+      setStyleSuggestions(styles);
+    } catch (e: any) {
+      onError(e.message || "Failed to suggest styles");
+    } finally {
+      setAiToolLoading(false);
+    }
+  };
+
+  const handleGenerateHook = async (style: 'question' | 'story' | 'statistic' | 'quote' | 'surprising') => {
+    if (!topic.trim()) {
+      onError("Please enter a topic first.");
+      return;
+    }
+    setAiToolLoading(true);
+    try {
+      let hook: string = "";
+      if (aiProvider === AIProvider.DEEPSEEK) {
+        hook = await generateHookDeepSeek(topic, style, deepSeekApiKey);
+      } else if (aiProvider === AIProvider.QWEN) {
+        hook = await generateHookQwen(topic, style, dashScopeApiKey);
+      } else {
+        hook = await generateHook(topic, style, googleApiKey);
+      }
+      setGeneratedHook(hook);
+    } catch (e: any) {
+      onError(e.message || "Failed to generate hook");
+    } finally {
+      setAiToolLoading(false);
+    }
+  };
+
+  const handleGenerateCTA = async (ctaType: 'subscribe' | 'share' | 'comment' | 'action' | 'reflection') => {
+    const content = getPlainTextContent();
+    if (content.length < 50) {
+      onError("Please generate some article content first.");
+      return;
+    }
+    setAiToolLoading(true);
+    try {
+      let cta: string = "";
+      if (aiProvider === AIProvider.DEEPSEEK) {
+        cta = await generateCTADeepSeek(content, ctaType, deepSeekApiKey);
+      } else if (aiProvider === AIProvider.QWEN) {
+        cta = await generateCTAQwen(content, ctaType, dashScopeApiKey);
+      } else {
+        cta = await generateCTA(content, ctaType, googleApiKey);
+      }
+      setGeneratedCTA(cta);
+    } catch (e: any) {
+      onError(e.message || "Failed to generate CTA");
+    } finally {
+      setAiToolLoading(false);
+    }
+  };
+
+  const handlePolishContent = async (tone: 'professional' | 'casual' | 'formal' | 'creative') => {
+    const content = getPlainTextContent();
+    if (content.length < 50) {
+      onError("Please generate some article content first.");
+      return;
+    }
+    setAiToolLoading(true);
+    try {
+      let polished: string = "";
+      if (aiProvider === AIProvider.DEEPSEEK) {
+        polished = await polishContentDeepSeek(content, tone, deepSeekApiKey);
+      } else if (aiProvider === AIProvider.QWEN) {
+        polished = await polishContentQwen(content, tone, dashScopeApiKey);
+      } else {
+        polished = await polishContent(content, tone, googleApiKey);
+      }
+      // Convert polished text back to simple HTML
+      setHtmlContent(`<p style="font-size: 16px; line-height: 1.8; color: #444;">${polished.replace(/\n\n/g, '</p><p style="font-size: 16px; line-height: 1.8; color: #444; margin-top: 16px;">').replace(/\n/g, '<br/>')}</p>`);
+    } catch (e: any) {
+      onError(e.message || "Failed to polish content");
+    } finally {
+      setAiToolLoading(false);
+    }
+  };
+
+  const handleRewriteContent = async (style: 'humorous' | 'serious' | 'inspirational' | 'educational' | 'conversational') => {
+    const content = getPlainTextContent();
+    if (content.length < 50) {
+      onError("Please generate some article content first.");
+      return;
+    }
+    setAiToolLoading(true);
+    try {
+      let rewritten: string = "";
+      if (aiProvider === AIProvider.DEEPSEEK) {
+        rewritten = await rewriteContentDeepSeek(content, style, deepSeekApiKey);
+      } else if (aiProvider === AIProvider.QWEN) {
+        rewritten = await rewriteContentQwen(content, style, dashScopeApiKey);
+      } else {
+        rewritten = await rewriteContent(content, style, googleApiKey);
+      }
+      setHtmlContent(`<p style="font-size: 16px; line-height: 1.8; color: #444;">${rewritten.replace(/\n\n/g, '</p><p style="font-size: 16px; line-height: 1.8; color: #444; margin-top: 16px;">').replace(/\n/g, '<br/>')}</p>`);
+    } catch (e: any) {
+      onError(e.message || "Failed to rewrite content");
+    } finally {
+      setAiToolLoading(false);
+    }
+  };
+
+  const handleTranslate = async (targetLang: 'zh' | 'en') => {
+    const content = getPlainTextContent();
+    if (content.length < 10) {
+      onError("Please generate some article content first.");
+      return;
+    }
+    setAiToolLoading(true);
+    try {
+      let translated: string = "";
+      if (aiProvider === AIProvider.DEEPSEEK) {
+        translated = await translateContentDeepSeek(content, targetLang, deepSeekApiKey);
+      } else if (aiProvider === AIProvider.QWEN) {
+        translated = await translateContentQwen(content, targetLang, dashScopeApiKey);
+      } else {
+        translated = await translateContent(content, targetLang, googleApiKey);
+      }
+      setHtmlContent(`<p style="font-size: 16px; line-height: 1.8; color: #444;">${translated.replace(/\n\n/g, '</p><p style="font-size: 16px; line-height: 1.8; color: #444; margin-top: 16px;">').replace(/\n/g, '<br/>')}</p>`);
+    } catch (e: any) {
+      onError(e.message || "Failed to translate content");
+    } finally {
+      setAiToolLoading(false);
+    }
+  };
+
+  const handleExpandContent = async (style: 'detailed' | 'examples' | 'storytelling') => {
+    const content = getPlainTextContent();
+    if (content.length < 30) {
+      onError("Please generate some article content first.");
+      return;
+    }
+    setAiToolLoading(true);
+    try {
+      let expanded: string = "";
+      if (aiProvider === AIProvider.DEEPSEEK) {
+        expanded = await expandContentDeepSeek(content, style, deepSeekApiKey);
+      } else if (aiProvider === AIProvider.QWEN) {
+        expanded = await expandContentQwen(content, style, dashScopeApiKey);
+      } else {
+        expanded = await expandContent(content, style, googleApiKey);
+      }
+      setHtmlContent(`<p style="font-size: 16px; line-height: 1.8; color: #444;">${expanded.replace(/\n\n/g, '</p><p style="font-size: 16px; line-height: 1.8; color: #444; margin-top: 16px;">').replace(/\n/g, '<br/>')}</p>`);
+    } catch (e: any) {
+      onError(e.message || "Failed to expand content");
+    } finally {
+      setAiToolLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -779,6 +1078,284 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                 </ul>
             </div>
         )}
+
+        {/* AI Tools Panel */}
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <button 
+            onClick={() => setShowAITools(!showAITools)}
+            className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100 transition"
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-icons text-purple-600">psychology</span>
+              <span className="font-semibold text-gray-800">AI Creative Tools</span>
+              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">NEW</span>
+            </div>
+            <span className={`material-icons text-gray-500 transition-transform ${showAITools ? 'rotate-180' : ''}`}>expand_more</span>
+          </button>
+          
+          {showAITools && (
+            <div className="p-4 bg-white space-y-4">
+              {/* Loading Indicator */}
+              {aiToolLoading && (
+                <div className="flex items-center justify-center py-2 text-purple-600">
+                  <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span className="text-sm">Processing...</span>
+                </div>
+              )}
+
+              {/* Title Suggestions */}
+              <div className="border-b border-gray-100 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                    <span className="material-icons text-sm text-orange-500">title</span>
+                    Title Suggestions
+                  </h4>
+                  <button
+                    onClick={handleGenerateTitles}
+                    disabled={aiToolLoading}
+                    className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded hover:bg-orange-200 disabled:opacity-50"
+                  >
+                    Generate
+                  </button>
+                </div>
+                {titleSuggestions.length > 0 && (
+                  <div className="space-y-1">
+                    {titleSuggestions.map((title, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setArticleTitle(title)}
+                        className="w-full text-left text-xs p-2 bg-orange-50 hover:bg-orange-100 rounded border border-orange-100 transition truncate"
+                      >
+                        {title}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Summary & Keywords */}
+              <div className="flex gap-2 border-b border-gray-100 pb-4">
+                <button
+                  onClick={handleGenerateSummary}
+                  disabled={aiToolLoading}
+                  className="flex-1 flex items-center justify-center gap-1 text-xs bg-blue-100 text-blue-700 px-3 py-2 rounded hover:bg-blue-200 disabled:opacity-50"
+                >
+                  <span className="material-icons text-sm">summarize</span>
+                  Auto Summary
+                </button>
+                <button
+                  onClick={handleExtractKeywords}
+                  disabled={aiToolLoading}
+                  className="flex-1 flex items-center justify-center gap-1 text-xs bg-green-100 text-green-700 px-3 py-2 rounded hover:bg-green-200 disabled:opacity-50"
+                >
+                  <span className="material-icons text-sm">sell</span>
+                  Extract Keywords
+                </button>
+              </div>
+
+              {/* Keywords Display */}
+              {keywords.length > 0 && (
+                <div className="flex flex-wrap gap-1 border-b border-gray-100 pb-4">
+                  {keywords.map((kw, idx) => (
+                    <span key={idx} className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded-full border border-green-100">
+                      {kw}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Hook Generation */}
+              <div className="border-b border-gray-100 pb-4">
+                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
+                  <span className="material-icons text-sm text-purple-500">psychology</span>
+                  Generate Opening Hook
+                </h4>
+                <div className="flex flex-wrap gap-1">
+                  {(['question', 'story', 'statistic', 'quote', 'surprising'] as const).map((style) => (
+                    <button
+                      key={style}
+                      onClick={() => handleGenerateHook(style)}
+                      disabled={aiToolLoading}
+                      className="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded hover:bg-purple-100 disabled:opacity-50 capitalize"
+                    >
+                      {style}
+                    </button>
+                  ))}
+                </div>
+                {generatedHook && (
+                  <div className="mt-2 p-2 bg-purple-50 rounded text-xs text-gray-700 border border-purple-100">
+                    {generatedHook}
+                    <button
+                      onClick={() => {
+                        const newContent = `<p style="font-size: 16px; line-height: 1.8; color: #444; font-style: italic; background: #f8f4ff; padding: 16px; border-radius: 8px; border-left: 4px solid #9b59b6;">${generatedHook}</p>` + htmlContent;
+                        setHtmlContent(newContent);
+                      }}
+                      className="block mt-2 text-purple-600 hover:underline"
+                    >
+                      + Insert at beginning
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* CTA Generation */}
+              <div className="border-b border-gray-100 pb-4">
+                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
+                  <span className="material-icons text-sm text-red-500">campaign</span>
+                  Generate Call-to-Action
+                </h4>
+                <div className="flex flex-wrap gap-1">
+                  {(['subscribe', 'share', 'comment', 'action', 'reflection'] as const).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => handleGenerateCTA(type)}
+                      disabled={aiToolLoading}
+                      className="text-xs bg-red-50 text-red-700 px-2 py-1 rounded hover:bg-red-100 disabled:opacity-50 capitalize"
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+                {generatedCTA && (
+                  <div className="mt-2 p-2 bg-red-50 rounded text-xs text-gray-700 border border-red-100">
+                    {generatedCTA}
+                    <button
+                      onClick={() => {
+                        const newContent = htmlContent + `<p style="font-size: 16px; line-height: 1.8; color: #444; text-align: center; margin-top: 24px; padding: 16px; background: #fff0f0; border-radius: 8px; border: 1px solid #ffc2c2;">${generatedCTA}</p>`;
+                        setHtmlContent(newContent);
+                      }}
+                      className="block mt-2 text-red-600 hover:underline"
+                    >
+                      + Insert at end
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Style Suggestions */}
+              <div className="border-b border-gray-100 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                    <span className="material-icons text-sm text-pink-500">palette</span>
+                    Style Suggestions
+                  </h4>
+                  <button
+                    onClick={handleSuggestStyles}
+                    disabled={aiToolLoading}
+                    className="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded hover:bg-pink-200 disabled:opacity-50"
+                  >
+                    Analyze
+                  </button>
+                </div>
+                {styleSuggestions.length > 0 && (
+                  <div className="space-y-2">
+                    {styleSuggestions.map((s, idx) => (
+                      <div key={idx} className="p-2 bg-pink-50 rounded text-xs border border-pink-100">
+                        <div className="font-medium text-pink-800 capitalize">{s.style}</div>
+                        <div className="text-gray-600 mt-1">{s.reason}</div>
+                        <div className="flex gap-1 mt-2">
+                          {s.colorScheme.map((color, cidx) => (
+                            <span key={cidx} className="px-2 py-0.5 bg-white rounded border text-gray-600">
+                              {color}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="text-pink-600 mt-1 italic">Mood: {s.mood}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Content Polish */}
+              <div className="border-b border-gray-100 pb-4">
+                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
+                  <span className="material-icons text-sm text-cyan-500">auto_fix_high</span>
+                  Polish Content
+                </h4>
+                <div className="flex flex-wrap gap-1">
+                  {(['professional', 'casual', 'formal', 'creative'] as const).map((tone) => (
+                    <button
+                      key={tone}
+                      onClick={() => handlePolishContent(tone)}
+                      disabled={aiToolLoading}
+                      className="text-xs bg-cyan-50 text-cyan-700 px-2 py-1 rounded hover:bg-cyan-100 disabled:opacity-50 capitalize"
+                    >
+                      {tone}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Rewrite Content */}
+              <div className="border-b border-gray-100 pb-4">
+                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
+                  <span className="material-icons text-sm text-indigo-500">refresh</span>
+                  Rewrite Style
+                </h4>
+                <div className="flex flex-wrap gap-1">
+                  {(['humorous', 'serious', 'inspirational', 'educational', 'conversational'] as const).map((style) => (
+                    <button
+                      key={style}
+                      onClick={() => handleRewriteContent(style)}
+                      disabled={aiToolLoading}
+                      className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-100 disabled:opacity-50 capitalize"
+                    >
+                      {style}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Expand Content */}
+              <div className="border-b border-gray-100 pb-4">
+                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
+                  <span className="material-icons text-sm text-amber-500">unfold_more</span>
+                  Expand Content
+                </h4>
+                <div className="flex flex-wrap gap-1">
+                  {(['detailed', 'examples', 'storytelling'] as const).map((style) => (
+                    <button
+                      key={style}
+                      onClick={() => handleExpandContent(style)}
+                      disabled={aiToolLoading}
+                      className="text-xs bg-amber-50 text-amber-700 px-2 py-1 rounded hover:bg-amber-100 disabled:opacity-50 capitalize"
+                    >
+                      {style}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Translation */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
+                  <span className="material-icons text-sm text-teal-500">translate</span>
+                  Translate
+                </h4>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleTranslate('zh')}
+                    disabled={aiToolLoading}
+                    className="flex-1 text-xs bg-teal-50 text-teal-700 px-3 py-2 rounded hover:bg-teal-100 disabled:opacity-50"
+                  >
+                    → 中文
+                  </button>
+                  <button
+                    onClick={() => handleTranslate('en')}
+                    disabled={aiToolLoading}
+                    className="flex-1 text-xs bg-teal-50 text-teal-700 px-3 py-2 rounded hover:bg-teal-100 disabled:opacity-50"
+                  >
+                    → English
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Right Panel: Preview & Edit */}
