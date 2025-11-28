@@ -84,8 +84,16 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
   const handleAddMaterial = () => {
     if (!newMaterialContent.trim()) return;
 
+    // Generate a unique ID using crypto.randomUUID if available, fallback to timestamp-based
+    const generateId = (): string => {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return `mat_${crypto.randomUUID()}`;
+      }
+      return `mat_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    };
+
     const newMaterial: Material = {
-      id: `mat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateId(),
       type: uploadType,
       name: newMaterialName || `素材 ${materials.length + 1}`,
       content: newMaterialContent,
@@ -249,7 +257,7 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
                   />
                 ) : (
                   <div className="w-full h-full p-2 flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50">
-                    <p className="text-xs text-gray-600 line-clamp-4 text-center">
+                    <p className="text-xs text-gray-600 text-center overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' }}>
                       {material.content.slice(0, 60)}...
                     </p>
                   </div>

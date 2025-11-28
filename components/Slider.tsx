@@ -13,6 +13,23 @@ interface SliderProps {
   icon?: string;
 }
 
+// Color mapping for generating light background and text colors
+const getColorVariants = (colorClass: string): { bg: string; text: string } => {
+  const colorMap: Record<string, { bg: string; text: string }> = {
+    'bg-purple-500': { bg: 'bg-purple-100', text: 'text-purple-700' },
+    'bg-blue-500': { bg: 'bg-blue-100', text: 'text-blue-700' },
+    'bg-green-500': { bg: 'bg-green-100', text: 'text-green-700' },
+    'bg-orange-500': { bg: 'bg-orange-100', text: 'text-orange-700' },
+    'bg-pink-500': { bg: 'bg-pink-100', text: 'text-pink-700' },
+    'bg-red-500': { bg: 'bg-red-100', text: 'text-red-700' },
+    'bg-cyan-500': { bg: 'bg-cyan-100', text: 'text-cyan-700' },
+    'bg-indigo-500': { bg: 'bg-indigo-100', text: 'text-indigo-700' },
+    'bg-amber-500': { bg: 'bg-amber-100', text: 'text-amber-700' },
+    'bg-teal-500': { bg: 'bg-teal-100', text: 'text-teal-700' },
+  };
+  return colorMap[colorClass] || { bg: 'bg-gray-100', text: 'text-gray-700' };
+};
+
 const Slider: React.FC<SliderProps> = ({
   label,
   value,
@@ -27,6 +44,9 @@ const Slider: React.FC<SliderProps> = ({
 }) => {
   // Calculate percentage for the filled track
   const percentage = ((value - min) / (max - min)) * 100;
+  
+  // Get color variants for the value badge
+  const colorVariants = getColorVariants(colorClass);
 
   return (
     <div className="mb-4">
@@ -35,7 +55,7 @@ const Slider: React.FC<SliderProps> = ({
           {icon && <span className="material-icons text-sm text-gray-500">{icon}</span>}
           <span className="text-sm font-medium text-gray-700">{label}</span>
         </div>
-        <span className={`text-sm font-bold px-2 py-0.5 rounded ${colorClass.replace('bg-', 'bg-').replace('-500', '-100')} ${colorClass.replace('bg-', 'text-').replace('-500', '-700')}`}>
+        <span className={`text-sm font-bold px-2 py-0.5 rounded ${colorVariants.bg} ${colorVariants.text}`}>
           {value}{unit}
         </span>
       </div>
