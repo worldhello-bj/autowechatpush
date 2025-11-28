@@ -48,6 +48,12 @@ import {
 import HtmlEditor from './HtmlEditor';
 import { ArticleBlock, GroundingSource, WeChatCredentials, BlockType, AIProvider } from '../types';
 import { getAccessToken, saveDraft, uploadImage } from '../services/wechatService';
+import { 
+  allDesignTemplates, 
+  getCategories, 
+  getTemplatesByCategory, 
+  DesignTemplate 
+} from '../services/designTemplates';
 
 interface EditorProps {
   onError: (msg: string) => void;
@@ -364,6 +370,11 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   const [styleSuggestions, setStyleSuggestions] = useState<StyleSuggestion[]>([]);
   const [generatedHook, setGeneratedHook] = useState('');
   const [generatedCTA, setGeneratedCTA] = useState('');
+
+  // Design Templates Panel State
+  const [showDesignTemplates, setShowDesignTemplates] = useState(false);
+  const [selectedTemplateCategory, setSelectedTemplateCategory] = useState<DesignTemplate['category']>('header');
+  const templateCategories = getCategories();
 
   // --- Handlers ---
 
@@ -818,6 +829,14 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     } finally {
       setAiToolLoading(false);
     }
+  };
+
+  // --- Design Template Handler ---
+  const handleInsertTemplate = (template: DesignTemplate) => {
+    // Insert the template HTML at the end of current content with proper spacing
+    const separator = htmlContent.trim() ? '\n' : '';
+    const newContent = htmlContent + separator + template.html;
+    setHtmlContent(newContent);
   };
 
   useEffect(() => {
@@ -1366,6 +1385,78 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                   >
                     → English
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Design Templates Library Panel */}
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <button 
+            onClick={() => setShowDesignTemplates(!showDesignTemplates)}
+            className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-pink-50 to-orange-50 hover:from-pink-100 hover:to-orange-100 transition"
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-icons text-pink-600">palette</span>
+              <span className="font-semibold text-gray-800">精美设计格式库</span>
+              <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">NEW</span>
+            </div>
+            <span className={`material-icons text-gray-500 transition-transform ${showDesignTemplates ? 'rotate-180' : ''}`}>expand_more</span>
+          </button>
+          
+          {showDesignTemplates && (
+            <div className="p-4 bg-white">
+              {/* Category Tabs */}
+              <div className="flex flex-wrap gap-1 mb-4 pb-3 border-b border-gray-100">
+                {templateCategories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedTemplateCategory(cat.id)}
+                    className={`text-xs px-3 py-1.5 rounded-full transition flex items-center gap-1 ${
+                      selectedTemplateCategory === cat.id 
+                        ? 'bg-pink-500 text-white' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span>{cat.icon}</span>
+                    <span>{cat.nameZh}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Templates Grid */}
+              <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                {getTemplatesByCategory(selectedTemplateCategory).map((template) => (
+                  <div 
+                    key={template.id}
+                    className="p-3 border border-gray-100 rounded-lg hover:border-pink-200 hover:bg-pink-50/50 transition cursor-pointer group"
+                    onClick={() => handleInsertTemplate(template)}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <div className="text-sm font-medium text-gray-800">{template.nameZh}</div>
+                        <div className="text-xs text-gray-500">{template.previewZh}</div>
+                      </div>
+                      <button className="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition">
+                        插入
+                      </button>
+                    </div>
+                    {/* Mini Preview - Safe: template.html is from internal trusted source (designTemplates.ts) */}
+                    <div 
+                      className="text-xs p-2 bg-white border border-gray-100 rounded overflow-hidden max-h-[60px]"
+                      style={{ transform: 'scale(0.8)', transformOrigin: 'top left', width: '125%' }}
+                      dangerouslySetInnerHTML={{ __html: template.html.slice(0, 500) }}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Usage Tip */}
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <div className="text-xs text-gray-500 flex items-center gap-1">
+                  <span className="material-icons text-sm">info</span>
+                  点击模板即可插入到文章末尾，然后在预览中编辑内容
                 </div>
               </div>
             </div>
