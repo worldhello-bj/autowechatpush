@@ -35,7 +35,7 @@ const HtmlEditor: React.FC<HtmlEditorProps> = ({ initialHtml, onChange, title, a
         // Force update the visual editor with the current internal HTML
         contentRef.current.innerHTML = internalHtml;
     }
-  }, [showSource]);
+  }, [showSource, internalHtml]);
 
   const handleInput = () => {
     if (contentRef.current) {
@@ -123,8 +123,12 @@ const HtmlEditor: React.FC<HtmlEditorProps> = ({ initialHtml, onChange, title, a
     const file = e.target.files?.[0];
     if (file) {
         const reader = new FileReader();
+        reader.onerror = () => {
+            console.error("Failed to read image file");
+        };
         reader.onload = (ev) => {
             const src = ev.target?.result as string;
+            if (!src) return;
             const imgHtml = `
                 <section style="margin: 20px 0; text-align: center;">
                     <img src="${src}" style="max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />

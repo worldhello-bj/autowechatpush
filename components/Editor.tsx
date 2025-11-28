@@ -12,8 +12,15 @@ interface EditorProps {
 
 // --- Helper: Base64 to Blob ---
 const dataURLtoBlob = (dataurl: string): Blob => {
+    if (!dataurl || !dataurl.includes(',')) {
+        throw new Error('Invalid data URL format');
+    }
     const arr = dataurl.split(',');
-    const mime = arr[0].match(/:(.*?);/)?.[1];
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) {
+        throw new Error('Invalid data URL: missing MIME type');
+    }
+    const mime = mimeMatch[1];
     const bstr = atob(arr[1]);
     let n = bstr.length;
     const u8arr = new Uint8Array(n);
@@ -166,7 +173,14 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
 
     // Base64 Preview always works
     const reader = new FileReader();
+    reader.onerror = () => {
+      onError("Failed to read image file");
+    };
     reader.onloadend = async () => {
+      if (!reader.result || typeof reader.result !== 'string') {
+        onError("Failed to read image file");
+        return;
+      }
       const base64String = (reader.result as string).split(',')[1];
       const mimeType = file.type;
       setUploadedImagePreview(reader.result as string);
@@ -328,7 +342,9 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     if (rawCreds) {
         try {
             setWechatCreds(JSON.parse(rawCreds));
-        } catch(e) {}
+        } catch(e) {
+            console.error("Failed to parse WeChat credentials from localStorage:", e);
+        }
     }
 
     const savedProvider = localStorage.getItem(PROVIDER_KEY);
@@ -344,8 +360,16 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     if (savedDashKey) setDashScopeApiKey(savedDashKey);
 
     return () => {
-       if (audioSourceRef.current) audioSourceRef.current.stop();
-       if (audioContextRef.current) audioContextRef.current.close();
+       try {
+         if (audioSourceRef.current) audioSourceRef.current.stop();
+       } catch (e) {
+         // Audio source may already be stopped
+       }
+       try {
+         if (audioContextRef.current) audioContextRef.current.close();
+       } catch (e) {
+         // Audio context may already be closed
+       }
     };
   }, []);
 
