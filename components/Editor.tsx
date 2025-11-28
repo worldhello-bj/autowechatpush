@@ -121,6 +121,19 @@ const createDefaultCoverBlob = (titleText: string = "AI Article"): Promise<Blob>
     });
 }
 
+// --- Helper: HTML Escape for XSS Prevention ---
+const escapeHtml = (text: string): string => {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+};
+
+// --- Helper: Convert plain text to safe HTML ---
+const textToSafeHtml = (text: string): string => {
+  const escaped = escapeHtml(text);
+  return `<p style="font-size: 16px; line-height: 1.8; color: #444;">${escaped.replace(/\n\n/g, '</p><p style="font-size: 16px; line-height: 1.8; color: #444; margin-top: 16px;">').replace(/\n/g, '<br/>')}</p>`;
+};
+
 // --- Helper: Color Mapping ---
 const getStyleColors = (style?: string) => {
   switch(style) {
@@ -726,8 +739,8 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       } else {
         polished = await polishContent(content, tone, googleApiKey);
       }
-      // Convert polished text back to simple HTML
-      setHtmlContent(`<p style="font-size: 16px; line-height: 1.8; color: #444;">${polished.replace(/\n\n/g, '</p><p style="font-size: 16px; line-height: 1.8; color: #444; margin-top: 16px;">').replace(/\n/g, '<br/>')}</p>`);
+      // Convert polished text back to safe HTML
+      setHtmlContent(textToSafeHtml(polished));
     } catch (e: any) {
       onError(e.message || "Failed to polish content");
     } finally {
@@ -751,7 +764,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       } else {
         rewritten = await rewriteContent(content, style, googleApiKey);
       }
-      setHtmlContent(`<p style="font-size: 16px; line-height: 1.8; color: #444;">${rewritten.replace(/\n\n/g, '</p><p style="font-size: 16px; line-height: 1.8; color: #444; margin-top: 16px;">').replace(/\n/g, '<br/>')}</p>`);
+      setHtmlContent(textToSafeHtml(rewritten));
     } catch (e: any) {
       onError(e.message || "Failed to rewrite content");
     } finally {
@@ -775,7 +788,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       } else {
         translated = await translateContent(content, targetLang, googleApiKey);
       }
-      setHtmlContent(`<p style="font-size: 16px; line-height: 1.8; color: #444;">${translated.replace(/\n\n/g, '</p><p style="font-size: 16px; line-height: 1.8; color: #444; margin-top: 16px;">').replace(/\n/g, '<br/>')}</p>`);
+      setHtmlContent(textToSafeHtml(translated));
     } catch (e: any) {
       onError(e.message || "Failed to translate content");
     } finally {
@@ -799,7 +812,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       } else {
         expanded = await expandContent(content, style, googleApiKey);
       }
-      setHtmlContent(`<p style="font-size: 16px; line-height: 1.8; color: #444;">${expanded.replace(/\n\n/g, '</p><p style="font-size: 16px; line-height: 1.8; color: #444; margin-top: 16px;">').replace(/\n/g, '<br/>')}</p>`);
+      setHtmlContent(textToSafeHtml(expanded));
     } catch (e: any) {
       onError(e.message || "Failed to expand content");
     } finally {
@@ -1190,7 +1203,8 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                     {generatedHook}
                     <button
                       onClick={() => {
-                        const newContent = `<p style="font-size: 16px; line-height: 1.8; color: #444; font-style: italic; background: #f8f4ff; padding: 16px; border-radius: 8px; border-left: 4px solid #9b59b6;">${generatedHook}</p>` + htmlContent;
+                        const safeHook = escapeHtml(generatedHook);
+                        const newContent = `<p style="font-size: 16px; line-height: 1.8; color: #444; font-style: italic; background: #f8f4ff; padding: 16px; border-radius: 8px; border-left: 4px solid #9b59b6;">${safeHook}</p>` + htmlContent;
                         setHtmlContent(newContent);
                       }}
                       className="block mt-2 text-purple-600 hover:underline"
@@ -1224,7 +1238,8 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                     {generatedCTA}
                     <button
                       onClick={() => {
-                        const newContent = htmlContent + `<p style="font-size: 16px; line-height: 1.8; color: #444; text-align: center; margin-top: 24px; padding: 16px; background: #fff0f0; border-radius: 8px; border: 1px solid #ffc2c2;">${generatedCTA}</p>`;
+                        const safeCTA = escapeHtml(generatedCTA);
+                        const newContent = htmlContent + `<p style="font-size: 16px; line-height: 1.8; color: #444; text-align: center; margin-top: 24px; padding: 16px; background: #fff0f0; border-radius: 8px; border: 1px solid #ffc2c2;">${safeCTA}</p>`;
                         setHtmlContent(newContent);
                       }}
                       className="block mt-2 text-red-600 hover:underline"
