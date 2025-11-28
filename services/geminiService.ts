@@ -224,3 +224,476 @@ export const generateSpeech = async (text: string, apiKey?: string): Promise<Arr
         throw error;
     }
 };
+
+// --- New AI Methods for Design Richness ---
+
+/**
+ * Generate multiple attractive title suggestions for an article
+ */
+export const generateTitleSuggestions = async (
+  content: string,
+  count: number = 5,
+  apiKey?: string
+): Promise<string[]> => {
+  try {
+    const ai = getAI(apiKey);
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `
+        Based on the following article content, generate ${count} attractive and engaging title suggestions suitable for a WeChat Official Account article.
+        
+        Requirements:
+        - Each title should be unique and capture different angles of the content
+        - Titles should be catchy, clickable, and suitable for Chinese social media
+        - Include a mix of styles: informative, emotional, question-based, and surprising
+        - Keep titles concise (preferably under 30 characters)
+        
+        Article Content:
+        """
+        ${content.slice(0, 2000)}
+        """
+        
+        Return ONLY a JSON array of title strings, like: ["Title 1", "Title 2", ...]
+      `,
+      config: {
+        temperature: 0.8,
+      }
+    });
+    
+    const text = response.text || "[]";
+    // Extract JSON array from response
+    const match = text.match(/\[[\s\S]*\]/);
+    if (match) {
+      return JSON.parse(match[0]);
+    }
+    return [];
+  } catch (error) {
+    console.error("Title generation failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Generate a concise summary/digest for an article
+ */
+export const generateSummary = async (
+  content: string,
+  maxLength: number = 120,
+  apiKey?: string
+): Promise<string> => {
+  try {
+    const ai = getAI(apiKey);
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `
+        Generate a concise and engaging summary for the following article content.
+        The summary should be suitable as a WeChat article digest/description.
+        
+        Requirements:
+        - Maximum ${maxLength} characters
+        - Capture the main essence of the article
+        - Make it compelling to encourage readers to click
+        - Write in the same language as the content
+        
+        Article Content:
+        """
+        ${content.slice(0, 3000)}
+        """
+        
+        Return ONLY the summary text, nothing else.
+      `,
+      config: {
+        temperature: 0.5,
+      }
+    });
+    
+    return response.text?.trim() || "";
+  } catch (error) {
+    console.error("Summary generation failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Expand a paragraph or section with more details
+ */
+export const expandContent = async (
+  content: string,
+  style: 'detailed' | 'examples' | 'storytelling' = 'detailed',
+  apiKey?: string
+): Promise<string> => {
+  try {
+    const ai = getAI(apiKey);
+    
+    const stylePrompts = {
+      detailed: 'Add more detailed explanations, facts, and depth to the content.',
+      examples: 'Expand with concrete examples, case studies, and practical applications.',
+      storytelling: 'Expand using storytelling techniques, anecdotes, and narrative elements.'
+    };
+    
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `
+        Expand the following content while maintaining its core message and tone.
+        
+        Expansion Style: ${stylePrompts[style]}
+        
+        Original Content:
+        """
+        ${content}
+        """
+        
+        Requirements:
+        - Expand to approximately 2-3x the original length
+        - Maintain the original voice and style
+        - Add valuable information, not just filler
+        - Keep it suitable for a WeChat article
+        
+        Return ONLY the expanded content, nothing else.
+      `,
+      config: {
+        temperature: 0.7,
+      }
+    });
+    
+    return response.text?.trim() || content;
+  } catch (error) {
+    console.error("Content expansion failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Polish and improve content style and grammar
+ */
+export const polishContent = async (
+  content: string,
+  tone: 'professional' | 'casual' | 'formal' | 'creative' = 'professional',
+  apiKey?: string
+): Promise<string> => {
+  try {
+    const ai = getAI(apiKey);
+    
+    const toneDescriptions = {
+      professional: 'professional, clear, and authoritative',
+      casual: 'friendly, conversational, and approachable',
+      formal: 'formal, academic, and scholarly',
+      creative: 'creative, vivid, and engaging with literary flair'
+    };
+    
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `
+        Polish and improve the following content while making it sound more ${toneDescriptions[tone]}.
+        
+        Original Content:
+        """
+        ${content}
+        """
+        
+        Requirements:
+        - Fix any grammar or spelling errors
+        - Improve sentence structure and flow
+        - Enhance word choice for better impact
+        - Maintain the original meaning
+        - Keep approximately the same length
+        
+        Return ONLY the polished content, nothing else.
+      `,
+      config: {
+        temperature: 0.5,
+      }
+    });
+    
+    return response.text?.trim() || content;
+  } catch (error) {
+    console.error("Content polish failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Extract keywords from content for SEO purposes
+ */
+export const extractKeywords = async (
+  content: string,
+  count: number = 10,
+  apiKey?: string
+): Promise<string[]> => {
+  try {
+    const ai = getAI(apiKey);
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `
+        Extract the ${count} most important keywords or key phrases from the following content.
+        These keywords should be useful for SEO and content tagging.
+        
+        Content:
+        """
+        ${content.slice(0, 3000)}
+        """
+        
+        Requirements:
+        - Include both single words and short phrases
+        - Focus on topics, themes, and important concepts
+        - Prioritize by relevance and search potential
+        
+        Return ONLY a JSON array of keyword strings, like: ["keyword1", "keyword2", ...]
+      `,
+      config: {
+        temperature: 0.3,
+      }
+    });
+    
+    const text = response.text || "[]";
+    const match = text.match(/\[[\s\S]*\]/);
+    if (match) {
+      return JSON.parse(match[0]);
+    }
+    return [];
+  } catch (error) {
+    console.error("Keyword extraction failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Translate content between Chinese and English
+ */
+export const translateContent = async (
+  content: string,
+  targetLanguage: 'zh' | 'en',
+  apiKey?: string
+): Promise<string> => {
+  try {
+    const ai = getAI(apiKey);
+    
+    const targetLangName = targetLanguage === 'zh' ? 'Chinese (Simplified)' : 'English';
+    
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `
+        Translate the following content to ${targetLangName}.
+        
+        Content:
+        """
+        ${content}
+        """
+        
+        Requirements:
+        - Provide a natural, fluent translation
+        - Maintain the original tone and style
+        - Preserve any formatting markers if present
+        - Adapt idioms and expressions appropriately
+        
+        Return ONLY the translated content, nothing else.
+      `,
+      config: {
+        temperature: 0.3,
+      }
+    });
+    
+    return response.text?.trim() || content;
+  } catch (error) {
+    console.error("Translation failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Suggest visual styles based on content theme
+ */
+export interface StyleSuggestion {
+  style: string;
+  reason: string;
+  colorScheme: string[];
+  mood: string;
+}
+
+export const suggestStyles = async (
+  content: string,
+  apiKey?: string
+): Promise<StyleSuggestion[]> => {
+  try {
+    const ai = getAI(apiKey);
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `
+        Analyze the following article content and suggest appropriate visual styles for a WeChat article.
+        
+        Content:
+        """
+        ${content.slice(0, 2000)}
+        """
+        
+        Return a JSON array with 3 style suggestions. Each suggestion should have:
+        - style: The main style name (e.g., "professional", "playful", "elegant", "tech", "nature")
+        - reason: Brief explanation of why this style fits
+        - colorScheme: Array of 3-4 recommended colors (use names like "blue", "red", "gold", etc.)
+        - mood: The overall mood this style conveys
+        
+        Available colors: red, blue, purple, orange, gold, green, pink, cyan, gradient
+        
+        Return ONLY a valid JSON array like:
+        [{"style": "...", "reason": "...", "colorScheme": ["...", "..."], "mood": "..."}, ...]
+      `,
+      config: {
+        temperature: 0.6,
+      }
+    });
+    
+    const text = response.text || "[]";
+    const match = text.match(/\[[\s\S]*\]/);
+    if (match) {
+      return JSON.parse(match[0]);
+    }
+    return [];
+  } catch (error) {
+    console.error("Style suggestion failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Generate an engaging article opening/hook
+ */
+export const generateHook = async (
+  topic: string,
+  style: 'question' | 'story' | 'statistic' | 'quote' | 'surprising' = 'question',
+  apiKey?: string
+): Promise<string> => {
+  try {
+    const ai = getAI(apiKey);
+    
+    const styleDescriptions = {
+      question: 'Start with a thought-provoking question that engages the reader',
+      story: 'Begin with a short, compelling anecdote or mini-story',
+      statistic: 'Open with a surprising or impactful statistic or fact',
+      quote: 'Start with an inspiring or relevant quote',
+      surprising: 'Begin with a surprising or counterintuitive statement'
+    };
+    
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `
+        Generate an engaging article opening/hook for an article about: "${topic}"
+        
+        Style: ${styleDescriptions[style]}
+        
+        Requirements:
+        - Keep it concise (2-4 sentences)
+        - Make it immediately captivating
+        - Create curiosity to continue reading
+        - Suitable for WeChat article audience
+        
+        Return ONLY the opening paragraph, nothing else.
+      `,
+      config: {
+        temperature: 0.8,
+      }
+    });
+    
+    return response.text?.trim() || "";
+  } catch (error) {
+    console.error("Hook generation failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Generate a compelling call-to-action for article ending
+ */
+export const generateCTA = async (
+  articleContext: string,
+  ctaType: 'subscribe' | 'share' | 'comment' | 'action' | 'reflection' = 'share',
+  apiKey?: string
+): Promise<string> => {
+  try {
+    const ai = getAI(apiKey);
+    
+    const ctaDescriptions = {
+      subscribe: 'Encourage readers to follow/subscribe to the account',
+      share: 'Encourage readers to share the article with others',
+      comment: 'Encourage readers to leave comments and engage in discussion',
+      action: 'Encourage readers to take a specific action related to the content',
+      reflection: 'End with a reflective thought or question for the reader to ponder'
+    };
+    
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `
+        Generate a compelling call-to-action ending for an article with this context:
+        """
+        ${articleContext.slice(0, 1000)}
+        """
+        
+        CTA Type: ${ctaDescriptions[ctaType]}
+        
+        Requirements:
+        - Keep it natural and not too salesy
+        - Make it relevant to the article content
+        - Be warm and engaging
+        - 2-3 sentences maximum
+        
+        Return ONLY the CTA text, nothing else.
+      `,
+      config: {
+        temperature: 0.7,
+      }
+    });
+    
+    return response.text?.trim() || "";
+  } catch (error) {
+    console.error("CTA generation failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Rewrite content in a different style or perspective
+ */
+export const rewriteContent = async (
+  content: string,
+  newStyle: 'humorous' | 'serious' | 'inspirational' | 'educational' | 'conversational',
+  apiKey?: string
+): Promise<string> => {
+  try {
+    const ai = getAI(apiKey);
+    
+    const styleDescriptions = {
+      humorous: 'witty, playful, with appropriate humor and light-hearted tone',
+      serious: 'serious, thoughtful, with gravitas and depth',
+      inspirational: 'uplifting, motivational, with emotional resonance',
+      educational: 'informative, clear, with structured explanations',
+      conversational: 'friendly, casual, as if talking to a friend'
+    };
+    
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `
+        Rewrite the following content in a ${styleDescriptions[newStyle]} style.
+        
+        Original Content:
+        """
+        ${content}
+        """
+        
+        Requirements:
+        - Completely transform the tone and style
+        - Keep the core message and facts intact
+        - Maintain approximately the same length
+        - Make it suitable for WeChat article format
+        
+        Return ONLY the rewritten content, nothing else.
+      `,
+      config: {
+        temperature: 0.8,
+      }
+    });
+    
+    return response.text?.trim() || content;
+  } catch (error) {
+    console.error("Content rewrite failed:", error);
+    throw error;
+  }
+};
