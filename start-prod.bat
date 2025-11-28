@@ -42,26 +42,30 @@ if not exist "node_modules" (
     echo.
 )
 
-:: Check if dist folder exists, if not build
-if not exist "dist" (
-    echo [信息] 正在构建生产版本...
-    echo.
-    call npm run build
-    if %ERRORLEVEL% NEQ 0 (
-        echo [错误] 构建失败
-        pause
-        exit /b 1
-    )
-    echo.
-    echo [成功] 构建完成
-    echo.
+:: Always rebuild to ensure latest changes are included
+echo [信息] 正在构建生产版本...
+echo 这包含素材库和AI工具滑动条等所有新功能
+echo.
+call npm run build
+if %ERRORLEVEL% NEQ 0 (
+    echo [错误] 构建失败
+    pause
+    exit /b 1
 )
+echo.
+echo [成功] 构建完成
+echo.
 
 echo [信息] 正在启动生产服务器...
 echo.
 echo ----------------------------------------
 echo 应用启动后，请在浏览器中访问:
 echo http://localhost:3000
+echo.
+echo 功能包括:
+echo   - 素材库 (图片/文字管理)
+echo   - AI工具 (含滑动条参数调节)
+echo   - 设计模板库
 echo.
 echo 按 Ctrl+C 可停止服务器
 echo ----------------------------------------
