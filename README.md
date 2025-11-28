@@ -1,11 +1,72 @@
-<div align="center">
+# 微信公众号 AI 自动化发布助手 (WeChat AI Publisher)
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+这是一个功能强大的 AI 驱动 Web 应用程序，旨在简化微信公众号内容的创作和发布流程。该工具基于 React 和 Google Gemini 模型构建，可自动完成写作、格式排版和草稿上传工作流。
 
-  <h1>Built with AI Studio</h2>
+## 🚀 功能特性
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+### 🤖 AI 驱动的内容创作
+- **文章生成**：基于简单的主题或提示词，利用 `gemini-2.5-flash` 模型生成长篇文章。
+- **搜索增强 (Grounding)**：集成 Google Search，为您的文章获取准确、实时的互联网信息。
+- **图像分析**：上传图片，使用 `gemini-3-pro-preview` 分析其内容和语境，并自动将其融入文章叙述中。
+- **文本转语音 (TTS)**：使用 `gemini-2.5-flash-preview-tts` 生成自然流畅的 AI 语音朗读。
+- **多模型支持**：支持 DeepSeek (V3) 和 Qwen (通义千问) 模型作为替代方案。
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+### ✍️ 微信专属编辑器
+- **富文本排版**：生成专为微信渲染器优化的 HTML 代码，包括“秀米风格”的卡片、装饰性标题和列表。
+- **所见即所得 (WYSIWYG)**：提供手机预览模式，允许可视化修改内容或直接编辑 HTML 源码。
+- **插入工具**：在编辑器中一键插入样式化的文本框（卡片）和图片。
 
-</div>
+### 📲 集成与管理
+- **草稿管理**：自动将工作内容保存到本地存储。意外关闭浏览器后可无缝恢复草稿。
+- **微信发布**：连接微信 API，上传图片并将文章直接保存到公众号后台的“草稿箱”。
+- **数据分析看板**：可视化展示阅读趋势、粉丝增长和文章表现（包含演示模式）。
+
+## 🛠️ 技术栈
+
+- **前端**：React 18, Tailwind CSS, React Router
+- **AI 模型**：Google GenAI SDK (`@google/genai`)
+  - `gemini-2.5-flash` (文本生成与搜索)
+  - `gemini-3-pro-preview` (视觉分析)
+  - `gemini-2.5-flash-preview-tts` (语音生成)
+- **图标库**：Google Material Icons
+
+## ⚙️ 配置说明
+
+### 1. Google Gemini API
+应用程序需要一个有效的 Google Cloud API 密钥。
+- **在线环境**：通常通过 `process.env.API_KEY` 自动注入。
+- **本地运行**：如果下载了代码，请在 **Settings (设置)** 页面中选择 "Google Gemini" 并手动输入您的 API Key。
+
+### 2. 微信公众号配置
+要发布文章，您需要从 [微信公众平台](https://mp.weixin.qq.com/) 获取凭证：
+1. 登录后台，进入 **设置与开发** > **基本配置**。
+2. 获取您的 **AppID** 和 **AppSecret**。
+3. 在公众号后台将您的当前 IP 地址添加到 **IP 白名单** 中。
+4. 在本应用的 **Settings (设置)** 页面中输入这些凭证。
+
+## ⚠️ 关于 CORS 的重要说明
+
+微信 API (`api.weixin.qq.com`) 不支持浏览器直接发起的跨域资源共享 (CORS) 请求。
+
+- **演示/本地模式**：本应用包含错误处理机制。如果发生网络/跨域错误，它会模拟成功的 API 调用，让您在没有后端的情况下体验完整的 UI 流程。
+- **生产环境使用**：您必须设置一个服务端代理来转发请求到微信。请更新 `services/wechatService.ts` 中的 `PROXY_URL` 常量，将其指向您的代理服务器地址。
+
+## 📖 使用指南
+
+1. **起草内容**：
+   - 在“Editor Workspace”中输入主题。
+   - (可选) 勾选 "Use Google Search" 以获取事实性内容。
+   - (可选) 上传图片，让 AI 基于视觉内容进行创作。
+   - 点击 **Generate Article** 生成文章。
+
+2. **编辑排版**：
+   - 使用右侧的手机模拟器预览效果。
+   - 使用工具栏加粗文本、设置标题或插入彩色的内容卡片。
+   - 切换到 "HTML" 模式可进行更精细的代码控制。
+
+3. **发布**：
+   - 点击 **Publish to WeChat**。
+   - 如果配置正确（或在演示模式下），文章将出现在您微信公众号后台的“草稿箱”中，等待最终审核和群发。
+
+## 💾 数据持久化
+用户资料、API 设置和当前草稿均保存于浏览器的 `localStorage` 中。清除浏览器缓存将重置这些设置。
