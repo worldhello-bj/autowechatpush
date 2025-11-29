@@ -1,72 +1,297 @@
 # 微信公众号 AI 自动化发布助手 (WeChat AI Publisher)
 
-这是一个功能强大的 AI 驱动 Web 应用程序，旨在简化微信公众号内容的创作和发布流程。该工具基于 React 和 Google Gemini 模型构建，可自动完成写作、格式排版和草稿上传工作流。
+<p align="center">
+  <img src="https://img.shields.io/badge/version-1.2.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/React-18.3-61DAFB.svg" alt="React">
+  <img src="https://img.shields.io/badge/TypeScript-5.5-3178C6.svg" alt="TypeScript">
+  <img src="https://img.shields.io/badge/AI-Multi--Model-green.svg" alt="AI">
+</p>
+
+一个功能强大的 AI 驱动 Web 应用程序，旨在简化微信公众号内容的创作和发布流程。支持多AI模型、双AI并行架构、丰富的素材库和微信公众号一键发布。
+
+## 📋 目录
+
+- [功能特性](#-功能特性)
+- [技术架构](#-技术架构)
+- [快速开始](#-快速开始)
+- [项目结构](#-项目结构)
+- [配置说明](#️-配置说明)
+- [使用指南](#-使用指南)
+- [API 参考](#-api-参考)
+
+---
 
 ## 🚀 功能特性
 
-### 🤖 AI 驱动的内容创作
-- **文章生成**：基于简单的主题或提示词，利用 `gemini-2.5-flash` 模型生成长篇文章。
-- **搜索增强 (Grounding)**：集成 Google Search，为您的文章获取准确、实时的互联网信息。
-- **图像分析**：上传图片，使用 `gemini-3-pro-preview` 分析其内容和语境，并自动将其融入文章叙述中。
-- **文本转语音 (TTS)**：使用 `gemini-2.5-flash-preview-tts` 生成自然流畅的 AI 语音朗读。
-- **多模型支持**：支持 DeepSeek (V3) 和 Qwen (通义千问) 模型作为替代方案。
+### 🤖 多AI模型支持
 
-### ✍️ 微信专属编辑器
-- **富文本排版**：生成专为微信渲染器优化的 HTML 代码，包括“秀米风格”的卡片、装饰性标题和列表。
-- **所见即所得 (WYSIWYG)**：提供手机预览模式，允许可视化修改内容或直接编辑 HTML 源码。
-- **插入工具**：在编辑器中一键插入样式化的文本框（卡片）和图片。
+| AI模型 | 提供商 | 功能 |
+|--------|--------|------|
+| Gemini 2.5 Flash | Google | 文本生成、搜索增强 |
+| Gemini 3 Pro Preview | Google | 图像分析 |
+| DeepSeek V3 | DeepSeek | 文本生成 |
+| Qwen Plus | 阿里云 | 文本生成、图像分析、TTS |
 
-### 📲 集成与管理
-- **草稿管理**：自动将工作内容保存到本地存储。意外关闭浏览器后可无缝恢复草稿。
-- **微信发布**：连接微信 API，上传图片并将文章直接保存到公众号后台的“草稿箱”。
-- **数据分析看板**：可视化展示阅读趋势、粉丝增长和文章表现（包含演示模式）。
+### 🔀 双AI并行架构 (Dual AI System)
 
-## 🛠️ 技术栈
+创新的双AI模式，让内容创作更专业：
 
-- **前端**：React 18, Tailwind CSS, React Router
-- **AI 模型**：Google GenAI SDK (`@google/genai`)
-  - `gemini-2.5-flash` (文本生成与搜索)
-  - `gemini-3-pro-preview` (视觉分析)
-  - `gemini-2.5-flash-preview-tts` (语音生成)
-- **图标库**：Google Material Icons
+- **文案AI (Content AI)**: 专注于内容创作、故事叙述、关键词提取
+- **美化AI (Design AI)**: 专注于排版设计、颜色搭配、视觉呈现
+- **记忆系统**: 自动记录用户偏好，优化后续生成效果
+
+### 📚 素材库系统
+
+#### 设计模板 (45+ 模板)
+- 标题样式: 绸带标题、括号标题、渐变背景、标签式等
+- 卡片样式: 数据统计、图文卡片、特性卡片、用户评价等
+- 列表样式: 图标列表、步骤流程、对比列表等
+- 特殊组件: 二维码区域、福利框、FAQ、联系方式、进度条、倒计时等
+
+#### 文案素材 (40+ 预设)
+- 开场白、结尾语、过渡语
+- 行动号召 (CTA)、名言警句
+- 问候语、公告、促销文案
+
+### 🎨 21种内容块类型
+
+| 基础块 (12种) | 高级块 (9种) |
+|--------------|--------------|
+| header, paragraph, card | qrcode (二维码) |
+| list, numbered_list | faq (问答区) |
+| quote, callout, highlight | countdown (倒计时) |
+| image, divider, code, table | progress (进度条) |
+| | gift (福利框) |
+| | contact (联系方式) |
+| | stats (数据统计) |
+| | testimonial (用户评价) |
+| | steps (步骤流程) |
+
+### 📲 微信集成
+
+- 草稿自动保存与恢复
+- 图片上传到微信服务器
+- 一键发布到公众号草稿箱
+
+---
+
+## 🛠 技术架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Frontend (React)                        │
+├─────────────────────────────────────────────────────────────┤
+│  Components          │  Services            │  Types         │
+│  ├── Editor          │  ├── geminiService   │  ├── BlockType │
+│  ├── HtmlEditor      │  ├── qwenService     │  ├── Article   │
+│  ├── MaterialLibrary │  ├── deepSeekService │  └── ...       │
+│  ├── AIToolsPanel    │  ├── dualAIService   │                │
+│  └── ArticlePreview  │  ├── designTemplates │                │
+│                      │  └── wechatService   │                │
+├─────────────────────────────────────────────────────────────┤
+│                     AI Providers                             │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌────────────────┐  │
+│  │ Google  │  │DeepSeek │  │  Qwen   │  │  Dual AI Mode  │  │
+│  │ Gemini  │  │   V3    │  │  Plus   │  │ Content+Design │  │
+│  └─────────┘  └─────────┘  └─────────┘  └────────────────┘  │
+├─────────────────────────────────────────────────────────────┤
+│                   WeChat MP API                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 技术栈
+
+- **前端框架**: React 18 + TypeScript 5.5
+- **构建工具**: Vite 5.4
+- **UI样式**: Tailwind CSS + Material Icons
+- **AI SDK**: @google/genai
+- **后端代理**: Express.js + http-proxy-middleware
+
+---
+
+## 🚀 快速开始
+
+### 安装依赖
+
+```bash
+npm install
+```
+
+### 开发模式
+
+```bash
+npm run dev
+```
+
+### 生产构建
+
+```bash
+npm run build
+npm start
+```
+
+### Windows 快捷启动
+
+```batch
+# 开发模式
+start.bat
+
+# 生产模式
+start-prod.bat
+```
+
+---
+
+## 📁 项目结构
+
+```
+autowechatpush/
+├── components/           # React 组件
+│   ├── README.md         # 组件文档
+│   ├── Editor.tsx        # 主编辑器
+│   ├── HtmlEditor.tsx    # HTML 编辑器
+│   ├── MaterialLibrary.tsx # 素材库
+│   ├── AIToolsPanel.tsx  # AI 工具面板
+│   └── ArticlePreview.tsx # 文章预览
+├── services/             # AI 服务层
+│   ├── README.md         # 服务文档
+│   ├── geminiService.ts  # Google Gemini
+│   ├── qwenService.ts    # 阿里云 Qwen
+│   ├── deepSeekService.ts # DeepSeek
+│   ├── dualAIService.ts  # 双AI系统
+│   ├── designTemplates.ts # 设计模板库
+│   ├── materialLibraryContent.ts # 文案素材库
+│   └── wechatService.ts  # 微信API
+├── types.ts              # TypeScript 类型定义
+├── App.tsx               # 应用入口
+├── server.js             # Express 代理服务器
+└── vite.config.ts        # Vite 配置
+```
+
+详细文档请查看各目录下的 README.md 文件。
+
+---
 
 ## ⚙️ 配置说明
 
-### 1. Google Gemini API
-应用程序需要一个有效的 Google Cloud API 密钥。
-- **在线环境**：通常通过 `process.env.API_KEY` 自动注入。
-- **本地运行**：如果下载了代码，请在 **Settings (设置)** 页面中选择 "Google Gemini" 并手动输入您的 API Key。
+### 1. AI 模型配置
+
+在应用的 **Settings** 页面配置 API 密钥：
+
+| 模型 | 密钥来源 |
+|------|----------|
+| Google Gemini | [Google AI Studio](https://aistudio.google.com/) |
+| DeepSeek | [DeepSeek Platform](https://platform.deepseek.com/) |
+| Qwen | [阿里云百炼](https://dashscope.console.aliyun.com/) |
 
 ### 2. 微信公众号配置
-要发布文章，您需要从 [微信公众平台](https://mp.weixin.qq.com/) 获取凭证：
-1. 登录后台，进入 **设置与开发** > **基本配置**。
-2. 获取您的 **AppID** 和 **AppSecret**。
-3. 在公众号后台将您的当前 IP 地址添加到 **IP 白名单** 中。
-4. 在本应用的 **Settings (设置)** 页面中输入这些凭证。
 
-## ⚠️ 关于 CORS 的重要说明
+1. 登录 [微信公众平台](https://mp.weixin.qq.com/)
+2. 进入 **设置与开发** > **基本配置**
+3. 获取 **AppID** 和 **AppSecret**
+4. 将服务器 IP 添加到 **IP 白名单**
+5. 在应用 Settings 页面填入凭证
 
-微信 API (`api.weixin.qq.com`) 不支持浏览器直接发起的跨域资源共享 (CORS) 请求。
+### 3. CORS 代理配置
 
-- **演示/本地模式**：本应用包含错误处理机制。如果发生网络/跨域错误，它会模拟成功的 API 调用，让您在没有后端的情况下体验完整的 UI 流程。
-- **生产环境使用**：您必须设置一个服务端代理来转发请求到微信。请更新 `services/wechatService.ts` 中的 `PROXY_URL` 常量，将其指向您的代理服务器地址。
+微信 API 不支持浏览器直接跨域请求，需配置代理：
+
+```javascript
+// server.js 已配置代理
+// 生产环境请修改 PROXY_URL 为您的代理服务器地址
+```
+
+---
 
 ## 📖 使用指南
 
-1. **起草内容**：
-   - 在“Editor Workspace”中输入主题。
-   - (可选) 勾选 "Use Google Search" 以获取事实性内容。
-   - (可选) 上传图片，让 AI 基于视觉内容进行创作。
-   - 点击 **Generate Article** 生成文章。
+### 单AI模式
 
-2. **编辑排版**：
-   - 使用右侧的手机模拟器预览效果。
-   - 使用工具栏加粗文本、设置标题或插入彩色的内容卡片。
-   - 切换到 "HTML" 模式可进行更精细的代码控制。
+1. 选择AI模型 (Google/DeepSeek/Qwen)
+2. 输入文章主题
+3. (可选) 开启 Google Search 增强
+4. (可选) 上传图片进行分析
+5. 点击 **Generate Article** 生成
 
-3. **发布**：
-   - 点击 **Publish to WeChat**。
-   - 如果配置正确（或在演示模式下），文章将出现在您微信公众号后台的“草稿箱”中，等待最终审核和群发。
+### 双AI模式 (推荐)
+
+1. 选择 DeepSeek 或 Qwen 模型
+2. 开启 **双AI模式** 开关
+3. 输入主题后点击 **双AI生成**
+4. 系统自动执行：文案AI创作 → 美化AI排版
+
+### 使用素材库
+
+1. 点击 **素材库** 按钮
+2. 切换 **我的素材** / **预设文案** 标签
+3. 选择分类，点击素材即可插入
+
+### 发布到微信
+
+1. 完成文章编辑
+2. 点击 **Publish to WeChat**
+3. 文章将保存到公众号草稿箱
+
+---
+
+## 📚 API 参考
+
+### BlockType 枚举
+
+```typescript
+enum BlockType {
+  // 基础块
+  HEADER, PARAGRAPH, IMAGE, CARD, LIST, QUOTE,
+  DIVIDER, CODE, CALLOUT, NUMBERED_LIST, HIGHLIGHT, TABLE,
+  // 高级块
+  QRCODE, FAQ, COUNTDOWN, PROGRESS, GIFT, 
+  CONTACT, STATS, TESTIMONIAL, STEPS
+}
+```
+
+### AI Memory 接口
+
+```typescript
+interface AIMemory {
+  contentHistory: ContentMemoryEntry[];
+  designHistory: DesignMemoryEntry[];
+  preferences: UserPreferences;
+}
+```
+
+### 双AI生成函数
+
+```typescript
+const result = await generateWithDualAI(topic, {
+  contentProvider: 'qwen',
+  designProvider: 'qwen',
+  contentApiKey,
+  designApiKey
+}, aiMemory, imageContext);
+```
+
+---
 
 ## 💾 数据持久化
-用户资料、API 设置和当前草稿均保存于浏览器的 `localStorage` 中。清除浏览器缓存将重置这些设置。
+
+所有数据保存在浏览器 `localStorage` 中：
+
+| Key | 内容 |
+|-----|------|
+| `wechat_editor_draft` | 当前草稿 |
+| `wechat_creds` | 微信凭证 |
+| `ai_provider` | 当前AI模型 |
+| `dual_ai_memory` | 双AI记忆 |
+| `wechat_material_library` | 用户素材 |
+
+---
+
+## 📄 License
+
+MIT License
+
+---
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
