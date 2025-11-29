@@ -25,6 +25,33 @@ async function logPublicIP() {
     }
 }
 
+// CORS Middleware - Add CORS headers for requests
+// In production, requests come from the same origin (served by this server)
+// This middleware handles cases where the browser might still send CORS preflight requests
+const allowedOrigins = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'
+];
+
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    
+    // Allow same-origin requests (no origin header) or requests from allowed origins
+    if (!origin || allowedOrigins.includes(origin)) {
+        if (origin) {
+            res.header('Access-Control-Allow-Origin', origin);
+        }
+        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    }
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
 // Proxy Configuration
 const wechatProxy = createProxyMiddleware({
     target: 'https://api.weixin.qq.com',
@@ -40,7 +67,21 @@ const wechatProxy = createProxyMiddleware({
     },
     onError: (err, req, res) => {
         console.error(`[Proxy] 🔴 Proxy Error:`, err);
-        res.status(500).json({ error: 'Proxy Error', details: err.message });
+        console.error(`[Proxy] 🔴 Error Details: ${err.message}`);
+        console.error(`[Proxy] 🔴 This could be caused by:`);
+        console.error(`[Proxy]    1. Network connectivity issues`);
+        console.error(`[Proxy]    2. DNS resolution failure for api.weixin.qq.com`);
+        console.error(`[Proxy]    3. Firewall blocking outbound connections`);
+        console.error(`[Proxy]    4. SSL/TLS certificate issues`);
+        
+        // Ensure the response hasn't been sent yet
+        if (!res.headersSent) {
+            res.status(502).json({ 
+                error: 'Proxy Error', 
+                details: err.message,
+                suggestion: 'Check server logs for more details. Ensure network connectivity to api.weixin.qq.com is available.'
+            });
+        }
     }
 });
 
