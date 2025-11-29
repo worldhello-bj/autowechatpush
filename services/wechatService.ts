@@ -5,6 +5,44 @@ import { WeChatCredentials, WechatPayload } from '../types';
 const BASE_API = '/api/wechat';
 
 /**
+ * Helper function to handle HTTP response and throw appropriate errors
+ */
+async function handleResponse(response: Response, context: string): Promise<any> {
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[WeChat Client] 🔴 HTTP Error: ${response.status} - ${errorText}`);
+    throw new Error(`${context} HTTP Error (${response.status}): ${errorText || 'Server error'}`);
+  }
+  
+  const data = await response.json();
+  console.log(`[WeChat Client] Response Body:`, data);
+  return data;
+}
+
+/**
+ * Helper function to handle and format errors consistently
+ */
+function formatError(error: unknown, context: string, defaultMessage: string): Error {
+  console.error(`[WeChat Client] 🔴 ${context}:`, error);
+  
+  if (error instanceof Error) {
+    // Check for network-related errors
+    if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('Failed to fetch')) {
+      return new Error(`Network Error: Cannot connect to server. Please ensure the server is running and try again.`);
+    }
+    
+    // If it's already a formatted error (contains context), re-throw it
+    if (error.message.includes('Error') && error.message.includes('(')) {
+      return error;
+    }
+    
+    return new Error(`${context}: ${error.message}. Check server logs for details.`);
+  }
+  
+  return new Error(defaultMessage);
+}
+
+/**
  * Get Access Token
  * Doc: https://developers.weixin.qq.com/doc/offiaccount/Basic_Information/Get_access_token.html
  */
@@ -18,15 +56,7 @@ export const getAccessToken = async (creds: WeChatCredentials): Promise<string> 
     const response = await fetch(url);
     console.log(`[WeChat Client] Status: ${response.status}`);
     
-    // Handle HTTP error status codes
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[WeChat Client] 🔴 HTTP Error: ${response.status} - ${errorText}`);
-      throw new Error(`Server Error (${response.status}): ${errorText || 'Unable to connect to WeChat API'}`);
-    }
-    
-    const data = await response.json();
-    console.log(`[WeChat Client] Response Body:`, data);
+    const data = await handleResponse(response, 'Access Token');
     
     if (data.errcode) {
       console.error(`[WeChat Client] 🔴 API Error: ${data.errcode} - ${data.errmsg}`);
@@ -35,24 +65,7 @@ export const getAccessToken = async (creds: WeChatCredentials): Promise<string> 
     
     return data.access_token;
   } catch (error: unknown) {
-    console.error("[WeChat Client] 🔴 Network/System Error:", error);
-    
-    // Provide more specific error messages based on error type
-    if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('network'))) {
-      throw new Error("Network Error: Cannot connect to server. Please ensure the server is running and try again.");
-    }
-    
-    if (error instanceof Error) {
-      // If it's already a formatted error from above, re-throw it
-      if (error.message.startsWith('WeChat API Error') || 
-          error.message.startsWith('Server Error') ||
-          error.message.startsWith('Network Error')) {
-        throw error;
-      }
-      throw new Error(`Connection Error: ${error.message}. Check server logs for details.`);
-    }
-    
-    throw new Error("Network/CORS Error: Unable to connect to WeChat API. Check server logs.");
+    throw formatError(error, 'Access Token Error', 'Network/CORS Error: Unable to connect to WeChat API. Check server logs.');
   }
 };
 
@@ -78,15 +91,7 @@ export const uploadImage = async (token: string, imageBlob: Blob): Promise<strin
 
         console.log(`[WeChat Client] Status: ${response.status}`);
         
-        // Handle HTTP error status codes
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[WeChat Client] 🔴 HTTP Error: ${response.status} - ${errorText}`);
-            throw new Error(`Image Upload HTTP Error (${response.status}): ${errorText || 'Server error'}`);
-        }
-        
-        const data = await response.json();
-        console.log(`[WeChat Client] Response Body:`, data);
+        const data = await handleResponse(response, 'Image Upload');
         
         if (data.errcode) {
              throw new Error(`Image Upload Error (${data.errcode}): ${data.errmsg}`);
@@ -94,17 +99,7 @@ export const uploadImage = async (token: string, imageBlob: Blob): Promise<strin
         
         return data.media_id;
     } catch (error: unknown) {
-        console.error("[WeChat Client] 🔴 Image upload failed:", error);
-        
-        if (error instanceof Error) {
-            // If it's already a formatted error, re-throw it
-            if (error.message.startsWith('Image Upload')) {
-                throw error;
-            }
-            throw new Error(`Image Upload Failed: ${error.message}`);
-        }
-        
-        throw new Error("Image Upload Failed: Network error. Check server logs.");
+        throw formatError(error, 'Image Upload Failed', 'Image Upload Failed: Network error. Check server logs.');
     }
 };
 
@@ -129,32 +124,13 @@ export const saveDraft = async (token: string, payload: WechatPayload): Promise<
     
     console.log(`[WeChat Client] Status: ${response.status}`);
     
-    // Handle HTTP error status codes
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[WeChat Client] 🔴 HTTP Error: ${response.status} - ${errorText}`);
-      throw new Error(`Draft Save HTTP Error (${response.status}): ${errorText || 'Server error'}`);
-    }
-    
-    const data = await response.json();
-    console.log(`[WeChat Client] Response Body:`, data);
+    const data = await handleResponse(response, 'Draft Save');
 
     if (data.errcode && data.errcode !== 0) {
       throw new Error(`WeChat Draft Error (${data.errcode}): ${data.errmsg}`);
     }
     return data;
   } catch (error: unknown) {
-    console.error("[WeChat Client] 🔴 Failed to save draft", error);
-    
-    if (error instanceof Error) {
-      // If it's already a formatted error, re-throw it
-      if (error.message.startsWith('WeChat Draft Error') || 
-          error.message.startsWith('Draft Save HTTP Error')) {
-        throw error;
-      }
-      throw new Error(`Draft Save Failed: ${error.message}`);
-    }
-    
-    throw new Error("Draft Save Failed: Network error. Check server logs.");
+    throw formatError(error, 'Draft Save Failed', 'Draft Save Failed: Network error. Check server logs.');
   }
 };

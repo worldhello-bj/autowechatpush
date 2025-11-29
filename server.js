@@ -25,11 +25,25 @@ async function logPublicIP() {
     }
 }
 
-// CORS Middleware - Add CORS headers for all requests
+// CORS Middleware - Add CORS headers for requests
+// In production, requests come from the same origin (served by this server)
+// This middleware handles cases where the browser might still send CORS preflight requests
+const allowedOrigins = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'
+];
+
 app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    const origin = req.headers.origin;
+    
+    // Allow same-origin requests (no origin header) or requests from allowed origins
+    if (!origin || allowedOrigins.includes(origin)) {
+        if (origin) {
+            res.header('Access-Control-Allow-Origin', origin);
+        }
+        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    }
     
     // Handle preflight requests
     if (req.method === 'OPTIONS') {
