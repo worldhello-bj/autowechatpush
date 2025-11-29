@@ -45,6 +45,12 @@ import {
   generateCTAQwen,
   rewriteContentQwen
 } from '../services/qwenService';
+import {
+  generateWithDualAI,
+  loadMemory,
+  saveMemory,
+  AIMemory
+} from '../services/dualAIService';
 import HtmlEditor from './HtmlEditor';
 import MaterialLibrary from './MaterialLibrary';
 import AIToolsPanel, { AISettings, DEFAULT_AI_SETTINGS } from './AIToolsPanel';
@@ -333,6 +339,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   const [analyzingImage, setAnalyzingImage] = useState(false);
   const [useSearch, setUseSearch] = useState(true);
   const [isFormattingMode, setIsFormattingMode] = useState(false); // NEW Toggle
+  const [useDualAI, setUseDualAI] = useState(false); // Dual AI Mode Toggle
   const [imageContext, setImageContext] = useState<string>('');
   const [uploadedImagePreview, setUploadedImagePreview] = useState<string | null>(null);
   
@@ -347,6 +354,10 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   const [googleApiKey, setGoogleApiKey] = useState('');
   const [deepSeekApiKey, setDeepSeekApiKey] = useState('');
   const [dashScopeApiKey, setDashScopeApiKey] = useState('');
+
+  // Dual AI Memory State
+  const [aiMemory, setAiMemory] = useState<AIMemory>(() => loadMemory());
+  const [designNotes, setDesignNotes] = useState<string>('');
 
   // Article Content
   const [articleTitle, setArticleTitle] = useState('New Article');
@@ -400,7 +411,47 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     try {
       let result: GenerationResult;
       
-      if (aiProvider === AIProvider.DEEPSEEK) {
+      // Check if Dual AI mode is enabled (requires Qwen or DeepSeek)
+      if (useDualAI && !isFormattingMode) {
+        // Dual AI Mode: Content AI + Design AI working in parallel
+        const contentProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
+        const designProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
+        
+        const contentKey = aiProvider === AIProvider.QWEN ? dashScopeApiKey : deepSeekApiKey;
+        const designKey = aiProvider === AIProvider.QWEN ? dashScopeApiKey : deepSeekApiKey;
+        
+        if (!contentKey) throw new Error(`${aiProvider === AIProvider.QWEN ? 'DashScope' : 'DeepSeek'} API Key is missing for Dual AI mode.`);
+        
+        console.log('[Editor] Using Dual AI Mode - Content AI + Design AI');
+        
+        const dualResult = await generateWithDualAI(
+          topic,
+          {
+            contentProvider,
+            designProvider,
+            contentApiKey: contentKey,
+            designApiKey: designKey
+          },
+          aiMemory,
+          imageContext
+        );
+        
+        result = dualResult.result;
+        
+        // Update memory with the new interaction
+        if (dualResult.memoryUpdate) {
+          const newMemory = { ...aiMemory, ...dualResult.memoryUpdate };
+          setAiMemory(newMemory);
+          saveMemory(newMemory);
+        }
+        
+        // Store design notes for user reference
+        if (dualResult.designNotes) {
+          setDesignNotes(dualResult.designNotes);
+          console.log('[Editor] Design Notes:', dualResult.designNotes);
+        }
+        
+      } else if (aiProvider === AIProvider.DEEPSEEK) {
         if (!deepSeekApiKey) throw new Error("DeepSeek API Key is missing. Please configure it in Settings.");
         result = await generateArticleStructureDeepSeek(topic, deepSeekApiKey, isFormattingMode);
       } else if (aiProvider === AIProvider.QWEN) {
@@ -1179,7 +1230,44 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                         {aiProvider === AIProvider.GOOGLE ? 'Use Google Search' : 'Use Web Search'}
                     </span>
                 </label>
+                
+                {/* Dual AI Mode Toggle */}
+                <label className={`flex items-center gap-2 px-3 py-2 rounded-md border transition ${
+                  aiProvider === AIProvider.GOOGLE || isFormattingMode 
+                    ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200' 
+                    : useDualAI 
+                      ? 'cursor-pointer bg-gradient-to-r from-purple-50 to-blue-50 border-purple-300' 
+                      : 'cursor-pointer hover:bg-purple-50 border-gray-200'
+                }`}>
+                    <input 
+                        type="checkbox" 
+                        checked={useDualAI} 
+                        onChange={(e) => setUseDualAI(e.target.checked)}
+                        disabled={aiProvider === AIProvider.GOOGLE || isFormattingMode}
+                        className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4"
+                    />
+                    <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                        <span className="material-icons text-sm text-purple-500">psychology</span>
+                        双AI模式
+                    </span>
+                    {useDualAI && <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">文案+美化</span>}
+                </label>
             </div>
+
+            {/* Dual AI Mode Info */}
+            {useDualAI && aiProvider !== AIProvider.GOOGLE && !isFormattingMode && (
+              <div className="p-3 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="material-icons text-purple-500 text-lg">auto_awesome</span>
+                  <div>
+                    <span className="font-medium text-purple-700">双并行AI模式已启用</span>
+                    <p className="text-xs text-purple-600 mt-1">
+                      ✨ 文案AI负责内容创作 → 美化AI负责排版设计 → 更优质的输出效果
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Image Analysis Upload */}
             <div className={`border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 transition text-center relative ${aiProvider === AIProvider.DEEPSEEK ? 'hover:bg-gray-50 opacity-80' : 'hover:bg-gray-100'}`}>
@@ -1210,17 +1298,21 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
             <button 
                 onClick={handleGenerate}
                 disabled={loading || analyzingImage}
-                className="w-full bg-green-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex justify-center items-center gap-2"
+                className={`w-full font-semibold py-3 px-4 rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed transition flex justify-center items-center gap-2 ${
+                  useDualAI && aiProvider !== AIProvider.GOOGLE && !isFormattingMode
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
             >
                 {loading ? (
                     <>
                         <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        {isFormattingMode ? 'Formatting...' : 'Generating...'}
+                        {useDualAI && !isFormattingMode ? '双AI处理中...' : (isFormattingMode ? 'Formatting...' : 'Generating...')}
                     </>
                 ) : (
                     <>
-                        <span className="material-icons">{isFormattingMode ? 'brush' : 'auto_awesome'}</span> 
-                        {isFormattingMode ? 'Format Article' : 'Generate Article'}
+                        <span className="material-icons">{isFormattingMode ? 'brush' : (useDualAI ? 'psychology' : 'auto_awesome')}</span> 
+                        {isFormattingMode ? 'Format Article' : (useDualAI && aiProvider !== AIProvider.GOOGLE ? '双AI生成' : 'Generate Article')}
                     </>
                 )}
             </button>
@@ -1282,7 +1374,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
             <div className="flex items-center gap-2">
               <span className="material-icons text-pink-600">palette</span>
               <span className="font-semibold text-gray-800">精美设计格式库</span>
-              <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">25+</span>
+              <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">{allDesignTemplates.length}+</span>
             </div>
             <span className="material-icons text-gray-500">open_in_new</span>
           </button>
@@ -1427,7 +1519,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
               <div className="flex items-center gap-2">
                 <span className="material-icons text-pink-600">palette</span>
                 <span className="font-bold text-lg text-gray-800">精美设计格式库</span>
-                <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">25+</span>
+                <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">{allDesignTemplates.length}+</span>
               </div>
               <button 
                 onClick={() => setShowDesignTemplates(false)}
