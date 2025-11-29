@@ -232,12 +232,12 @@ const designAITools = [
               properties: {
                 type: { 
                   type: "string", 
-                  enum: ["header", "paragraph", "card", "list", "quote", "image", "divider", "code", "callout", "numbered_list", "highlight", "table"],
-                  description: "Block type" 
+                  enum: ["header", "paragraph", "card", "list", "quote", "image", "divider", "code", "callout", "numbered_list", "highlight", "table", "qrcode", "faq", "countdown", "progress", "gift", "contact", "stats", "testimonial", "steps"],
+                  description: "Block type - use special types like qrcode, faq, countdown, progress, gift, contact, stats, testimonial, steps for advanced layouts" 
                 },
                 content: { type: "string", description: "The content for this block" },
-                title: { type: "string", description: "Title for card, header, callout blocks" },
-                items: { type: "array", items: { type: "string" }, description: "List items" },
+                title: { type: "string", description: "Title for card, header, callout, gift, faq blocks" },
+                items: { type: "array", items: { type: "string" }, description: "List items, FAQ questions, or step descriptions" },
                 style: { 
                   type: "string", 
                   enum: ["default", "red", "blue", "purple", "orange", "gold", "green", "pink", "cyan", "gradient"],
@@ -245,7 +245,13 @@ const designAITools = [
                 },
                 level: { type: "number", enum: [1, 2, 3], description: "Header level" },
                 alignment: { type: "string", enum: ["left", "center", "right"], description: "Text alignment" },
-                icon: { type: "string", enum: ["info", "warning", "success", "error", "tip", "note"], description: "Callout icon" }
+                icon: { type: "string", enum: ["info", "warning", "success", "error", "tip", "note"], description: "Callout icon" },
+                // New properties for special blocks
+                values: { type: "array", items: { type: "string" }, description: "Values for stats blocks (e.g., ['1000+', '50%', '99%'])" },
+                labels: { type: "array", items: { type: "string" }, description: "Labels for stats/progress blocks (e.g., ['用户数', '增长率', '满意度'])" },
+                answers: { type: "array", items: { type: "string" }, description: "Answers for FAQ blocks, matching items array" },
+                countdown: { type: "object", description: "Countdown values: {days, hours, minutes, seconds}" },
+                percentage: { type: "number", description: "Progress percentage (0-100)" }
               },
               required: ["type", "content"]
             }

@@ -319,6 +319,164 @@ const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
             ${tableRows}
           </section>
         `;
+      
+      // --- Special Block Types ---
+      case BlockType.QRCODE:
+        return `
+          <section style="margin: 24px 0; padding: 24px; background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%); border-radius: 16px; border: 2px solid #667eea; text-align: center;">
+            <section style="width: 120px; height: 120px; margin: 0 auto 16px; background: #fff; border: 2px solid #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+              <section style="font-size: 48px;">📱</section>
+            </section>
+            <section style="font-size: 16px; font-weight: bold; color: #333; margin-bottom: 8px;">${block.title || '扫码关注'}</section>
+            <section style="font-size: 14px; color: #888;">${block.content}</section>
+          </section>
+        `;
+      
+      case BlockType.FAQ:
+        const faqItems = (block.items || []).map((question, idx) => {
+          const answer = block.answers?.[idx] || block.content;
+          const faqColor = idx % 2 === 0 ? '#667eea' : '#9b59b6';
+          return `
+            <section style="margin-bottom: 16px; background: #f8f9fa; border-radius: 12px; overflow: hidden;">
+              <section style="padding: 16px 20px; background: ${faqColor}; color: #fff; font-size: 15px; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                <section>Q</section>
+                <section>${question}</section>
+              </section>
+              <section style="padding: 16px 20px; font-size: 14px; color: #555; line-height: 1.7; display: flex; align-items: flex-start; gap: 8px;">
+                <section style="color: ${faqColor}; font-weight: bold;">A</section>
+                <section>${answer}</section>
+              </section>
+            </section>
+          `;
+        }).join('');
+        return `<section style="margin: 24px 0;">${faqItems}</section>`;
+      
+      case BlockType.COUNTDOWN:
+        const cd = block.countdown || { days: '00', hours: '00', minutes: '00', seconds: '00' };
+        return `
+          <section style="margin: 24px 0; padding: 24px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; text-align: center; color: #fff;">
+            <section style="font-size: 14px; color: #feca57; margin-bottom: 16px; letter-spacing: 2px;">⏰ ${block.title || '距离活动开始还有'}</section>
+            <section style="display: flex; justify-content: center; gap: 12px;">
+              <section style="padding: 16px 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                <section style="font-size: 28px; font-weight: bold;">${cd.days || '00'}</section>
+                <section style="font-size: 12px; opacity: 0.8; margin-top: 4px;">天</section>
+              </section>
+              <section style="padding: 16px 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                <section style="font-size: 28px; font-weight: bold;">${cd.hours || '00'}</section>
+                <section style="font-size: 12px; opacity: 0.8; margin-top: 4px;">时</section>
+              </section>
+              <section style="padding: 16px 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                <section style="font-size: 28px; font-weight: bold;">${cd.minutes || '00'}</section>
+                <section style="font-size: 12px; opacity: 0.8; margin-top: 4px;">分</section>
+              </section>
+              <section style="padding: 16px 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                <section style="font-size: 28px; font-weight: bold;">${cd.seconds || '00'}</section>
+                <section style="font-size: 12px; opacity: 0.8; margin-top: 4px;">秒</section>
+              </section>
+            </section>
+          </section>
+        `;
+      
+      case BlockType.PROGRESS:
+        const pct = block.percentage || 50;
+        return `
+          <section style="margin: 24px 0; padding: 20px; background: #f8f9fa; border-radius: 12px;">
+            <section style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <section style="font-size: 14px; font-weight: bold; color: #333;">${block.title || '进度'}</section>
+              <section style="font-size: 14px; color: ${colors.main}; font-weight: bold;">${pct}%</section>
+            </section>
+            <section style="height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
+              <section style="width: ${pct}%; height: 100%; ${isGradient ? `background: ${colors.main}` : `background-color: ${colors.main}`}; border-radius: 4px;"></section>
+            </section>
+            ${block.content ? `<section style="font-size: 13px; color: #666; margin-top: 8px;">${block.content}</section>` : ''}
+          </section>
+        `;
+      
+      case BlockType.GIFT:
+        return `
+          <section style="margin: 24px 0; padding: 20px; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); border-radius: 16px; text-align: center; color: #fff; position: relative; overflow: hidden;">
+            <section style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: rgba(255,255,255,0.2); border-radius: 50%;"></section>
+            <section style="position: absolute; bottom: -30px; left: -30px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></section>
+            <section style="font-size: 28px; margin-bottom: 8px;">🎁</section>
+            <section style="font-size: 20px; font-weight: bold; margin-bottom: 8px;">${block.title || '限时福利'}</section>
+            <section style="font-size: 14px; opacity: 0.95; margin-bottom: 16px;">${block.content}</section>
+            <section style="display: inline-block; padding: 10px 24px; background: #fff; color: #ff6b6b; font-size: 14px; font-weight: bold; border-radius: 20px;">立即领取</section>
+          </section>
+        `;
+      
+      case BlockType.CONTACT:
+        const contactItems = (block.items || ['邮箱', '电话', '地址']).map((label, idx) => {
+          const value = block.values?.[idx] || block.content;
+          const icons = ['📧', '📱', '📍', '🌐', '💬'];
+          return `
+            <section style="flex: 1; min-width: 140px; padding: 12px; background: #fff; border-radius: 8px; text-align: center;">
+              <section style="font-size: 20px; margin-bottom: 6px;">${icons[idx] || '📌'}</section>
+              <section style="font-size: 12px; color: #888; margin-bottom: 4px;">${label}</section>
+              <section style="font-size: 13px; color: #333;">${value}</section>
+            </section>
+          `;
+        }).join('');
+        return `
+          <section style="margin: 24px 0; padding: 20px; background: #f8f9fa; border-radius: 12px;">
+            <section style="font-size: 16px; font-weight: bold; color: #333; margin-bottom: 16px; text-align: center;">📞 ${block.title || '联系我们'}</section>
+            <section style="display: flex; gap: 12px; flex-wrap: wrap;">${contactItems}</section>
+          </section>
+        `;
+      
+      case BlockType.STATS:
+        const statItems = (block.values || ['1000+', '50%', '99%']).map((value, idx) => {
+          const label = block.labels?.[idx] || `指标${idx + 1}`;
+          const gradients = [
+            'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            'linear-gradient(135deg, #5ee7df 0%, #b490ca 100%)',
+            'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+          ];
+          return `
+            <section style="flex: 1; padding: 20px; background: ${gradients[idx % gradients.length]}; border-radius: 12px; text-align: center; color: #fff;">
+              <section style="font-size: 32px; font-weight: bold;">${value}</section>
+              <section style="font-size: 12px; opacity: 0.9; margin-top: 4px;">${label}</section>
+            </section>
+          `;
+        }).join('');
+        return `<section style="margin: 20px 0; display: flex; gap: 16px;">${statItems}</section>`;
+      
+      case BlockType.TESTIMONIAL:
+        return `
+          <section style="margin: 20px 0; padding: 24px; background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%); border-radius: 16px; border: 1px solid #e8e8ff;">
+            <section style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+              <section style="width: 50px; height: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px;">👤</section>
+              <section>
+                <section style="font-size: 15px; font-weight: bold; color: #333;">${block.author || '用户名'}</section>
+                <section style="font-size: 12px; color: #888;">${block.role || '职位/身份'}</section>
+              </section>
+              <section style="margin-left: auto; color: #f39c12; font-size: 14px;">★★★★★</section>
+            </section>
+            <section style="font-size: 14px; color: #555; line-height: 1.8; font-style: italic;">"${block.content}"</section>
+          </section>
+        `;
+      
+      case BlockType.STEPS:
+        const stepItems = (block.items || []).map((step, idx) => {
+          const stepColors = ['#667eea', '#9b59b6', '#764ba2'];
+          const stepBgs = ['#f8f9ff', '#faf5ff', '#f5f0ff'];
+          return `
+            <section style="margin-bottom: 24px; position: relative;">
+              <section style="position: absolute; left: -24px; width: 24px; height: 24px; background: ${stepColors[idx % stepColors.length]}; border-radius: 50%; color: #fff; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);">${idx + 1}</section>
+              <section style="background: ${stepBgs[idx % stepBgs.length]}; padding: 16px; border-radius: 8px; margin-left: 12px;">
+                <section style="font-size: 15px; font-weight: bold; color: #333; margin-bottom: 4px;">${block.labels?.[idx] || `步骤 ${idx + 1}`}</section>
+                <section style="font-size: 13px; color: #666; line-height: 1.6;">${step}</section>
+              </section>
+            </section>
+          `;
+        }).join('');
+        return `
+          <section style="margin: 20px 0; padding-left: 30px; position: relative;">
+            <section style="position: absolute; left: 11px; top: 20px; bottom: 20px; width: 2px; background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);"></section>
+            ${stepItems}
+          </section>
+        `;
+
       default:
         return '';
     }
