@@ -92,13 +92,16 @@ export const loadMemory = (): AIMemory => {
   return DEFAULT_MEMORY;
 };
 
+// Maximum number of history entries to keep in memory
+const MAX_HISTORY_SIZE = 20;
+
 export const saveMemory = (memory: AIMemory): void => {
   try {
     // Limit history size to prevent localStorage overflow
     const trimmedMemory: AIMemory = {
       ...memory,
-      contentHistory: memory.contentHistory.slice(-20),
-      designHistory: memory.designHistory.slice(-20)
+      contentHistory: memory.contentHistory.slice(-MAX_HISTORY_SIZE),
+      designHistory: memory.designHistory.slice(-MAX_HISTORY_SIZE)
     };
     localStorage.setItem(MEMORY_STORAGE_KEY, JSON.stringify(trimmedMemory));
   } catch (e) {
@@ -375,7 +378,9 @@ Requirements:
 
   const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
   if (!toolCall || toolCall.function.name !== 'generate_article_content') {
-    throw new Error('Content AI failed to generate structured content');
+    const receivedFunction = toolCall?.function?.name || 'none';
+    const messageContent = data.choices?.[0]?.message?.content?.slice(0, 100) || 'no content';
+    throw new Error(`Content AI failed to generate structured content. Expected 'generate_article_content', received: '${receivedFunction}'. Message: ${messageContent}`);
   }
 
   return JSON.parse(toolCall.function.arguments);
@@ -449,7 +454,9 @@ Requirements:
 
   const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
   if (!toolCall || toolCall.function.name !== 'beautify_article') {
-    throw new Error('Design AI failed to beautify content');
+    const receivedFunction = toolCall?.function?.name || 'none';
+    const messageContent = data.choices?.[0]?.message?.content?.slice(0, 100) || 'no content';
+    throw new Error(`Design AI failed to beautify content. Expected 'beautify_article', received: '${receivedFunction}'. Message: ${messageContent}`);
   }
 
   const result = JSON.parse(toolCall.function.arguments);

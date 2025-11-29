@@ -1,4 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { 
+  allTextMaterials, 
+  getTextMaterialCategories, 
+  getMaterialsByCategory,
+  TextMaterial,
+  TextMaterialCategory
+} from '../services/materialLibraryContent';
 
 // --- Types ---
 interface Material {
@@ -41,7 +48,15 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
   const [previewMaterial, setPreviewMaterial] = useState<Material | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
+  // New state for preset materials
+  const [activeTab, setActiveTab] = useState<'user' | 'preset'>('user');
+  const [selectedPresetCategory, setSelectedPresetCategory] = useState<TextMaterialCategory>('opening');
+  const presetCategories = getTextMaterialCategories();
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Memoized count of preset materials to avoid recalculation on every render
+  const presetMaterialsCount = React.useMemo(() => allTextMaterials.length, []);
 
   // Load materials from localStorage
   useEffect(() => {
@@ -144,6 +159,20 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
     }
   };
 
+  // Use preset material
+  const handleUsePresetMaterial = (textMaterial: TextMaterial) => {
+    onInsertText(textMaterial.content);
+  };
+
+  // Get filtered preset materials
+  const filteredPresetMaterials = getMaterialsByCategory(selectedPresetCategory).filter(m => 
+    searchQuery === '' || 
+    m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    m.nameZh.includes(searchQuery) ||
+    m.content.includes(searchQuery) ||
+    m.tags.some(t => t.includes(searchQuery))
+  );
+
   return (
     <div className="bg-white rounded-lg overflow-hidden h-full flex flex-col">
       {/* Hidden file input */}
@@ -162,7 +191,7 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
             <span className="material-icons text-blue-600">folder_special</span>
             <h3 className="font-bold text-gray-800">素材库</h3>
             <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-              {materials.length} 个素材
+              {activeTab === 'user' ? `${materials.length} 个素材` : `${presetMaterialsCount} 个预设`}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -179,6 +208,33 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
           </div>
         </div>
 
+        {/* Tab Switcher */}
+        <div className="flex bg-gray-100 p-1 rounded-lg mb-3">
+          <button
+            onClick={() => setActiveTab('user')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium rounded-md transition ${
+              activeTab === 'user' 
+                ? 'bg-white text-blue-600 shadow-sm' 
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <span className="material-icons text-sm">cloud_upload</span>
+            我的素材
+          </button>
+          <button
+            onClick={() => setActiveTab('preset')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium rounded-md transition ${
+              activeTab === 'preset' 
+                ? 'bg-white text-purple-600 shadow-sm' 
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <span className="material-icons text-sm">auto_awesome</span>
+            预设文案
+            <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">NEW</span>
+          </button>
+        </div>
+
         {/* Search */}
         <div className="relative mb-3">
           <span className="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
@@ -188,72 +244,100 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="搜索素材..."
+            placeholder={activeTab === 'user' ? "搜索素材..." : "搜索预设文案..."}
             className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
 
-        {/* Category tabs */}
-        <div className="flex gap-1 overflow-x-auto pb-1">
-          {DEFAULT_CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition ${
-                selectedCategory === cat
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-              }`}
-            >
-              {cat}
+        {/* Category tabs - for user materials */}
+        {activeTab === 'user' && (
+          <div className="flex gap-1 overflow-x-auto pb-1">
+            {DEFAULT_CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition ${
+                  selectedCategory === cat
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                }`}
+              >
+                {cat}
             </button>
           ))}
         </div>
-      </div>
+        )}
 
-      {/* Upload buttons */}
-      <div className="p-3 border-b border-gray-100 flex gap-2">
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
-        >
-          <span className="material-icons text-sm">add_photo_alternate</span>
-          上传图片
-        </button>
-        <button
-          onClick={() => {
-            setUploadType('text');
-            setNewMaterialCategory('文字');
-            setShowUploadModal(true);
-          }}
-          className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition text-sm font-medium"
-        >
-          <span className="material-icons text-sm">text_snippet</span>
-          添加文字
-        </button>
-      </div>
-
-      {/* Materials grid/list */}
-      <div className="flex-1 overflow-y-auto p-3">
-        {filteredMaterials.length === 0 ? (
-          <div className="text-center py-12">
-            <span className="material-icons text-gray-300 text-5xl mb-3 block">folder_open</span>
-            <p className="text-gray-500 text-sm">暂无素材</p>
-            <p className="text-gray-400 text-xs mt-1">点击上方按钮添加素材</p>
-          </div>
-        ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-3 gap-2">
-            {filteredMaterials.map((material) => (
-              <div
-                key={material.id}
-                className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 hover:shadow-md transition cursor-pointer"
-                onClick={() => setPreviewMaterial(material)}
+        {/* Category tabs - for preset materials */}
+        {activeTab === 'preset' && (
+          <div className="flex gap-1 overflow-x-auto pb-1">
+            {presetCategories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedPresetCategory(cat.id)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition flex items-center gap-1 ${
+                  selectedPresetCategory === cat.id
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                }`}
               >
-                {material.type === 'image' ? (
-                  <img
-                    src={material.content}
-                    alt={material.name}
-                    className="w-full h-full object-cover"
+                <span>{cat.icon}</span>
+                {cat.nameZh}
+                <span className={`text-xs px-1 rounded ${selectedPresetCategory === cat.id ? 'bg-purple-500' : 'bg-gray-100 text-gray-500'}`}>
+                  {cat.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Upload buttons - only show for user materials tab */}
+      {activeTab === 'user' && (
+        <div className="p-3 border-b border-gray-100 flex gap-2">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
+          >
+            <span className="material-icons text-sm">add_photo_alternate</span>
+            上传图片
+          </button>
+          <button
+            onClick={() => {
+              setUploadType('text');
+              setNewMaterialCategory('文字');
+              setShowUploadModal(true);
+            }}
+            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition text-sm font-medium"
+          >
+            <span className="material-icons text-sm">text_snippet</span>
+            添加文字
+          </button>
+        </div>
+      )}
+
+      {/* Materials grid/list - User Materials */}
+      {activeTab === 'user' && (
+        <div className="flex-1 overflow-y-auto p-3">
+          {filteredMaterials.length === 0 ? (
+            <div className="text-center py-12">
+              <span className="material-icons text-gray-300 text-5xl mb-3 block">folder_open</span>
+              <p className="text-gray-500 text-sm">暂无素材</p>
+              <p className="text-gray-400 text-xs mt-1">点击上方按钮添加素材</p>
+            </div>
+          ) : viewMode === 'grid' ? (
+            <div className="grid grid-cols-3 gap-2">
+              {filteredMaterials.map((material) => (
+                <div
+                  key={material.id}
+                  className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 hover:shadow-md transition cursor-pointer"
+                  onClick={() => setPreviewMaterial(material)}
+                >
+                  {material.type === 'image' ? (
+                    <img
+                      src={material.content}
+                      alt={material.name}
+                      className="w-full h-full object-cover"
                   />
                 ) : (
                   <div className="w-full h-full p-2 flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50">
@@ -344,6 +428,52 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
           </div>
         )}
       </div>
+      )}
+
+      {/* Preset Materials Section */}
+      {activeTab === 'preset' && (
+        <div className="flex-1 overflow-y-auto p-3">
+          {filteredPresetMaterials.length === 0 ? (
+            <div className="text-center py-12">
+              <span className="material-icons text-gray-300 text-5xl mb-3 block">search_off</span>
+              <p className="text-gray-500 text-sm">未找到匹配的预设文案</p>
+              <p className="text-gray-400 text-xs mt-1">尝试其他搜索词或分类</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredPresetMaterials.map((textMaterial) => (
+                <div
+                  key={textMaterial.id}
+                  className="p-4 bg-gradient-to-r from-purple-50 to-white rounded-lg border border-purple-100 hover:border-purple-300 hover:shadow-md transition cursor-pointer group"
+                  onClick={() => handleUsePresetMaterial(textMaterial)}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{presetCategories.find(c => c.id === textMaterial.category)?.icon}</span>
+                      <span className="font-medium text-gray-800">{textMaterial.nameZh}</span>
+                    </div>
+                    <span className="text-xs text-purple-600 opacity-0 group-hover:opacity-100 transition flex items-center gap-1">
+                      <span className="material-icons text-sm">add_circle</span>
+                      点击使用
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 line-clamp-2 mb-2">{textMaterial.content}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {textMaterial.tags.map((tag, idx) => (
+                      <span 
+                        key={idx} 
+                        className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Upload Modal */}
       {showUploadModal && (
