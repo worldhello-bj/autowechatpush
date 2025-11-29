@@ -46,6 +46,8 @@ import {
   rewriteContentQwen
 } from '../services/qwenService';
 import HtmlEditor from './HtmlEditor';
+import MaterialLibrary from './MaterialLibrary';
+import AIToolsPanel, { AISettings, DEFAULT_AI_SETTINGS } from './AIToolsPanel';
 import { ArticleBlock, GroundingSource, WeChatCredentials, BlockType, AIProvider } from '../types';
 import { getAccessToken, saveDraft, uploadImage } from '../services/wechatService';
 import { 
@@ -379,6 +381,12 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   // Template Preview Modal State
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<DesignTemplate | null>(null);
+
+  // Material Library Panel State
+  const [showMaterialLibrary, setShowMaterialLibrary] = useState(false);
+
+  // AI Settings State (with sliders)
+  const [aiSettings, setAiSettings] = useState<AISettings>(DEFAULT_AI_SETTINGS);
 
   // --- Handlers ---
 
@@ -843,6 +851,38 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     setHtmlContent(newContent);
   };
 
+  // --- Material Library Handlers ---
+  const handleInsertMaterialImage = (imageDataUrl: string) => {
+    const imgHtml = `
+      <section style="margin: 20px 0; text-align: center;">
+        <img src="${imageDataUrl}" style="max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
+      </section>
+    `;
+    const separator = htmlContent.trim() ? '\n' : '';
+    setHtmlContent(htmlContent + separator + imgHtml);
+  };
+
+  const handleInsertMaterialText = (text: string) => {
+    const safeText = escapeHtml(text);
+    const textHtml = `<p style="font-size: 16px; line-height: 1.8; color: #444;">${safeText}</p>`;
+    const separator = htmlContent.trim() ? '\n' : '';
+    setHtmlContent(htmlContent + separator + textHtml);
+  };
+
+  // --- Insert Hook Handler ---
+  const handleInsertHookContent = (hook: string) => {
+    const safeHook = escapeHtml(hook);
+    const newContent = `<p style="font-size: 16px; line-height: 1.8; color: #444; font-style: italic; background: #f8f4ff; padding: 16px; border-radius: 8px; border-left: 4px solid #9b59b6;">${safeHook}</p>` + htmlContent;
+    setHtmlContent(newContent);
+  };
+
+  // --- Insert CTA Handler ---
+  const handleInsertCTAContent = (cta: string) => {
+    const safeCTA = escapeHtml(cta);
+    const newContent = htmlContent + `<p style="font-size: 16px; line-height: 1.8; color: #444; text-align: center; margin-top: 24px; padding: 16px; background: #fff0f0; border-radius: 8px; border: 1px solid #ffc2c2;">${safeCTA}</p>`;
+    setHtmlContent(newContent);
+  };
+
   useEffect(() => {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (raw) {
@@ -1202,290 +1242,41 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
             </div>
         )}
 
-        {/* AI Tools Panel */}
+
+        {/* Material Library Panel - Button Only */}
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <button 
-            onClick={() => setShowAITools(!showAITools)}
+            onClick={() => setShowMaterialLibrary(true)}
+            className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition"
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-icons text-blue-600">folder_special</span>
+              <span className="font-semibold text-gray-800">素材库</span>
+              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">NEW</span>
+            </div>
+            <span className="material-icons text-gray-500">open_in_new</span>
+          </button>
+        </div>
+
+        {/* AI Tools Panel - Button Only */}
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <button 
+            onClick={() => setShowAITools(true)}
             className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100 transition"
           >
             <div className="flex items-center gap-2">
               <span className="material-icons text-purple-600">psychology</span>
-              <span className="font-semibold text-gray-800">AI Creative Tools</span>
-              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">NEW</span>
+              <span className="font-semibold text-gray-800">AI 智能工具</span>
+              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">含滑动条</span>
             </div>
-            <span className={`material-icons text-gray-500 transition-transform ${showAITools ? 'rotate-180' : ''}`}>expand_more</span>
+            <span className="material-icons text-gray-500">open_in_new</span>
           </button>
-          
-          {showAITools && (
-            <div className="p-4 bg-white space-y-4">
-              {/* Loading Indicator */}
-              {aiToolLoading && (
-                <div className="flex items-center justify-center py-2 text-purple-600">
-                  <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span className="text-sm">Processing...</span>
-                </div>
-              )}
-
-              {/* Title Suggestions */}
-              <div className="border-b border-gray-100 pb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                    <span className="material-icons text-sm text-orange-500">title</span>
-                    Title Suggestions
-                  </h4>
-                  <button
-                    onClick={handleGenerateTitles}
-                    disabled={aiToolLoading}
-                    className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded hover:bg-orange-200 disabled:opacity-50"
-                  >
-                    Generate
-                  </button>
-                </div>
-                {titleSuggestions.length > 0 && (
-                  <div className="space-y-1">
-                    {titleSuggestions.map((title, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setArticleTitle(title)}
-                        className="w-full text-left text-xs p-2 bg-orange-50 hover:bg-orange-100 rounded border border-orange-100 transition truncate"
-                      >
-                        {title}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Summary & Keywords */}
-              <div className="flex gap-2 border-b border-gray-100 pb-4">
-                <button
-                  onClick={handleGenerateSummary}
-                  disabled={aiToolLoading}
-                  className="flex-1 flex items-center justify-center gap-1 text-xs bg-blue-100 text-blue-700 px-3 py-2 rounded hover:bg-blue-200 disabled:opacity-50"
-                >
-                  <span className="material-icons text-sm">summarize</span>
-                  Auto Summary
-                </button>
-                <button
-                  onClick={handleExtractKeywords}
-                  disabled={aiToolLoading}
-                  className="flex-1 flex items-center justify-center gap-1 text-xs bg-green-100 text-green-700 px-3 py-2 rounded hover:bg-green-200 disabled:opacity-50"
-                >
-                  <span className="material-icons text-sm">sell</span>
-                  Extract Keywords
-                </button>
-              </div>
-
-              {/* Keywords Display */}
-              {keywords.length > 0 && (
-                <div className="flex flex-wrap gap-1 border-b border-gray-100 pb-4">
-                  {keywords.map((kw, idx) => (
-                    <span key={idx} className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded-full border border-green-100">
-                      {kw}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Hook Generation */}
-              <div className="border-b border-gray-100 pb-4">
-                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
-                  <span className="material-icons text-sm text-purple-500">psychology</span>
-                  Generate Opening Hook
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {(['question', 'story', 'statistic', 'quote', 'surprising'] as const).map((style) => (
-                    <button
-                      key={style}
-                      onClick={() => handleGenerateHook(style)}
-                      disabled={aiToolLoading}
-                      className="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded hover:bg-purple-100 disabled:opacity-50 capitalize"
-                    >
-                      {style}
-                    </button>
-                  ))}
-                </div>
-                {generatedHook && (
-                  <div className="mt-2 p-2 bg-purple-50 rounded text-xs text-gray-700 border border-purple-100">
-                    {generatedHook}
-                    <button
-                      onClick={() => {
-                        const safeHook = escapeHtml(generatedHook);
-                        const newContent = `<p style="font-size: 16px; line-height: 1.8; color: #444; font-style: italic; background: #f8f4ff; padding: 16px; border-radius: 8px; border-left: 4px solid #9b59b6;">${safeHook}</p>` + htmlContent;
-                        setHtmlContent(newContent);
-                      }}
-                      className="block mt-2 text-purple-600 hover:underline"
-                    >
-                      + Insert at beginning
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* CTA Generation */}
-              <div className="border-b border-gray-100 pb-4">
-                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
-                  <span className="material-icons text-sm text-red-500">campaign</span>
-                  Generate Call-to-Action
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {(['subscribe', 'share', 'comment', 'action', 'reflection'] as const).map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => handleGenerateCTA(type)}
-                      disabled={aiToolLoading}
-                      className="text-xs bg-red-50 text-red-700 px-2 py-1 rounded hover:bg-red-100 disabled:opacity-50 capitalize"
-                    >
-                      {type}
-                    </button>
-                  ))}
-                </div>
-                {generatedCTA && (
-                  <div className="mt-2 p-2 bg-red-50 rounded text-xs text-gray-700 border border-red-100">
-                    {generatedCTA}
-                    <button
-                      onClick={() => {
-                        const safeCTA = escapeHtml(generatedCTA);
-                        const newContent = htmlContent + `<p style="font-size: 16px; line-height: 1.8; color: #444; text-align: center; margin-top: 24px; padding: 16px; background: #fff0f0; border-radius: 8px; border: 1px solid #ffc2c2;">${safeCTA}</p>`;
-                        setHtmlContent(newContent);
-                      }}
-                      className="block mt-2 text-red-600 hover:underline"
-                    >
-                      + Insert at end
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Style Suggestions */}
-              <div className="border-b border-gray-100 pb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                    <span className="material-icons text-sm text-pink-500">palette</span>
-                    Style Suggestions
-                  </h4>
-                  <button
-                    onClick={handleSuggestStyles}
-                    disabled={aiToolLoading}
-                    className="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded hover:bg-pink-200 disabled:opacity-50"
-                  >
-                    Analyze
-                  </button>
-                </div>
-                {styleSuggestions.length > 0 && (
-                  <div className="space-y-2">
-                    {styleSuggestions.map((s, idx) => (
-                      <div key={idx} className="p-2 bg-pink-50 rounded text-xs border border-pink-100">
-                        <div className="font-medium text-pink-800 capitalize">{s.style}</div>
-                        <div className="text-gray-600 mt-1">{s.reason}</div>
-                        <div className="flex gap-1 mt-2">
-                          {s.colorScheme.map((color, cidx) => (
-                            <span key={cidx} className="px-2 py-0.5 bg-white rounded border text-gray-600">
-                              {color}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="text-pink-600 mt-1 italic">Mood: {s.mood}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Content Polish */}
-              <div className="border-b border-gray-100 pb-4">
-                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
-                  <span className="material-icons text-sm text-cyan-500">auto_fix_high</span>
-                  Polish Content
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {(['professional', 'casual', 'formal', 'creative'] as const).map((tone) => (
-                    <button
-                      key={tone}
-                      onClick={() => handlePolishContent(tone)}
-                      disabled={aiToolLoading}
-                      className="text-xs bg-cyan-50 text-cyan-700 px-2 py-1 rounded hover:bg-cyan-100 disabled:opacity-50 capitalize"
-                    >
-                      {tone}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Rewrite Content */}
-              <div className="border-b border-gray-100 pb-4">
-                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
-                  <span className="material-icons text-sm text-indigo-500">refresh</span>
-                  Rewrite Style
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {(['humorous', 'serious', 'inspirational', 'educational', 'conversational'] as const).map((style) => (
-                    <button
-                      key={style}
-                      onClick={() => handleRewriteContent(style)}
-                      disabled={aiToolLoading}
-                      className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-100 disabled:opacity-50 capitalize"
-                    >
-                      {style}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Expand Content */}
-              <div className="border-b border-gray-100 pb-4">
-                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
-                  <span className="material-icons text-sm text-amber-500">unfold_more</span>
-                  Expand Content
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {(['detailed', 'examples', 'storytelling'] as const).map((style) => (
-                    <button
-                      key={style}
-                      onClick={() => handleExpandContent(style)}
-                      disabled={aiToolLoading}
-                      className="text-xs bg-amber-50 text-amber-700 px-2 py-1 rounded hover:bg-amber-100 disabled:opacity-50 capitalize"
-                    >
-                      {style}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Translation */}
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
-                  <span className="material-icons text-sm text-teal-500">translate</span>
-                  Translate
-                </h4>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleTranslate('zh')}
-                    disabled={aiToolLoading}
-                    className="flex-1 text-xs bg-teal-50 text-teal-700 px-3 py-2 rounded hover:bg-teal-100 disabled:opacity-50"
-                  >
-                    → 中文
-                  </button>
-                  <button
-                    onClick={() => handleTranslate('en')}
-                    disabled={aiToolLoading}
-                    className="flex-1 text-xs bg-teal-50 text-teal-700 px-3 py-2 rounded hover:bg-teal-100 disabled:opacity-50"
-                  >
-                    → English
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Design Templates Library Panel */}
+        {/* Design Templates Panel - Button Only */}
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <button 
-            onClick={() => setShowDesignTemplates(!showDesignTemplates)}
+            onClick={() => setShowDesignTemplates(true)}
             className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-pink-50 to-orange-50 hover:from-pink-100 hover:to-orange-100 transition"
           >
             <div className="flex items-center gap-2">
@@ -1493,64 +1284,8 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
               <span className="font-semibold text-gray-800">精美设计格式库</span>
               <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">25+</span>
             </div>
-            <span className={`material-icons text-gray-500 transition-transform ${showDesignTemplates ? 'rotate-180' : ''}`}>expand_more</span>
+            <span className="material-icons text-gray-500">open_in_new</span>
           </button>
-          
-          {showDesignTemplates && (
-            <div className="p-4 bg-white">
-              {/* Quick Access Buttons */}
-              <div className="mb-4">
-                <button 
-                  onClick={() => setShowTemplateModal(true)}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg font-medium hover:from-pink-600 hover:to-purple-600 transition shadow-lg flex items-center justify-center gap-2"
-                >
-                  <span className="material-icons">grid_view</span>
-                  浏览全部模板（大图预览）
-                </button>
-              </div>
-
-              {/* Category Tabs */}
-              <div className="flex flex-wrap gap-1 mb-4 pb-3 border-b border-gray-100">
-                {templateCategories.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setSelectedTemplateCategory(cat.id)}
-                    className={`text-xs px-3 py-1.5 rounded-full transition flex items-center gap-1 ${
-                      selectedTemplateCategory === cat.id 
-                        ? 'bg-pink-500 text-white' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    <span>{cat.icon}</span>
-                    <span>{cat.nameZh}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Templates Grid - Compact View */}
-              <div className="grid grid-cols-2 gap-2 max-h-[250px] overflow-y-auto">
-                {getTemplatesByCategory(selectedTemplateCategory).map((template) => (
-                  <div 
-                    key={template.id}
-                    className="p-3 border border-gray-100 rounded-lg hover:border-pink-300 hover:bg-pink-50/50 transition cursor-pointer group text-center"
-                    onClick={() => handleInsertTemplate(template)}
-                  >
-                    <div className="text-sm font-medium text-gray-800 truncate">{template.nameZh}</div>
-                    <div className="text-xs text-gray-400 truncate">{template.previewZh}</div>
-                    <div className="mt-2 text-xs text-pink-500 opacity-0 group-hover:opacity-100 transition">点击插入 →</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Usage Tip */}
-              <div className="mt-4 pt-3 border-t border-gray-100">
-                <div className="text-xs text-gray-500 flex items-center gap-1">
-                  <span className="material-icons text-sm">lightbulb</span>
-                  点击"浏览全部模板"查看精美大图预览
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -1610,6 +1345,162 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
              </button>
          </div>
       </div>
+
+      {/* Material Library Modal Overlay */}
+      {showMaterialLibrary && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div className="flex items-center gap-2">
+                <span className="material-icons text-blue-600">folder_special</span>
+                <span className="font-bold text-lg text-gray-800">素材库</span>
+              </div>
+              <button 
+                onClick={() => setShowMaterialLibrary(false)}
+                className="p-2 hover:bg-gray-200 rounded-full transition"
+              >
+                <span className="material-icons text-gray-500">close</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto">
+              <MaterialLibrary
+                onSelectMaterial={() => {}}
+                onInsertImage={(img) => { handleInsertMaterialImage(img); setShowMaterialLibrary(false); }}
+                onInsertText={(txt) => { handleInsertMaterialText(txt); setShowMaterialLibrary(false); }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Tools Modal Overlay */}
+      {showAITools && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
+              <div className="flex items-center gap-2">
+                <span className="material-icons text-purple-600">psychology</span>
+                <span className="font-bold text-lg text-gray-800">AI 智能工具</span>
+                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">含滑动条</span>
+              </div>
+              <button 
+                onClick={() => setShowAITools(false)}
+                className="p-2 hover:bg-gray-200 rounded-full transition"
+              >
+                <span className="material-icons text-gray-500">close</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              <AIToolsPanel
+                settings={aiSettings}
+                onSettingsChange={setAiSettings}
+                onGenerateTitles={handleGenerateTitles}
+                onGenerateSummary={handleGenerateSummary}
+                onExtractKeywords={handleExtractKeywords}
+                onGenerateHook={handleGenerateHook}
+                onGenerateCTA={handleGenerateCTA}
+                onSuggestStyles={handleSuggestStyles}
+                onPolishContent={handlePolishContent}
+                onRewriteContent={handleRewriteContent}
+                onExpandContent={handleExpandContent}
+                onTranslate={handleTranslate}
+                titleSuggestions={titleSuggestions}
+                keywords={keywords}
+                styleSuggestions={styleSuggestions}
+                generatedHook={generatedHook}
+                generatedCTA={generatedCTA}
+                onSelectTitle={(title) => { setArticleTitle(title); }}
+                onInsertHook={(hook) => { handleInsertHookContent(hook); }}
+                onInsertCTA={(cta) => { handleInsertCTAContent(cta); }}
+                loading={aiToolLoading}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Design Templates Modal Overlay */}
+      {showDesignTemplates && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-pink-50 to-orange-50">
+              <div className="flex items-center gap-2">
+                <span className="material-icons text-pink-600">palette</span>
+                <span className="font-bold text-lg text-gray-800">精美设计格式库</span>
+                <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">25+</span>
+              </div>
+              <button 
+                onClick={() => setShowDesignTemplates(false)}
+                className="p-2 hover:bg-gray-200 rounded-full transition"
+              >
+                <span className="material-icons text-gray-500">close</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              {/* Category Tabs */}
+              <div className="flex flex-wrap gap-2 mb-4 pb-3 border-b border-gray-100">
+                {templateCategories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedTemplateCategory(cat.id)}
+                    className={`text-sm px-4 py-2 rounded-full transition flex items-center gap-1 ${
+                      selectedTemplateCategory === cat.id 
+                        ? 'bg-pink-500 text-white' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span>{cat.icon}</span>
+                    <span>{cat.nameZh}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Templates Grid with Preview */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {getTemplatesByCategory(selectedTemplateCategory).map((template) => (
+                  <div 
+                    key={template.id}
+                    className="border border-gray-200 rounded-xl hover:border-pink-400 hover:shadow-lg transition cursor-pointer group overflow-hidden"
+                    onClick={() => { handleInsertTemplate(template); setShowDesignTemplates(false); }}
+                  >
+                    {/* Template Preview */}
+                    <div 
+                      className="bg-white p-4 border-b border-gray-100 min-h-[120px] flex items-center justify-center"
+                      style={{ 
+                        transform: 'scale(0.75)', 
+                        transformOrigin: 'center center',
+                        margin: '-20px -40px'
+                      }}
+                    >
+                      <div 
+                        dangerouslySetInnerHTML={{ __html: template.html }}
+                        style={{ 
+                          pointerEvents: 'none',
+                          maxWidth: '100%',
+                          overflow: 'hidden'
+                        }}
+                      />
+                    </div>
+                    {/* Template Info */}
+                    <div className="p-3 bg-gray-50 group-hover:bg-pink-50/50 transition">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-medium text-gray-800">{template.nameZh}</div>
+                          <div className="text-xs text-gray-500">{template.previewZh}</div>
+                        </div>
+                        <div className="text-pink-500 opacity-0 group-hover:opacity-100 transition flex items-center gap-1 text-xs">
+                          <span className="material-icons text-sm">add_circle</span>
+                          插入
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
