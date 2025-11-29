@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 
 interface HtmlEditorProps {
   initialHtml: string;
@@ -8,7 +8,13 @@ interface HtmlEditorProps {
   date: string;
 }
 
-const HtmlEditor: React.FC<HtmlEditorProps> = ({ initialHtml, onChange, title, author, date }) => {
+// Exposed methods for parent component
+export interface HtmlEditorRef {
+  insertHtmlAtCursor: (html: string) => void;
+  focus: () => void;
+}
+
+const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, onChange, title, author, date }, ref) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showSource, setShowSource] = useState(false);
@@ -63,7 +69,13 @@ const HtmlEditor: React.FC<HtmlEditorProps> = ({ initialHtml, onChange, title, a
   // --- Insert Logic ---
 
   const insertHtmlAtCursor = (html: string) => {
-    if (showSource) return; // Only works in visual mode
+    if (showSource) {
+      // In source mode, append to end of text
+      const newHtml = internalHtml + '\n' + html;
+      setInternalHtml(newHtml);
+      onChange(newHtml);
+      return;
+    }
 
     // Focus the editor first
     if (contentRef.current) {
@@ -103,6 +115,12 @@ const HtmlEditor: React.FC<HtmlEditorProps> = ({ initialHtml, onChange, title, a
     }
     handleInput();
   };
+
+  // Expose methods to parent component via ref
+  useImperativeHandle(ref, () => ({
+    insertHtmlAtCursor,
+    focus: () => contentRef.current?.focus()
+  }));
 
   const insertCard = () => {
     const cardHtml = `
@@ -221,6 +239,6 @@ const HtmlEditor: React.FC<HtmlEditorProps> = ({ initialHtml, onChange, title, a
       </div>
     </div>
   );
-};
+});
 
 export default HtmlEditor;

@@ -51,7 +51,7 @@ import {
   saveMemory,
   AIMemory
 } from '../services/dualAIService';
-import HtmlEditor from './HtmlEditor';
+import HtmlEditor, { HtmlEditorRef } from './HtmlEditor';
 import MaterialLibrary from './MaterialLibrary';
 import AIToolsPanel, { AISettings, DEFAULT_AI_SETTINGS } from './AIToolsPanel';
 import { ArticleBlock, GroundingSource, WeChatCredentials, BlockType, AIProvider } from '../types';
@@ -529,6 +529,9 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  
+  // HTML Editor Ref (for inserting at cursor)
+  const htmlEditorRef = useRef<HtmlEditorRef>(null);
 
   // Draft State
   const [foundDraft, setFoundDraft] = useState(false);
@@ -1067,15 +1070,27 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         <img src="${imageDataUrl}" style="max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
       </section>
     `;
-    const separator = htmlContent.trim() ? '\n' : '';
-    setHtmlContent(htmlContent + separator + imgHtml);
+    // Use ref to insert at cursor position if available
+    if (htmlEditorRef.current) {
+      htmlEditorRef.current.insertHtmlAtCursor(imgHtml);
+    } else {
+      // Fallback: append to end
+      const separator = htmlContent.trim() ? '\n' : '';
+      setHtmlContent(htmlContent + separator + imgHtml);
+    }
   };
 
   const handleInsertMaterialText = (text: string) => {
     const safeText = escapeHtml(text);
     const textHtml = `<p style="font-size: 16px; line-height: 1.8; color: #444;">${safeText}</p>`;
-    const separator = htmlContent.trim() ? '\n' : '';
-    setHtmlContent(htmlContent + separator + textHtml);
+    // Use ref to insert at cursor position if available
+    if (htmlEditorRef.current) {
+      htmlEditorRef.current.insertHtmlAtCursor(textHtml);
+    } else {
+      // Fallback: append to end
+      const separator = htmlContent.trim() ? '\n' : '';
+      setHtmlContent(htmlContent + separator + textHtml);
+    }
   };
 
   // --- Insert Hook Handler ---
@@ -1576,6 +1591,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
             {/* Editor Component */}
             <div className="flex-1 overflow-hidden relative">
                  <HtmlEditor 
+                    ref={htmlEditorRef}
                     initialHtml={htmlContent}
                     onChange={(newHtml) => setHtmlContent(newHtml)}
                     title={articleTitle}
