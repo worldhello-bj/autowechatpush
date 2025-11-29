@@ -25,6 +25,19 @@ async function logPublicIP() {
     }
 }
 
+// CORS Middleware - Add CORS headers for all requests
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
 // Proxy Configuration
 const wechatProxy = createProxyMiddleware({
     target: 'https://api.weixin.qq.com',
@@ -40,7 +53,21 @@ const wechatProxy = createProxyMiddleware({
     },
     onError: (err, req, res) => {
         console.error(`[Proxy] 🔴 Proxy Error:`, err);
-        res.status(500).json({ error: 'Proxy Error', details: err.message });
+        console.error(`[Proxy] 🔴 Error Details: ${err.message}`);
+        console.error(`[Proxy] 🔴 This could be caused by:`);
+        console.error(`[Proxy]    1. Network connectivity issues`);
+        console.error(`[Proxy]    2. DNS resolution failure for api.weixin.qq.com`);
+        console.error(`[Proxy]    3. Firewall blocking outbound connections`);
+        console.error(`[Proxy]    4. SSL/TLS certificate issues`);
+        
+        // Ensure the response hasn't been sent yet
+        if (!res.headersSent) {
+            res.status(502).json({ 
+                error: 'Proxy Error', 
+                details: err.message,
+                suggestion: 'Check server logs for more details. Ensure network connectivity to api.weixin.qq.com is available.'
+            });
+        }
     }
 });
 
