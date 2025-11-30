@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import { 
   generateArticleStructure, 
   analyzeImage, 
@@ -1123,8 +1124,12 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   };
 
   const handleInsertMaterialSvg = (svgContent: string) => {
-    // Sanitize SVG by removing script tags
-    const sanitizedSvg = svgContent.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    // Sanitize SVG using DOMPurify for proper security
+    const sanitizedSvg = DOMPurify.sanitize(svgContent, {
+      USE_PROFILES: { svg: true, svgFilters: true },
+      ADD_TAGS: ['use'],
+      ADD_ATTR: ['xlink:href', 'href']
+    });
     const svgHtml = `
       <section style="margin: 20px 0; text-align: center;">
         ${sanitizedSvg}

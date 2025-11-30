@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import { 
   allTextMaterials, 
   getTextMaterialCategories, 
@@ -6,6 +7,15 @@ import {
   TextMaterial,
   TextMaterialCategory
 } from '../services/materialLibraryContent';
+
+// Configure DOMPurify for SVG sanitization
+const sanitizeSvg = (svgContent: string): string => {
+  return DOMPurify.sanitize(svgContent, {
+    USE_PROFILES: { svg: true, svgFilters: true },
+    ADD_TAGS: ['use'],
+    ADD_ATTR: ['xlink:href', 'href']
+  });
+};
 
 // --- Types ---
 interface Material {
@@ -530,7 +540,7 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
                       <div 
                         className="w-full h-full flex items-center justify-center"
                         dangerouslySetInnerHTML={{ 
-                          __html: material.content.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                          __html: sanitizeSvg(material.content)
                         }}
                         style={{ maxWidth: '100%', maxHeight: '100%' }}
                       />
@@ -612,7 +622,7 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
                   <div className="w-12 h-12 flex items-center justify-center bg-green-100 rounded-md overflow-hidden">
                     <div 
                       dangerouslySetInnerHTML={{ 
-                        __html: material.content.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                        __html: sanitizeSvg(material.content)
                       }}
                       className="w-8 h-8"
                       style={{ transform: 'scale(0.3)', transformOrigin: 'center' }}
@@ -771,7 +781,7 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
                 <div className="flex justify-center p-4 bg-gray-50 rounded-lg">
                   <div 
                     dangerouslySetInnerHTML={{ 
-                      __html: newMaterialContent.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                      __html: sanitizeSvg(newMaterialContent)
                     }}
                     className="max-h-40"
                   />
@@ -931,7 +941,7 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
                 <div className="p-4 bg-gray-50 rounded-lg flex items-center justify-center">
                   <div 
                     dangerouslySetInnerHTML={{ 
-                      __html: previewMaterial.content.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                      __html: sanitizeSvg(previewMaterial.content)
                     }}
                     className="max-w-full max-h-64"
                   />
