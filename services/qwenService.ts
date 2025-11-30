@@ -1,6 +1,9 @@
 
 import { ArticleBlock, GroundingSource } from "../types";
 import { GenerationResult } from "./geminiService";
+import { loggers } from './logger';
+
+const logger = loggers.qwen;
 
 const BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
 const TTS_URL = "https://dashscope.aliyuncs.com/api/v1/services/audio/tts/generation";
@@ -141,11 +144,42 @@ export const generateArticleStructureQwen = async (
     }
 
     const data = await response.json();
+    
+    // Log the raw API response
+    logger.group('Qwen API Response', true);
+    logger.debug('Raw response:', data);
+    logger.groupEnd();
+    
     const choice = data.choices?.[0];
     const toolCall = choice?.message?.tool_calls?.[0];
 
     if (toolCall && toolCall.function.name === 'layout_article') {
-        const args = JSON.parse(toolCall.function.arguments);
+        // Safely parse JSON with error handling
+        let args;
+        try {
+          let jsonStr = toolCall.function.arguments;
+          // Clean up common JSON issues from AI responses
+          // Remove any trailing content after the closing brace
+          const lastBrace = jsonStr.lastIndexOf('}');
+          if (lastBrace !== -1 && lastBrace < jsonStr.length - 1) {
+            jsonStr = jsonStr.substring(0, lastBrace + 1);
+            logger.warn('Cleaned trailing content from JSON response');
+          }
+          args = JSON.parse(jsonStr);
+        } catch (parseError) {
+          logger.error('Failed to parse AI response JSON:', parseError);
+          logger.error('Raw arguments:', toolCall.function.arguments);
+          throw new Error(`Failed to parse AI response: ${parseError}`);
+        }
+        
+        // Log generated content
+        logger.group('Generated Article', true);
+        logger.info('Title:', args.title);
+        logger.info('Digest:', args.digest);
+        logger.info('Blocks count:', args.blocks?.length || 0);
+        logger.debug('Blocks detail:', args.blocks);
+        logger.groupEnd();
+        
         const blocks = (args.blocks || []).map((b: any, index: number) => ({
             id: `qwen-${Date.now()}-${index}`,
             ...b
@@ -162,7 +196,7 @@ export const generateArticleStructureQwen = async (
     throw new Error("Qwen failed to generate structured content. Please try again.");
 
   } catch (error) {
-    console.error("Qwen generation failed:", error);
+    logger.error("Qwen generation failed:", error);
     throw error;
   }
 };

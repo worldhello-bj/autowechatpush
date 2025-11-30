@@ -10,6 +10,9 @@
 
 import { ArticleBlock, BlockType, GroundingSource } from "../types";
 import { GenerationResult } from "./geminiService";
+import { loggers } from './logger';
+
+const logger = loggers.dualAI;
 
 // --- Types ---
 
@@ -382,6 +385,11 @@ Requirements:
     0.7
   );
 
+  // Log the raw API response
+  logger.group('Content AI Response', true);
+  logger.debug('Raw response:', data);
+  logger.groupEnd();
+
   const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
   if (!toolCall || toolCall.function.name !== 'generate_article_content') {
     const receivedFunction = toolCall?.function?.name || 'none';
@@ -389,7 +397,32 @@ Requirements:
     throw new Error(`Content AI failed to generate structured content. Expected 'generate_article_content', received: '${receivedFunction}'. Message: ${messageContent}`);
   }
 
-  return JSON.parse(toolCall.function.arguments);
+  // Safely parse JSON with error handling
+  let result;
+  try {
+    let jsonStr = toolCall.function.arguments;
+    // Clean up common JSON issues from AI responses
+    const lastBrace = jsonStr.lastIndexOf('}');
+    if (lastBrace !== -1 && lastBrace < jsonStr.length - 1) {
+      jsonStr = jsonStr.substring(0, lastBrace + 1);
+      logger.warn('Cleaned trailing content from JSON response');
+    }
+    result = JSON.parse(jsonStr);
+  } catch (parseError) {
+    logger.error('Failed to parse Content AI response JSON:', parseError);
+    logger.error('Raw arguments:', toolCall.function.arguments);
+    throw new Error(`Failed to parse Content AI response: ${parseError}`);
+  }
+  
+  // Log generated content
+  logger.group('Content AI Generated', true);
+  logger.info('Title:', result.title);
+  logger.info('Digest:', result.digest);
+  logger.info('Sections:', result.sections?.length || 0);
+  logger.debug('Full result:', result);
+  logger.groupEnd();
+  
+  return result;
 };
 
 // --- Design AI Service ---
@@ -458,6 +491,11 @@ Requirements:
     0.8
   );
 
+  // Log the raw API response
+  logger.group('Design AI Response', true);
+  logger.debug('Raw response:', data);
+  logger.groupEnd();
+
   const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
   if (!toolCall || toolCall.function.name !== 'beautify_article') {
     const receivedFunction = toolCall?.function?.name || 'none';
@@ -465,7 +503,30 @@ Requirements:
     throw new Error(`Design AI failed to beautify content. Expected 'beautify_article', received: '${receivedFunction}'. Message: ${messageContent}`);
   }
 
-  const result = JSON.parse(toolCall.function.arguments);
+  // Safely parse JSON with error handling
+  let result;
+  try {
+    let jsonStr = toolCall.function.arguments;
+    // Clean up common JSON issues from AI responses
+    const lastBrace = jsonStr.lastIndexOf('}');
+    if (lastBrace !== -1 && lastBrace < jsonStr.length - 1) {
+      jsonStr = jsonStr.substring(0, lastBrace + 1);
+      logger.warn('Cleaned trailing content from JSON response');
+    }
+    result = JSON.parse(jsonStr);
+  } catch (parseError) {
+    logger.error('Failed to parse Design AI response JSON:', parseError);
+    logger.error('Raw arguments:', toolCall.function.arguments);
+    throw new Error(`Failed to parse Design AI response: ${parseError}`);
+  }
+  
+  // Log design result
+  logger.group('Design AI Generated', true);
+  logger.info('Blocks count:', result.blocks?.length || 0);
+  logger.info('Color scheme:', result.colorScheme);
+  logger.info('Design notes:', result.designNotes);
+  logger.debug('Blocks detail:', result.blocks);
+  logger.groupEnd();
   
   // Add IDs to blocks
   const blocks = (result.blocks || []).map((b: any, index: number) => ({
@@ -498,7 +559,8 @@ export const generateWithDualAI = async (
   designNotes?: string;
 }> => {
   // Step 1: Content AI generates the article content
-  console.log('[Dual AI] Step 1: Generating content...');
+  logger.info('Step 1: Generating content with', config.contentProvider);
+  logger.time('Content Generation');
   const contentResult = await generateContentWithAI(
     topic,
     memory,
@@ -506,17 +568,21 @@ export const generateWithDualAI = async (
     config.contentApiKey,
     imageContext
   );
+  logger.timeEnd('Content Generation');
 
   // Step 2: Design AI beautifies the content
-  console.log('[Dual AI] Step 2: Beautifying design...');
+  logger.info('Step 2: Beautifying design with', config.designProvider);
+  logger.time('Design Beautification');
   const designResult = await beautifyWithAI(
     contentResult,
     memory,
     config.designProvider,
     config.designApiKey
   );
+  logger.timeEnd('Design Beautification');
 
   // Step 3: Update memory with this interaction
+  logger.info('Step 3: Updating memory');
   const memoryUpdate: Partial<AIMemory> = {
     contentHistory: [
       ...memory.contentHistory,

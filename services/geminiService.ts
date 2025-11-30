@@ -168,6 +168,11 @@ export const generateArticleStructure = async (
       }
     });
 
+    // Log full AI response for debugging
+    logger.group('AI Response', true);
+    logger.debug('Raw response:', response);
+    logger.groupEnd();
+
     // Handle Grounding
     const sources: GroundingSource[] = [];
     const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
@@ -185,6 +190,15 @@ export const generateArticleStructure = async (
 
     if (callPart && callPart.functionCall) {
       const args = callPart.functionCall.args as any;
+      
+      // Log AI generated content details
+      logger.group('Generated Article', true);
+      logger.info('Title:', args.title);
+      logger.info('Digest:', args.digest);
+      logger.info('Blocks count:', args.blocks?.length || 0);
+      logger.debug('Blocks detail:', args.blocks);
+      logger.groupEnd();
+      
       const blocks = (args.blocks || []).map((b: any, index: number) => ({
         id: `gen-${Date.now()}-${index}`,
         ...b
