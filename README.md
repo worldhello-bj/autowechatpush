@@ -425,8 +425,48 @@ MIT License
 - 🎬 素材库支持视频、GIF、SVG文件上传
 - 🔧 修复素材库插入时光标位置丢失问题
 - 🔒 使用DOMPurify进行SVG安全过滤
+- 📊 统一日志系统 + UI设置面板
+- 🖥️ **新增Electron桌面应用支持 (EXE打包)**
 
 ### v1.2.0
 - 🤖 双AI并行架构
 - 📚 40+预设文案模板
 - 🎨 45+设计模板
+
+---
+
+## 🖥️ 桌面应用 (EXE)
+
+本项目支持打包为桌面应用程序，详见 [BUILD.md](./BUILD.md)。
+
+### 快速打包
+
+```bash
+# 安装依赖
+npm install
+
+# 打包 Windows EXE
+npm run electron:build:win
+
+# 打包 macOS DMG
+npm run electron:build:mac
+
+# 打包 Linux AppImage
+npm run electron:build:linux
+```
+
+### 输出文件
+
+| 平台 | 文件类型 | 位置 |
+|------|----------|------|
+| Windows | NSIS安装程序 | `release/微信AI发布助手-1.3.0-win-x64.exe` |
+| Windows | 便携版 | `release/微信AI发布助手-1.3.0-win-x64-portable.exe` |
+| macOS | DMG镜像 | `release/微信AI发布助手-1.3.0.dmg` |
+| Linux | AppImage | `release/微信AI发布助手-1.3.0.AppImage` |
+
+### 开发调试
+
+```bash
+# Electron 开发模式 (热重载)
+npm run electron:dev
+```
