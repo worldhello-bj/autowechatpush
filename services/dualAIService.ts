@@ -11,6 +11,7 @@
 import { ArticleBlock, BlockType, GroundingSource } from "../types";
 import { GenerationResult } from "./geminiService";
 import { loggers } from './logger';
+import { safeParseJSON } from './jsonParser';
 
 const logger = loggers.dualAI;
 
@@ -401,13 +402,7 @@ Requirements:
   let result;
   try {
     let jsonStr = toolCall.function.arguments;
-    // Clean up common JSON issues from AI responses
-    const lastBrace = jsonStr.lastIndexOf('}');
-    if (lastBrace !== -1 && lastBrace < jsonStr.length - 1) {
-      jsonStr = jsonStr.substring(0, lastBrace + 1);
-      logger.warn('Cleaned trailing content from JSON response');
-    }
-    result = JSON.parse(jsonStr);
+    result = safeParseJSON(jsonStr, logger);
   } catch (parseError) {
     logger.error('Failed to parse Content AI response JSON:', parseError);
     logger.error('Raw arguments:', toolCall.function.arguments);
@@ -507,13 +502,7 @@ Requirements:
   let result;
   try {
     let jsonStr = toolCall.function.arguments;
-    // Clean up common JSON issues from AI responses
-    const lastBrace = jsonStr.lastIndexOf('}');
-    if (lastBrace !== -1 && lastBrace < jsonStr.length - 1) {
-      jsonStr = jsonStr.substring(0, lastBrace + 1);
-      logger.warn('Cleaned trailing content from JSON response');
-    }
-    result = JSON.parse(jsonStr);
+    result = safeParseJSON(jsonStr, logger);
   } catch (parseError) {
     logger.error('Failed to parse Design AI response JSON:', parseError);
     logger.error('Raw arguments:', toolCall.function.arguments);
