@@ -15,10 +15,17 @@ export interface HtmlEditorRef {
   saveCursorPosition: () => void;
 }
 
+// Saved cursor position info that survives DOM changes
+interface SavedCursorPosition {
+  range: Range;
+  // Also save character offset from start of editor as fallback
+  charOffset: number;
+}
+
 const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, onChange, title, author, date }, ref) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const savedRangeRef = useRef<Range | null>(null);
+  const savedPositionRef = useRef<SavedCursorPosition | null>(null);
   const [showSource, setShowSource] = useState(false);
   const [internalHtml, setInternalHtml] = useState(initialHtml);
 
@@ -70,13 +77,59 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
 
   // --- Insert Logic ---
 
+  // Helper: Calculate character offset from start of contentEditable
+  const getCharOffset = (container: Node, offset: number, root: HTMLElement): number => {
+    let charCount = 0;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let node: Node | null;
+    
+    while ((node = walker.nextNode())) {
+      if (node === container) {
+        return charCount + offset;
+      }
+      charCount += (node.textContent?.length || 0);
+    }
+    
+    // If we're at an element node, count up to that position
+    return charCount;
+  };
+
+  // Helper: Find position from character offset
+  const findPositionFromOffset = (targetOffset: number, root: HTMLElement): { node: Node; offset: number } | null => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let charCount = 0;
+    let node: Node | null;
+    let lastNode: Node | null = null;
+    
+    while ((node = walker.nextNode())) {
+      const length = node.textContent?.length || 0;
+      if (charCount + length >= targetOffset) {
+        return { node, offset: targetOffset - charCount };
+      }
+      charCount += length;
+      lastNode = node;
+    }
+    
+    // Return end of last text node or null
+    if (lastNode) {
+      return { node: lastNode, offset: lastNode.textContent?.length || 0 };
+    }
+    return null;
+  };
+
   // Save the current cursor position for later use (e.g., before opening a modal)
   const saveCursorPosition = () => {
-    if (showSource) return;
+    if (showSource || !contentRef.current) return;
     
     const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0 && sel.anchorNode && contentRef.current?.contains(sel.anchorNode)) {
-      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+    if (sel && sel.rangeCount > 0 && sel.anchorNode && contentRef.current.contains(sel.anchorNode)) {
+      const range = sel.getRangeAt(0).cloneRange();
+      const charOffset = getCharOffset(range.startContainer, range.startOffset, contentRef.current);
+      
+      savedPositionRef.current = {
+        range: range,
+        charOffset: charOffset
+      };
     }
   };
 
@@ -89,57 +142,53 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
       return;
     }
 
+    if (!contentRef.current) return;
+
     // Focus the editor first
-    if (contentRef.current) {
-        contentRef.current.focus();
-    }
+    contentRef.current.focus();
 
     const sel = window.getSelection();
     
-    // Determine which range to use: current selection or saved position
+    // Determine which range to use
+    // PRIORITY: Saved position > Current selection > Fallback
     let rangeToUse: Range | null = null;
     
-    if (sel && sel.rangeCount > 0 && sel.anchorNode && contentRef.current?.contains(sel.anchorNode)) {
-      // Current selection is valid and within the editor
+    // Try 1: Use saved range if its startContainer is still in the DOM
+    // This is prioritized because the modal interaction loses the real cursor position
+    if (savedPositionRef.current?.range?.startContainer && contentRef.current.contains(savedPositionRef.current.range.startContainer)) {
+      rangeToUse = savedPositionRef.current.range;
+    }
+    // Try 2: Reconstruct range from character offset (if saved range was invalidated)
+    else if (savedPositionRef.current && savedPositionRef.current.charOffset >= 0) {
+      const position = findPositionFromOffset(savedPositionRef.current.charOffset, contentRef.current);
+      if (position) {
+        rangeToUse = document.createRange();
+        try {
+          rangeToUse.setStart(position.node, position.offset);
+          rangeToUse.collapse(true);
+        } catch {
+          rangeToUse = null;
+        }
+      }
+    }
+    // Try 3: Use current selection if no saved position (direct insert without modal)
+    else if (sel && sel.rangeCount > 0 && sel.anchorNode && contentRef.current.contains(sel.anchorNode)) {
       rangeToUse = sel.getRangeAt(0);
-    } else if (savedRangeRef.current && savedRangeRef.current.startContainer && contentRef.current?.contains(savedRangeRef.current.startContainer)) {
-      // Use saved cursor position if current selection is not in editor
-      rangeToUse = savedRangeRef.current;
     }
     
-    if (rangeToUse) {
-        rangeToUse.deleteContents();
-
-        // Create a temporary container for the HTML
-        const el = document.createElement("div");
-        el.innerHTML = html;
+    if (rangeToUse && sel) {
+        // Apply the range to the selection
+        sel.removeAllRanges();
+        sel.addRange(rangeToUse);
         
-        const frag = document.createDocumentFragment();
-        let node; 
-        let lastNode;
-        while ((node = el.firstChild)) {
-            lastNode = frag.appendChild(node);
-        }
+        // Use execCommand insertHTML which handles block elements correctly
+        document.execCommand('insertHTML', false, html);
         
-        rangeToUse.insertNode(frag);
-
-        // Move cursor after inserted content
-        if (lastNode) {
-            rangeToUse.setStartAfter(lastNode);
-            rangeToUse.collapse(true);
-            if (sel) {
-              sel.removeAllRanges();
-              sel.addRange(rangeToUse);
-            }
-        }
-        
-        // Clear saved range after use
-        savedRangeRef.current = null;
+        // Clear saved position after use
+        savedPositionRef.current = null;
     } else {
-        // Fallback: Append to end if no selection and no saved position
-        if (contentRef.current) {
-            contentRef.current.innerHTML += html;
-        }
+        // Fallback: Append to end if no valid position found
+        contentRef.current.innerHTML += html;
     }
     handleInput();
   };
@@ -252,7 +301,11 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
                 className="prose max-w-none px-5 pb-10 focus:outline-none article-content min-h-[300px]"
                 contentEditable
                 onInput={handleInput}
-                onBlur={handleInput}
+                onBlur={() => {
+                    // Save cursor position before losing focus
+                    saveCursorPosition();
+                    handleInput();
+                }}
                 suppressContentEditableWarning={true}
             />
         )}

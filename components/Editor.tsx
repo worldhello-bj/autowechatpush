@@ -1083,12 +1083,13 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
 
   const handleInsertMaterialText = (text: string) => {
     const safeText = escapeHtml(text);
-    const textHtml = `<p style="font-size: 16px; line-height: 1.8; color: #444;">${safeText}</p>`;
-    // Use ref to insert at cursor position if available
+    // Insert text inline (without wrapper) to preserve cursor position
+    // Use a span for inline styling that works with cursor positioning
     if (htmlEditorRef.current) {
-      htmlEditorRef.current.insertHtmlAtCursor(textHtml);
+      htmlEditorRef.current.insertHtmlAtCursor(safeText);
     } else {
-      // Fallback: append to end
+      // Fallback: append with proper paragraph wrapper
+      const textHtml = `<p style="font-size: 16px; line-height: 1.8; color: #444;">${safeText}</p>`;
       const separator = htmlContent.trim() ? '\n' : '';
       setHtmlContent(htmlContent + separator + textHtml);
     }
@@ -1130,14 +1131,19 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       ADD_TAGS: ['use'],
       ADD_ATTR: ['xlink:href', 'href']
     });
-    const svgHtml = `
-      <section style="margin: 20px 0; text-align: center;">
-        ${sanitizedSvg}
-      </section>
-    `;
+    
+    // Wrap SVG in a span to make it inline and preserve cursor position
+    const inlineSvg = `<span style="display:inline-block; vertical-align:middle;">${sanitizedSvg}</span>`;
+    
     if (htmlEditorRef.current) {
-      htmlEditorRef.current.insertHtmlAtCursor(svgHtml);
+      htmlEditorRef.current.insertHtmlAtCursor(inlineSvg);
     } else {
+      // Fallback: append with wrapper for proper block display
+      const svgHtml = `
+        <section style="margin: 20px 0; text-align: center;">
+          ${sanitizedSvg}
+        </section>
+      `;
       const separator = htmlContent.trim() ? '\n' : '';
       setHtmlContent(htmlContent + separator + svgHtml);
     }
