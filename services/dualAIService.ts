@@ -232,10 +232,10 @@ const designAITools = [
               properties: {
                 type: { 
                   type: "string", 
-                  enum: ["header", "paragraph", "card", "list", "quote", "image", "divider", "code", "callout", "numbered_list", "highlight", "table", "qrcode", "faq", "countdown", "progress", "gift", "contact", "stats", "testimonial", "steps"],
-                  description: "Block type - use special types like qrcode, faq, countdown, progress, gift, contact, stats, testimonial, steps for advanced layouts" 
+                  enum: ["header", "paragraph", "card", "list", "quote", "image", "divider", "code", "callout", "numbered_list", "highlight", "table", "qrcode", "faq", "countdown", "progress", "gift", "contact", "stats", "testimonial", "steps", "svg"],
+                  description: "Block type - use special types like qrcode, faq, countdown, progress, gift, contact, stats, testimonial, steps, svg for advanced layouts" 
                 },
-                content: { type: "string", description: "The content for this block" },
+                content: { type: "string", description: "The content for this block. For svg, provide SVG code or description." },
                 title: { type: "string", description: "Title for card, header, callout, gift, faq blocks" },
                 items: { type: "array", items: { type: "string" }, description: "List items, FAQ questions, or step descriptions" },
                 style: { 
