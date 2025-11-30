@@ -155,11 +155,20 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
     
     // Try 1: Use saved range if its startContainer is still in the DOM
     // This is prioritized because the modal interaction loses the real cursor position
-    if (savedPositionRef.current?.range?.startContainer && contentRef.current.contains(savedPositionRef.current.range.startContainer)) {
-      rangeToUse = savedPositionRef.current.range;
+    // Wrap in try-catch in case the DOM node was removed or is invalid
+    try {
+      if (savedPositionRef.current?.range?.startContainer && 
+          contentRef.current && 
+          contentRef.current.contains(savedPositionRef.current.range.startContainer)) {
+        rangeToUse = savedPositionRef.current.range;
+      }
+    } catch {
+      // DOM node may have been removed, fall through to next option
+      rangeToUse = null;
     }
+    
     // Try 2: Reconstruct range from character offset (if saved range was invalidated)
-    else if (savedPositionRef.current && savedPositionRef.current.charOffset >= 0) {
+    if (!rangeToUse && savedPositionRef.current && savedPositionRef.current.charOffset >= 0 && contentRef.current) {
       const position = findPositionFromOffset(savedPositionRef.current.charOffset, contentRef.current);
       if (position) {
         rangeToUse = document.createRange();
@@ -171,22 +180,25 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
         }
       }
     }
+    
     // Try 3: Use current selection if no saved position (direct insert without modal)
-    else if (sel && sel.rangeCount > 0 && sel.anchorNode && contentRef.current.contains(sel.anchorNode)) {
+    if (!rangeToUse && sel && sel.rangeCount > 0 && sel.anchorNode && contentRef.current && contentRef.current.contains(sel.anchorNode)) {
       rangeToUse = sel.getRangeAt(0);
     }
     
-    if (rangeToUse && sel) {
+    if (rangeToUse && sel && contentRef.current) {
         // Apply the range to the selection
         sel.removeAllRanges();
         sel.addRange(rangeToUse);
         
-        // Use execCommand insertHTML which handles block elements correctly
+        // Use execCommand insertHTML for contentEditable
+        // Note: execCommand is deprecated but still widely supported for contentEditable
+        // and provides better cross-browser behavior than manual DOM manipulation
         document.execCommand('insertHTML', false, html);
         
         // Clear saved position after use
         savedPositionRef.current = null;
-    } else {
+    } else if (contentRef.current) {
         // Fallback: Append to end if no valid position found
         contentRef.current.innerHTML += html;
     }
