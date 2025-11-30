@@ -75,7 +75,7 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
     if (showSource) return;
     
     const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0 && contentRef.current?.contains(sel.anchorNode)) {
+    if (sel && sel.rangeCount > 0 && sel.anchorNode && contentRef.current?.contains(sel.anchorNode)) {
       savedRangeRef.current = sel.getRangeAt(0).cloneRange();
     }
   };
@@ -99,10 +99,10 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
     // Determine which range to use: current selection or saved position
     let rangeToUse: Range | null = null;
     
-    if (sel && sel.rangeCount > 0 && contentRef.current?.contains(sel.anchorNode)) {
+    if (sel && sel.rangeCount > 0 && sel.anchorNode && contentRef.current?.contains(sel.anchorNode)) {
       // Current selection is valid and within the editor
       rangeToUse = sel.getRangeAt(0);
-    } else if (savedRangeRef.current && contentRef.current?.contains(savedRangeRef.current.startContainer)) {
+    } else if (savedRangeRef.current && savedRangeRef.current.startContainer && contentRef.current?.contains(savedRangeRef.current.startContainer)) {
       // Use saved cursor position if current selection is not in editor
       rangeToUse = savedRangeRef.current;
     }
