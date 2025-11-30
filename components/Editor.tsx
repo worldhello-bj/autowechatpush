@@ -1058,10 +1058,15 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
 
   // --- Design Template Handler ---
   const handleInsertTemplate = (template: DesignTemplate) => {
-    // Insert the template HTML at the end of current content with proper spacing
-    const separator = htmlContent.trim() ? '\n' : '';
-    const newContent = htmlContent + separator + template.html;
-    setHtmlContent(newContent);
+    // Use ref to insert at cursor position if available
+    if (htmlEditorRef.current) {
+      htmlEditorRef.current.insertHtmlAtCursor(template.html);
+    } else {
+      // Fallback: append to end
+      const separator = htmlContent.trim() ? '\n' : '';
+      const newContent = htmlContent + separator + template.html;
+      setHtmlContent(newContent);
+    }
   };
 
   // --- Material Library Handlers ---
@@ -1603,7 +1608,13 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         {/* Design Templates Panel - Button Only */}
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <button 
-            onClick={() => setShowDesignTemplates(true)}
+            onClick={() => {
+              // Save cursor position before opening modal
+              if (htmlEditorRef.current) {
+                htmlEditorRef.current.saveCursorPosition();
+              }
+              setShowDesignTemplates(true);
+            }}
             className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-pink-50 to-orange-50 hover:from-pink-100 hover:to-orange-100 transition"
           >
             <div className="flex items-center gap-2">
