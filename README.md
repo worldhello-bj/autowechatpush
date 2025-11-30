@@ -198,6 +198,7 @@ autowechatpush/
 │   ├── HtmlEditor.tsx    # HTML 编辑器 (支持光标位置保存)
 │   ├── MaterialLibrary.tsx # 素材库 (支持视频/GIF/SVG)
 │   ├── AIToolsPanel.tsx  # AI 工具面板
+│   ├── LogSettings.tsx   # 日志设置面板 🆕
 │   └── ArticlePreview.tsx # 文章预览
 ├── services/             # 服务层
 │   ├── geminiService.ts  # Google Gemini
@@ -368,6 +369,17 @@ logger.groupEnd();
 // 设置日志级别
 setLogLevel(LogLevel.WARN); // 只显示 WARN 和 ERROR
 ```
+
+#### 图形界面设置 🆕
+
+在 **Settings** 页面新增了 **日志设置** 面板，提供可视化的日志配置：
+
+- 📊 **日志级别选择**: 可视化选择 DEBUG/INFO/WARN/ERROR/NONE
+- 🧪 **测试日志**: 一键发送测试日志验证配置
+- 🗑️ **清空控制台**: 快速清除控制台输出
+- ↩️ **恢复默认**: 重置为默认日志级别
+
+![Log Settings UI](https://img.shields.io/badge/Settings-Log%20Settings-green)
 
 | 日志级别 | 说明 |
 |---------|------|

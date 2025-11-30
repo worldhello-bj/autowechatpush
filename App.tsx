@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
 import Editor from './components/Editor';
+import LogSettings from './components/LogSettings';
 import { AIProvider } from './types';
 
 // --- Shared Types ---
@@ -484,9 +485,14 @@ const SettingsPage: React.FC = () => {
                 </button>
              </div>
           </div>
+
+          {/* Log Settings */}
+          <div className="p-6">
+             <LogSettings />
+          </div>
           
            <div className="p-6 bg-gray-50">
-               <div className="text-sm text-gray-500 text-center">WeChat AI Publisher v1.2.0</div>
+               <div className="text-sm text-gray-500 text-center">WeChat AI Publisher v1.3.0</div>
            </div>
        </div>
     </div>
