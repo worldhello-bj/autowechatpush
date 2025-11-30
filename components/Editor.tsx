@@ -1511,7 +1511,13 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         {/* Material Library Panel - Button Only */}
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <button 
-            onClick={() => setShowMaterialLibrary(true)}
+            onClick={() => {
+              // Save cursor position before opening the modal
+              if (htmlEditorRef.current) {
+                htmlEditorRef.current.saveCursorPosition();
+              }
+              setShowMaterialLibrary(true);
+            }}
             className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition"
           >
             <div className="flex items-center gap-2">

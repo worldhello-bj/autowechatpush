@@ -12,11 +12,13 @@ interface HtmlEditorProps {
 export interface HtmlEditorRef {
   insertHtmlAtCursor: (html: string) => void;
   focus: () => void;
+  saveCursorPosition: () => void;
 }
 
 const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, onChange, title, author, date }, ref) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const savedRangeRef = useRef<Range | null>(null);
   const [showSource, setShowSource] = useState(false);
   const [internalHtml, setInternalHtml] = useState(initialHtml);
 
@@ -68,6 +70,16 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
 
   // --- Insert Logic ---
 
+  // Save the current cursor position for later use (e.g., before opening a modal)
+  const saveCursorPosition = () => {
+    if (showSource) return;
+    
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && contentRef.current?.contains(sel.anchorNode)) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  };
+
   const insertHtmlAtCursor = (html: string) => {
     if (showSource) {
       // In source mode, append to end of text
@@ -83,9 +95,20 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
     }
 
     const sel = window.getSelection();
+    
+    // Determine which range to use: current selection or saved position
+    let rangeToUse: Range | null = null;
+    
     if (sel && sel.rangeCount > 0 && contentRef.current?.contains(sel.anchorNode)) {
-        const range = sel.getRangeAt(0);
-        range.deleteContents();
+      // Current selection is valid and within the editor
+      rangeToUse = sel.getRangeAt(0);
+    } else if (savedRangeRef.current && contentRef.current?.contains(savedRangeRef.current.startContainer)) {
+      // Use saved cursor position if current selection is not in editor
+      rangeToUse = savedRangeRef.current;
+    }
+    
+    if (rangeToUse) {
+        rangeToUse.deleteContents();
 
         // Create a temporary container for the HTML
         const el = document.createElement("div");
@@ -98,17 +121,22 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
             lastNode = frag.appendChild(node);
         }
         
-        range.insertNode(frag);
+        rangeToUse.insertNode(frag);
 
         // Move cursor after inserted content
         if (lastNode) {
-            range.setStartAfter(lastNode);
-            range.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(range);
+            rangeToUse.setStartAfter(lastNode);
+            rangeToUse.collapse(true);
+            if (sel) {
+              sel.removeAllRanges();
+              sel.addRange(rangeToUse);
+            }
         }
+        
+        // Clear saved range after use
+        savedRangeRef.current = null;
     } else {
-        // Fallback: Append to end if no selection
+        // Fallback: Append to end if no selection and no saved position
         if (contentRef.current) {
             contentRef.current.innerHTML += html;
         }
@@ -119,7 +147,8 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
   // Expose methods to parent component via ref
   useImperativeHandle(ref, () => ({
     insertHtmlAtCursor,
-    focus: () => contentRef.current?.focus()
+    focus: () => contentRef.current?.focus(),
+    saveCursorPosition
   }));
 
   const insertCard = () => {
