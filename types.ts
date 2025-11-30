@@ -21,7 +21,8 @@ export enum BlockType {
   CONTACT = 'contact',         // 联系方式
   STATS = 'stats',             // 数据统计卡片
   TESTIMONIAL = 'testimonial', // 用户评价
-  STEPS = 'steps'              // 步骤流程
+  STEPS = 'steps',             // 步骤流程
+  SVG = 'svg'                  // SVG图形/装饰
 }
 
 export interface ArticleBlock {

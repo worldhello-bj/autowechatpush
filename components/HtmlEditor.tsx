@@ -144,8 +144,17 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
 
     if (!contentRef.current) return;
 
+    // Save scroll position before focus to prevent scroll jump
+    const scrollContainer = contentRef.current.closest('.overflow-y-auto');
+    const savedScrollTop = scrollContainer?.scrollTop || 0;
+
     // Focus the editor first
     contentRef.current.focus();
+
+    // Restore scroll position immediately after focus
+    if (scrollContainer) {
+      scrollContainer.scrollTop = savedScrollTop;
+    }
 
     const sel = window.getSelection();
     
@@ -202,6 +211,12 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
         // Fallback: Append to end if no valid position found
         contentRef.current.innerHTML += html;
     }
+    
+    // Restore scroll position after insertion to prevent scroll jump
+    if (scrollContainer) {
+      scrollContainer.scrollTop = savedScrollTop;
+    }
+    
     handleInput();
   };
 

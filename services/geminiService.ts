@@ -28,10 +28,10 @@ const layoutArticleFunction: FunctionDeclaration = {
           properties: {
             type: { 
               type: Type.STRING, 
-              enum: ['header', 'paragraph', 'card', 'list', 'quote', 'image', 'divider', 'code', 'callout', 'numbered_list', 'highlight', 'table', 'qrcode', 'faq', 'countdown', 'progress', 'gift', 'contact', 'stats', 'testimonial', 'steps'], 
-              description: 'Block type. Use "header" for section titles, "paragraph" for body text, "card" for key points, "list" for bullet points, "numbered_list" for steps, "quote" for citations, "image" for visual placeholders, "divider" for section breaks, "code" for code snippets, "callout" for important notices, "highlight" for emphasized text, "table" for structured data. Special types: "qrcode" for QR code sections, "faq" for Q&A blocks, "countdown" for timers, "progress" for progress bars, "gift" for promotional boxes, "contact" for contact info, "stats" for statistics display, "testimonial" for user reviews, "steps" for step-by-step flows.' 
+              enum: ['header', 'paragraph', 'card', 'list', 'quote', 'image', 'divider', 'code', 'callout', 'numbered_list', 'highlight', 'table', 'qrcode', 'faq', 'countdown', 'progress', 'gift', 'contact', 'stats', 'testimonial', 'steps', 'svg'], 
+              description: 'Block type. Use "header" for section titles, "paragraph" for body text, "card" for key points, "list" for bullet points, "numbered_list" for steps, "quote" for citations, "image" for visual placeholders, "divider" for section breaks, "code" for code snippets, "callout" for important notices, "highlight" for emphasized text, "table" for structured data. Special types: "qrcode" for QR code sections, "faq" for Q&A blocks, "countdown" for timers, "progress" for progress bars, "gift" for promotional boxes, "contact" for contact info, "stats" for statistics display, "testimonial" for user reviews, "steps" for step-by-step flows, "svg" for decorative SVG graphics (icons, badges, dividers, arrows).' 
             },
-            content: { type: Type.STRING, description: 'The main text content. For "image" type, provide a visual description. For "divider", this can be empty.' },
+            content: { type: Type.STRING, description: 'The main text content. For "image" type, provide a visual description. For "divider", this can be empty. For "svg" type, provide SVG code or a description of desired graphic.' },
             title: { type: Type.STRING, description: 'Title for card, header, callout, gift, faq, or table blocks.' },
             items: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'List items for "list" or "numbered_list" types. Also used for FAQ questions or step descriptions.' },
             style: { 
@@ -134,6 +134,7 @@ export const generateArticleStructure = async (
       - **Visual Variety**: Do NOT just use paragraphs. You MUST use 'card' blocks for key takeaways, 'highlight' for important points.
       - **Colors**: You MUST use specific colors ('red', 'blue', 'orange', 'purple', 'gold', 'green', 'pink', 'cyan', 'gradient') for different Cards and Headers. Do not just use default.
       - **Images**: Insert 'image' blocks where appropriate. For the content, write a PROMPT describing the image (e.g., "A chart showing growth" or "A happy family in a park"). Do not provide URLs.
+      - **SVG Graphics**: Use 'svg' blocks for decorative elements like icons, badges, arrows, or custom graphics. For the content, provide inline SVG code (e.g., '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48" fill="#FFD700"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>') or a description of desired graphic.
       - **Headers**: Use clear headers with levels (1 for main sections, 2 for subsections, 3 for minor titles).
       - **Lists**: Use 'list' for bullet points, 'numbered_list' for steps or ordered items.
       - **Rich Elements**: Use 'divider' to separate major sections, 'callout' for important tips/warnings/info, 'code' for code snippets with language specified.

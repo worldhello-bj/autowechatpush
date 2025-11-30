@@ -477,6 +477,33 @@ const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
             ${stepItems}
           </section>
         `;
+      
+      case BlockType.SVG:
+        // SVG block for decorative graphics, icons, dividers, badges, etc.
+        // content should be SVG code or a description for placeholder
+        const svgContent = block.content.trim();
+        const isSvgCode = svgContent.startsWith('<svg') || svgContent.startsWith('<?xml');
+        if (isSvgCode) {
+          // Render actual SVG code
+          return `
+            <section style="margin: 20px 0; text-align: ${alignment};">
+              <span style="display: inline-block; vertical-align: middle;">
+                ${svgContent}
+              </span>
+              ${block.title ? `<section style="font-size: 12px; color: #888; margin-top: 8px;">${block.title}</section>` : ''}
+            </section>
+          `;
+        } else {
+          // Placeholder for SVG description
+          return `
+            <section style="margin: 20px 0; padding: 24px; border: 2px dashed ${colors.main}; background-color: ${colors.bg}; border-radius: 8px; text-align: center; color: #666;">
+              <section style="font-size: 24px; margin-bottom: 8px;">🎨</section>
+              <section style="font-weight: 600; font-size: 14px; margin-bottom: 5px; color: ${colors.main};">建议SVG图形</section>
+              <section style="font-size: 13px; color: #888;">"${svgContent}"</section>
+              ${block.title ? `<section style="font-size: 12px; color: #aaa; margin-top: 5px;">${block.title}</section>` : ''}
+            </section>
+          `;
+        }
 
       default:
         return '';
