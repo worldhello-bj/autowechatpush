@@ -24,15 +24,15 @@ const tools = [
               properties: {
                 type: { 
                   type: "string", 
-                  enum: ["header", "paragraph", "card", "list", "quote", "image", "divider", "code", "callout", "numbered_list", "highlight", "table"], 
-                  description: "Block type. Use 'header' for section titles, 'paragraph' for body text, 'card' for key points, 'list' for bullets, 'numbered_list' for steps, 'quote' for citations, 'image' for visual placeholders, 'divider' for section breaks, 'code' for code snippets, 'callout' for notices, 'highlight' for emphasized text, 'table' for structured data." 
+                  enum: ["header", "paragraph", "card", "list", "quote", "image", "divider", "code", "callout", "numbered_list", "highlight", "table", "qrcode", "faq", "countdown", "progress", "gift", "contact", "stats", "testimonial", "steps"], 
+                  description: "Block type. Use 'header' for section titles, 'paragraph' for body text, 'card' for key points, 'list' for bullets, 'numbered_list' for steps, 'quote' for citations, 'image' for visual placeholders, 'divider' for section breaks, 'code' for code snippets, 'callout' for notices, 'highlight' for emphasized text, 'table' for structured data. Special types: 'qrcode' for QR code sections, 'faq' for Q&A blocks, 'countdown' for timers, 'progress' for progress bars, 'gift' for promotional boxes, 'contact' for contact info, 'stats' for statistics display, 'testimonial' for user reviews, 'steps' for step-by-step flows." 
                 },
                 content: { type: "string", description: "The main text content. For images, provide a description. For divider, this can be empty." },
-                title: { type: "string", description: "Title for card, header, callout, or table blocks." },
+                title: { type: "string", description: "Title for card, header, callout, gift, faq, or table blocks." },
                 items: { 
                   type: "array", 
                   items: { type: "string" }, 
-                  description: "List items for 'list' or 'numbered_list' types." 
+                  description: "List items for 'list' or 'numbered_list' types. Also used for FAQ questions or step descriptions." 
                 },
                 style: { 
                   type: "string", 
@@ -44,7 +44,15 @@ const tools = [
                 language: { type: "string", description: "Programming language for 'code' blocks." },
                 icon: { type: "string", enum: ["info", "warning", "success", "error", "tip", "note"], description: "Icon type for 'callout' blocks." },
                 rows: { type: "array", items: { type: "array", items: { type: "string" } }, description: "Table data rows for 'table' type." },
-                headers: { type: "array", items: { type: "string" }, description: "Table header row for 'table' type." }
+                headers: { type: "array", items: { type: "string" }, description: "Table header row for 'table' type." },
+                // New properties for special blocks
+                values: { type: "array", items: { type: "string" }, description: "Values for stats blocks (e.g., ['1000+', '50%', '99%'])." },
+                labels: { type: "array", items: { type: "string" }, description: "Labels for stats/progress/steps blocks (e.g., ['用户数', '增长率', '满意度'])." },
+                answers: { type: "array", items: { type: "string" }, description: "Answers for FAQ blocks, matching items array." },
+                countdown: { type: "object", description: "Countdown values: {days, hours, minutes, seconds}." },
+                percentage: { type: "number", description: "Progress percentage (0-100) for progress blocks." },
+                author: { type: "string", description: "Author name for testimonial blocks." },
+                role: { type: "string", description: "Author role/position for testimonial blocks." }
               },
               required: ["type", "content"]
             }

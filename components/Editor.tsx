@@ -45,7 +45,13 @@ import {
   generateCTAQwen,
   rewriteContentQwen
 } from '../services/qwenService';
-import HtmlEditor from './HtmlEditor';
+import {
+  generateWithDualAI,
+  loadMemory,
+  saveMemory,
+  AIMemory
+} from '../services/dualAIService';
+import HtmlEditor, { HtmlEditorRef } from './HtmlEditor';
 import MaterialLibrary from './MaterialLibrary';
 import AIToolsPanel, { AISettings, DEFAULT_AI_SETTINGS } from './AIToolsPanel';
 import { ArticleBlock, GroundingSource, WeChatCredentials, BlockType, AIProvider } from '../types';
@@ -313,6 +319,164 @@ const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
             ${tableRows}
           </section>
         `;
+      
+      // --- Special Block Types ---
+      case BlockType.QRCODE:
+        return `
+          <section style="margin: 24px 0; padding: 24px; background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%); border-radius: 16px; border: 2px solid #667eea; text-align: center;">
+            <section style="width: 120px; height: 120px; margin: 0 auto 16px; background: #fff; border: 2px solid #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+              <section style="font-size: 48px;">📱</section>
+            </section>
+            <section style="font-size: 16px; font-weight: bold; color: #333; margin-bottom: 8px;">${block.title || '扫码关注'}</section>
+            <section style="font-size: 14px; color: #888;">${block.content}</section>
+          </section>
+        `;
+      
+      case BlockType.FAQ:
+        const faqItems = (block.items || []).map((question, idx) => {
+          const answer = block.answers?.[idx] || block.content;
+          const faqColor = idx % 2 === 0 ? '#667eea' : '#9b59b6';
+          return `
+            <section style="margin-bottom: 16px; background: #f8f9fa; border-radius: 12px; overflow: hidden;">
+              <section style="padding: 16px 20px; background: ${faqColor}; color: #fff; font-size: 15px; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                <section>Q</section>
+                <section>${question}</section>
+              </section>
+              <section style="padding: 16px 20px; font-size: 14px; color: #555; line-height: 1.7; display: flex; align-items: flex-start; gap: 8px;">
+                <section style="color: ${faqColor}; font-weight: bold;">A</section>
+                <section>${answer}</section>
+              </section>
+            </section>
+          `;
+        }).join('');
+        return `<section style="margin: 24px 0;">${faqItems}</section>`;
+      
+      case BlockType.COUNTDOWN:
+        const cd = block.countdown || { days: '00', hours: '00', minutes: '00', seconds: '00' };
+        return `
+          <section style="margin: 24px 0; padding: 24px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; text-align: center; color: #fff;">
+            <section style="font-size: 14px; color: #feca57; margin-bottom: 16px; letter-spacing: 2px;">⏰ ${block.title || '距离活动开始还有'}</section>
+            <section style="display: flex; justify-content: center; gap: 12px;">
+              <section style="padding: 16px 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                <section style="font-size: 28px; font-weight: bold;">${cd.days || '00'}</section>
+                <section style="font-size: 12px; opacity: 0.8; margin-top: 4px;">天</section>
+              </section>
+              <section style="padding: 16px 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                <section style="font-size: 28px; font-weight: bold;">${cd.hours || '00'}</section>
+                <section style="font-size: 12px; opacity: 0.8; margin-top: 4px;">时</section>
+              </section>
+              <section style="padding: 16px 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                <section style="font-size: 28px; font-weight: bold;">${cd.minutes || '00'}</section>
+                <section style="font-size: 12px; opacity: 0.8; margin-top: 4px;">分</section>
+              </section>
+              <section style="padding: 16px 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                <section style="font-size: 28px; font-weight: bold;">${cd.seconds || '00'}</section>
+                <section style="font-size: 12px; opacity: 0.8; margin-top: 4px;">秒</section>
+              </section>
+            </section>
+          </section>
+        `;
+      
+      case BlockType.PROGRESS:
+        const pct = block.percentage || 50;
+        return `
+          <section style="margin: 24px 0; padding: 20px; background: #f8f9fa; border-radius: 12px;">
+            <section style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <section style="font-size: 14px; font-weight: bold; color: #333;">${block.title || '进度'}</section>
+              <section style="font-size: 14px; color: ${colors.main}; font-weight: bold;">${pct}%</section>
+            </section>
+            <section style="height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
+              <section style="width: ${pct}%; height: 100%; ${isGradient ? `background: ${colors.main}` : `background-color: ${colors.main}`}; border-radius: 4px;"></section>
+            </section>
+            ${block.content ? `<section style="font-size: 13px; color: #666; margin-top: 8px;">${block.content}</section>` : ''}
+          </section>
+        `;
+      
+      case BlockType.GIFT:
+        return `
+          <section style="margin: 24px 0; padding: 20px; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); border-radius: 16px; text-align: center; color: #fff; position: relative; overflow: hidden;">
+            <section style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: rgba(255,255,255,0.2); border-radius: 50%;"></section>
+            <section style="position: absolute; bottom: -30px; left: -30px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></section>
+            <section style="font-size: 28px; margin-bottom: 8px;">🎁</section>
+            <section style="font-size: 20px; font-weight: bold; margin-bottom: 8px;">${block.title || '限时福利'}</section>
+            <section style="font-size: 14px; opacity: 0.95; margin-bottom: 16px;">${block.content}</section>
+            <section style="display: inline-block; padding: 10px 24px; background: #fff; color: #ff6b6b; font-size: 14px; font-weight: bold; border-radius: 20px;">立即领取</section>
+          </section>
+        `;
+      
+      case BlockType.CONTACT:
+        const contactItems = (block.items || ['邮箱', '电话', '地址']).map((label, idx) => {
+          const value = block.values?.[idx] || block.content;
+          const icons = ['📧', '📱', '📍', '🌐', '💬'];
+          return `
+            <section style="flex: 1; min-width: 140px; padding: 12px; background: #fff; border-radius: 8px; text-align: center;">
+              <section style="font-size: 20px; margin-bottom: 6px;">${icons[idx] || '📌'}</section>
+              <section style="font-size: 12px; color: #888; margin-bottom: 4px;">${label}</section>
+              <section style="font-size: 13px; color: #333;">${value}</section>
+            </section>
+          `;
+        }).join('');
+        return `
+          <section style="margin: 24px 0; padding: 20px; background: #f8f9fa; border-radius: 12px;">
+            <section style="font-size: 16px; font-weight: bold; color: #333; margin-bottom: 16px; text-align: center;">📞 ${block.title || '联系我们'}</section>
+            <section style="display: flex; gap: 12px; flex-wrap: wrap;">${contactItems}</section>
+          </section>
+        `;
+      
+      case BlockType.STATS:
+        const statItems = (block.values || ['1000+', '50%', '99%']).map((value, idx) => {
+          const label = block.labels?.[idx] || `指标${idx + 1}`;
+          const gradients = [
+            'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            'linear-gradient(135deg, #5ee7df 0%, #b490ca 100%)',
+            'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+          ];
+          return `
+            <section style="flex: 1; padding: 20px; background: ${gradients[idx % gradients.length]}; border-radius: 12px; text-align: center; color: #fff;">
+              <section style="font-size: 32px; font-weight: bold;">${value}</section>
+              <section style="font-size: 12px; opacity: 0.9; margin-top: 4px;">${label}</section>
+            </section>
+          `;
+        }).join('');
+        return `<section style="margin: 20px 0; display: flex; gap: 16px;">${statItems}</section>`;
+      
+      case BlockType.TESTIMONIAL:
+        return `
+          <section style="margin: 20px 0; padding: 24px; background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%); border-radius: 16px; border: 1px solid #e8e8ff;">
+            <section style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+              <section style="width: 50px; height: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px;">👤</section>
+              <section>
+                <section style="font-size: 15px; font-weight: bold; color: #333;">${block.author || '用户名'}</section>
+                <section style="font-size: 12px; color: #888;">${block.role || '职位/身份'}</section>
+              </section>
+              <section style="margin-left: auto; color: #f39c12; font-size: 14px;">★★★★★</section>
+            </section>
+            <section style="font-size: 14px; color: #555; line-height: 1.8; font-style: italic;">"${block.content}"</section>
+          </section>
+        `;
+      
+      case BlockType.STEPS:
+        const stepItems = (block.items || []).map((step, idx) => {
+          const stepColors = ['#667eea', '#9b59b6', '#764ba2'];
+          const stepBgs = ['#f8f9ff', '#faf5ff', '#f5f0ff'];
+          return `
+            <section style="margin-bottom: 24px; position: relative;">
+              <section style="position: absolute; left: -24px; width: 24px; height: 24px; background: ${stepColors[idx % stepColors.length]}; border-radius: 50%; color: #fff; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);">${idx + 1}</section>
+              <section style="background: ${stepBgs[idx % stepBgs.length]}; padding: 16px; border-radius: 8px; margin-left: 12px;">
+                <section style="font-size: 15px; font-weight: bold; color: #333; margin-bottom: 4px;">${block.labels?.[idx] || `步骤 ${idx + 1}`}</section>
+                <section style="font-size: 13px; color: #666; line-height: 1.6;">${step}</section>
+              </section>
+            </section>
+          `;
+        }).join('');
+        return `
+          <section style="margin: 20px 0; padding-left: 30px; position: relative;">
+            <section style="position: absolute; left: 11px; top: 20px; bottom: 20px; width: 2px; background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);"></section>
+            ${stepItems}
+          </section>
+        `;
+
       default:
         return '';
     }
@@ -333,6 +497,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   const [analyzingImage, setAnalyzingImage] = useState(false);
   const [useSearch, setUseSearch] = useState(true);
   const [isFormattingMode, setIsFormattingMode] = useState(false); // NEW Toggle
+  const [useDualAI, setUseDualAI] = useState(false); // Dual AI Mode Toggle
   const [imageContext, setImageContext] = useState<string>('');
   const [uploadedImagePreview, setUploadedImagePreview] = useState<string | null>(null);
   
@@ -348,6 +513,10 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   const [deepSeekApiKey, setDeepSeekApiKey] = useState('');
   const [dashScopeApiKey, setDashScopeApiKey] = useState('');
 
+  // Dual AI Memory State
+  const [aiMemory, setAiMemory] = useState<AIMemory>(() => loadMemory());
+  const [designNotes, setDesignNotes] = useState<string>('');
+
   // Article Content
   const [articleTitle, setArticleTitle] = useState('New Article');
   const [articleDigest, setArticleDigest] = useState('');
@@ -360,6 +529,9 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  
+  // HTML Editor Ref (for inserting at cursor)
+  const htmlEditorRef = useRef<HtmlEditorRef>(null);
 
   // Draft State
   const [foundDraft, setFoundDraft] = useState(false);
@@ -400,7 +572,47 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     try {
       let result: GenerationResult;
       
-      if (aiProvider === AIProvider.DEEPSEEK) {
+      // Check if Dual AI mode is enabled (requires Qwen or DeepSeek)
+      if (useDualAI && !isFormattingMode) {
+        // Dual AI Mode: Content AI + Design AI working in parallel
+        const contentProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
+        const designProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
+        
+        const contentKey = aiProvider === AIProvider.QWEN ? dashScopeApiKey : deepSeekApiKey;
+        const designKey = aiProvider === AIProvider.QWEN ? dashScopeApiKey : deepSeekApiKey;
+        
+        if (!contentKey) throw new Error(`${aiProvider === AIProvider.QWEN ? 'DashScope' : 'DeepSeek'} API Key is missing for Dual AI mode.`);
+        
+        console.log('[Editor] Using Dual AI Mode - Content AI + Design AI');
+        
+        const dualResult = await generateWithDualAI(
+          topic,
+          {
+            contentProvider,
+            designProvider,
+            contentApiKey: contentKey,
+            designApiKey: designKey
+          },
+          aiMemory,
+          imageContext
+        );
+        
+        result = dualResult.result;
+        
+        // Update memory with the new interaction
+        if (dualResult.memoryUpdate) {
+          const newMemory = { ...aiMemory, ...dualResult.memoryUpdate };
+          setAiMemory(newMemory);
+          saveMemory(newMemory);
+        }
+        
+        // Store design notes for user reference
+        if (dualResult.designNotes) {
+          setDesignNotes(dualResult.designNotes);
+          console.log('[Editor] Design Notes:', dualResult.designNotes);
+        }
+        
+      } else if (aiProvider === AIProvider.DEEPSEEK) {
         if (!deepSeekApiKey) throw new Error("DeepSeek API Key is missing. Please configure it in Settings.");
         result = await generateArticleStructureDeepSeek(topic, deepSeekApiKey, isFormattingMode);
       } else if (aiProvider === AIProvider.QWEN) {
@@ -858,15 +1070,27 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         <img src="${imageDataUrl}" style="max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
       </section>
     `;
-    const separator = htmlContent.trim() ? '\n' : '';
-    setHtmlContent(htmlContent + separator + imgHtml);
+    // Use ref to insert at cursor position if available
+    if (htmlEditorRef.current) {
+      htmlEditorRef.current.insertHtmlAtCursor(imgHtml);
+    } else {
+      // Fallback: append to end
+      const separator = htmlContent.trim() ? '\n' : '';
+      setHtmlContent(htmlContent + separator + imgHtml);
+    }
   };
 
   const handleInsertMaterialText = (text: string) => {
     const safeText = escapeHtml(text);
     const textHtml = `<p style="font-size: 16px; line-height: 1.8; color: #444;">${safeText}</p>`;
-    const separator = htmlContent.trim() ? '\n' : '';
-    setHtmlContent(htmlContent + separator + textHtml);
+    // Use ref to insert at cursor position if available
+    if (htmlEditorRef.current) {
+      htmlEditorRef.current.insertHtmlAtCursor(textHtml);
+    } else {
+      // Fallback: append to end
+      const separator = htmlContent.trim() ? '\n' : '';
+      setHtmlContent(htmlContent + separator + textHtml);
+    }
   };
 
   // --- Insert Hook Handler ---
@@ -1179,7 +1403,44 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                         {aiProvider === AIProvider.GOOGLE ? 'Use Google Search' : 'Use Web Search'}
                     </span>
                 </label>
+                
+                {/* Dual AI Mode Toggle */}
+                <label className={`flex items-center gap-2 px-3 py-2 rounded-md border transition ${
+                  aiProvider === AIProvider.GOOGLE || isFormattingMode 
+                    ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200' 
+                    : useDualAI 
+                      ? 'cursor-pointer bg-gradient-to-r from-purple-50 to-blue-50 border-purple-300' 
+                      : 'cursor-pointer hover:bg-purple-50 border-gray-200'
+                }`}>
+                    <input 
+                        type="checkbox" 
+                        checked={useDualAI} 
+                        onChange={(e) => setUseDualAI(e.target.checked)}
+                        disabled={aiProvider === AIProvider.GOOGLE || isFormattingMode}
+                        className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4"
+                    />
+                    <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                        <span className="material-icons text-sm text-purple-500">psychology</span>
+                        双AI模式
+                    </span>
+                    {useDualAI && <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">文案+美化</span>}
+                </label>
             </div>
+
+            {/* Dual AI Mode Info */}
+            {useDualAI && aiProvider !== AIProvider.GOOGLE && !isFormattingMode && (
+              <div className="p-3 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="material-icons text-purple-500 text-lg">auto_awesome</span>
+                  <div>
+                    <span className="font-medium text-purple-700">双并行AI模式已启用</span>
+                    <p className="text-xs text-purple-600 mt-1">
+                      ✨ 文案AI负责内容创作 → 美化AI负责排版设计 → 更优质的输出效果
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Image Analysis Upload */}
             <div className={`border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 transition text-center relative ${aiProvider === AIProvider.DEEPSEEK ? 'hover:bg-gray-50 opacity-80' : 'hover:bg-gray-100'}`}>
@@ -1210,17 +1471,21 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
             <button 
                 onClick={handleGenerate}
                 disabled={loading || analyzingImage}
-                className="w-full bg-green-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex justify-center items-center gap-2"
+                className={`w-full font-semibold py-3 px-4 rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed transition flex justify-center items-center gap-2 ${
+                  useDualAI && aiProvider !== AIProvider.GOOGLE && !isFormattingMode
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
             >
                 {loading ? (
                     <>
                         <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        {isFormattingMode ? 'Formatting...' : 'Generating...'}
+                        {useDualAI && !isFormattingMode ? '双AI处理中...' : (isFormattingMode ? 'Formatting...' : 'Generating...')}
                     </>
                 ) : (
                     <>
-                        <span className="material-icons">{isFormattingMode ? 'brush' : 'auto_awesome'}</span> 
-                        {isFormattingMode ? 'Format Article' : 'Generate Article'}
+                        <span className="material-icons">{isFormattingMode ? 'brush' : (useDualAI ? 'psychology' : 'auto_awesome')}</span> 
+                        {isFormattingMode ? 'Format Article' : (useDualAI && aiProvider !== AIProvider.GOOGLE ? '双AI生成' : 'Generate Article')}
                     </>
                 )}
             </button>
@@ -1282,7 +1547,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
             <div className="flex items-center gap-2">
               <span className="material-icons text-pink-600">palette</span>
               <span className="font-semibold text-gray-800">精美设计格式库</span>
-              <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">25+</span>
+              <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">{allDesignTemplates.length}+</span>
             </div>
             <span className="material-icons text-gray-500">open_in_new</span>
           </button>
@@ -1326,6 +1591,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
             {/* Editor Component */}
             <div className="flex-1 overflow-hidden relative">
                  <HtmlEditor 
+                    ref={htmlEditorRef}
                     initialHtml={htmlContent}
                     onChange={(newHtml) => setHtmlContent(newHtml)}
                     title={articleTitle}
@@ -1427,7 +1693,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
               <div className="flex items-center gap-2">
                 <span className="material-icons text-pink-600">palette</span>
                 <span className="font-bold text-lg text-gray-800">精美设计格式库</span>
-                <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">25+</span>
+                <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">{allDesignTemplates.length}+</span>
               </div>
               <button 
                 onClick={() => setShowDesignTemplates(false)}

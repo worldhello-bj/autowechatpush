@@ -28,12 +28,12 @@ const layoutArticleFunction: FunctionDeclaration = {
           properties: {
             type: { 
               type: Type.STRING, 
-              enum: ['header', 'paragraph', 'card', 'list', 'quote', 'image', 'divider', 'code', 'callout', 'numbered_list', 'highlight', 'table'], 
-              description: 'Block type. Use "header" for section titles, "paragraph" for body text, "card" for key points, "list" for bullet points, "numbered_list" for steps, "quote" for citations, "image" for visual placeholders, "divider" for section breaks, "code" for code snippets, "callout" for important notices, "highlight" for emphasized text, "table" for structured data.' 
+              enum: ['header', 'paragraph', 'card', 'list', 'quote', 'image', 'divider', 'code', 'callout', 'numbered_list', 'highlight', 'table', 'qrcode', 'faq', 'countdown', 'progress', 'gift', 'contact', 'stats', 'testimonial', 'steps'], 
+              description: 'Block type. Use "header" for section titles, "paragraph" for body text, "card" for key points, "list" for bullet points, "numbered_list" for steps, "quote" for citations, "image" for visual placeholders, "divider" for section breaks, "code" for code snippets, "callout" for important notices, "highlight" for emphasized text, "table" for structured data. Special types: "qrcode" for QR code sections, "faq" for Q&A blocks, "countdown" for timers, "progress" for progress bars, "gift" for promotional boxes, "contact" for contact info, "stats" for statistics display, "testimonial" for user reviews, "steps" for step-by-step flows.' 
             },
             content: { type: Type.STRING, description: 'The main text content. For "image" type, provide a visual description. For "divider", this can be empty.' },
-            title: { type: Type.STRING, description: 'Title for card, header, callout, or table blocks.' },
-            items: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'List items for "list" or "numbered_list" types.' },
+            title: { type: Type.STRING, description: 'Title for card, header, callout, gift, faq, or table blocks.' },
+            items: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'List items for "list" or "numbered_list" types. Also used for FAQ questions or step descriptions.' },
             style: { 
               type: Type.STRING, 
               enum: ['default', 'primary', 'warning', 'quote', 'red', 'blue', 'purple', 'orange', 'gold', 'green', 'pink', 'cyan', 'gradient'], 
@@ -44,7 +44,15 @@ const layoutArticleFunction: FunctionDeclaration = {
             language: { type: Type.STRING, description: 'Programming language for "code" blocks (e.g., "javascript", "python").' },
             icon: { type: Type.STRING, enum: ['info', 'warning', 'success', 'error', 'tip', 'note'], description: 'Icon type for "callout" blocks.' },
             rows: { type: Type.ARRAY, items: { type: Type.ARRAY, items: { type: Type.STRING } }, description: 'Table data rows for "table" type. Each row is an array of cell values.' },
-            headers: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Table header row for "table" type.' }
+            headers: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Table header row for "table" type.' },
+            // New properties for special blocks
+            values: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Values for stats blocks (e.g., ["1000+", "50%", "99%"]).' },
+            labels: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Labels for stats/progress/steps blocks (e.g., ["用户数", "增长率", "满意度"]).' },
+            answers: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Answers for FAQ blocks, matching items array.' },
+            countdown: { type: Type.OBJECT, description: 'Countdown values object with days, hours, minutes, seconds properties.' },
+            percentage: { type: Type.NUMBER, description: 'Progress percentage (0-100) for progress blocks.' },
+            author: { type: Type.STRING, description: 'Author name for testimonial blocks.' },
+            role: { type: Type.STRING, description: 'Author role/position for testimonial blocks.' }
           },
           required: ['type', 'content']
         }
