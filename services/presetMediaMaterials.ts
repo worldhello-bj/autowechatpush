@@ -214,7 +214,7 @@ const badgeMaterials: PresetMediaMaterial[] = [
     nameZh: 'VIP徽章',
     type: 'svg',
     category: 'badges',
-    content: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 30" width="80" height="30"><rect x="0" y="0" width="80" height="30" rx="4" fill="linear-gradient(90deg, #FFD700, #FFA500)"/><defs><linearGradient id="vipGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#FFD700"/><stop offset="100%" style="stop-color:#FFA500"/></linearGradient></defs><rect x="0" y="0" width="80" height="30" rx="4" fill="url(#vipGrad)"/><text x="40" y="20" font-family="Arial, sans-serif" font-size="12" fill="#8B4513" text-anchor="middle" font-weight="bold">VIP会员</text></svg>`,
+    content: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 30" width="80" height="30"><defs><linearGradient id="vipGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#FFD700"/><stop offset="100%" style="stop-color:#FFA500"/></linearGradient></defs><rect x="0" y="0" width="80" height="30" rx="4" fill="url(#vipGrad)"/><text x="40" y="20" font-family="Arial, sans-serif" font-size="12" fill="#8B4513" text-anchor="middle" font-weight="bold">VIP会员</text></svg>`,
     tags: ['VIP', '会员', '尊享']
   },
   {
