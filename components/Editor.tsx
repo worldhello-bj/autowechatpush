@@ -1093,6 +1093,51 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     }
   };
 
+  const handleInsertMaterialVideo = (videoDataUrl: string) => {
+    const videoHtml = `
+      <section style="margin: 20px 0; text-align: center;">
+        <video src="${videoDataUrl}" style="max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" controls></video>
+        <section style="font-size: 12px; color: #888; margin-top: 6px;">视频</section>
+      </section>
+    `;
+    if (htmlEditorRef.current) {
+      htmlEditorRef.current.insertHtmlAtCursor(videoHtml);
+    } else {
+      const separator = htmlContent.trim() ? '\n' : '';
+      setHtmlContent(htmlContent + separator + videoHtml);
+    }
+  };
+
+  const handleInsertMaterialGif = (gifDataUrl: string) => {
+    const gifHtml = `
+      <section style="margin: 20px 0; text-align: center;">
+        <img src="${gifDataUrl}" style="max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
+      </section>
+    `;
+    if (htmlEditorRef.current) {
+      htmlEditorRef.current.insertHtmlAtCursor(gifHtml);
+    } else {
+      const separator = htmlContent.trim() ? '\n' : '';
+      setHtmlContent(htmlContent + separator + gifHtml);
+    }
+  };
+
+  const handleInsertMaterialSvg = (svgContent: string) => {
+    // Sanitize SVG by removing script tags
+    const sanitizedSvg = svgContent.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    const svgHtml = `
+      <section style="margin: 20px 0; text-align: center;">
+        ${sanitizedSvg}
+      </section>
+    `;
+    if (htmlEditorRef.current) {
+      htmlEditorRef.current.insertHtmlAtCursor(svgHtml);
+    } else {
+      const separator = htmlContent.trim() ? '\n' : '';
+      setHtmlContent(htmlContent + separator + svgHtml);
+    }
+  };
+
   // --- Insert Hook Handler ---
   const handleInsertHookContent = (hook: string) => {
     const safeHook = escapeHtml(hook);
@@ -1639,6 +1684,9 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                 onSelectMaterial={() => {}}
                 onInsertImage={(img) => { handleInsertMaterialImage(img); setShowMaterialLibrary(false); }}
                 onInsertText={(txt) => { handleInsertMaterialText(txt); setShowMaterialLibrary(false); }}
+                onInsertVideo={(video) => { handleInsertMaterialVideo(video); setShowMaterialLibrary(false); }}
+                onInsertGif={(gif) => { handleInsertMaterialGif(gif); setShowMaterialLibrary(false); }}
+                onInsertSvg={(svg) => { handleInsertMaterialSvg(svg); setShowMaterialLibrary(false); }}
               />
             </div>
           </div>
