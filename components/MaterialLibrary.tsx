@@ -7,6 +7,13 @@ import {
   TextMaterial,
   TextMaterialCategory
 } from '../services/materialLibraryContent';
+import {
+  allPresetMediaMaterials,
+  getPresetMediaCategories,
+  getPresetMediaByCategory,
+  PresetMediaMaterial,
+  PresetMediaCategory
+} from '../services/presetMediaMaterials';
 
 // Configure DOMPurify for SVG sanitization
 const sanitizeSvg = (svgContent: string): string => {
@@ -64,10 +71,12 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
   const [previewMaterial, setPreviewMaterial] = useState<Material | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
-  // New state for preset materials
-  const [activeTab, setActiveTab] = useState<'user' | 'preset'>('user');
+  // State for preset materials tabs
+  const [activeTab, setActiveTab] = useState<'user' | 'preset' | 'media'>('user');
   const [selectedPresetCategory, setSelectedPresetCategory] = useState<TextMaterialCategory>('opening');
+  const [selectedMediaCategory, setSelectedMediaCategory] = useState<PresetMediaCategory>('icons');
   const presetCategories = getTextMaterialCategories();
+  const mediaCategories = getPresetMediaCategories();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -76,6 +85,7 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
 
   // Memoized count of preset materials to avoid recalculation on every render
   const presetMaterialsCount = React.useMemo(() => allTextMaterials.length, []);
+  const presetMediaCount = React.useMemo(() => allPresetMediaMaterials.length, []);
 
   // Load materials from localStorage
   useEffect(() => {
@@ -275,12 +285,27 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
     onInsertText(textMaterial.content);
   };
 
+  // Use preset media (SVG)
+  const handleUsePresetMedia = (mediaMaterial: PresetMediaMaterial) => {
+    if (mediaMaterial.type === 'svg' && onInsertSvg) {
+      onInsertSvg(mediaMaterial.content);
+    }
+  };
+
   // Get filtered preset materials
   const filteredPresetMaterials = getMaterialsByCategory(selectedPresetCategory).filter(m => 
     searchQuery === '' || 
     m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m.nameZh.includes(searchQuery) ||
     m.content.includes(searchQuery) ||
+    m.tags.some(t => t.includes(searchQuery))
+  );
+
+  // Get filtered preset media
+  const filteredPresetMedia = getPresetMediaByCategory(selectedMediaCategory).filter(m =>
+    searchQuery === '' ||
+    m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    m.nameZh.includes(searchQuery) ||
     m.tags.some(t => t.includes(searchQuery))
   );
 
@@ -323,7 +348,7 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
             <span className="material-icons text-blue-600">folder_special</span>
             <h3 className="font-bold text-gray-800">素材库</h3>
             <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-              {activeTab === 'user' ? `${materials.length} 个素材` : `${presetMaterialsCount} 个预设`}
+              {activeTab === 'user' ? `${materials.length} 个素材` : activeTab === 'preset' ? `${presetMaterialsCount} 个预设` : `${presetMediaCount} 个组件`}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -344,7 +369,7 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
         <div className="flex bg-gray-100 p-1 rounded-lg mb-3">
           <button
             onClick={() => setActiveTab('user')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium rounded-md transition ${
+            className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-md transition ${
               activeTab === 'user' 
                 ? 'bg-white text-blue-600 shadow-sm' 
                 : 'text-gray-500 hover:text-gray-700'
@@ -355,15 +380,26 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('preset')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium rounded-md transition ${
+            className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-md transition ${
               activeTab === 'preset' 
                 ? 'bg-white text-purple-600 shadow-sm' 
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            <span className="material-icons text-sm">auto_awesome</span>
+            <span className="material-icons text-sm">text_snippet</span>
             预设文案
-            <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">NEW</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('media')}
+            className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-md transition ${
+              activeTab === 'media' 
+                ? 'bg-white text-green-600 shadow-sm' 
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <span className="material-icons text-sm">interests</span>
+            SVG组件
+            <span className="text-[10px] bg-green-100 text-green-700 px-1 rounded">NEW</span>
           </button>
         </div>
 
@@ -376,7 +412,7 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={activeTab === 'user' ? "搜索素材..." : "搜索预设文案..."}
+            placeholder={activeTab === 'user' ? "搜索素材..." : activeTab === 'preset' ? "搜索预设文案..." : "搜索SVG组件..."}
             className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
@@ -416,6 +452,29 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
                 <span>{cat.icon}</span>
                 {cat.nameZh}
                 <span className={`text-xs px-1 rounded ${selectedPresetCategory === cat.id ? 'bg-purple-500' : 'bg-gray-100 text-gray-500'}`}>
+                  {cat.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Category tabs - for preset media/SVG */}
+        {activeTab === 'media' && (
+          <div className="flex gap-1 overflow-x-auto pb-1">
+            {mediaCategories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedMediaCategory(cat.id)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition flex items-center gap-1 ${
+                  selectedMediaCategory === cat.id
+                    ? 'bg-green-600 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                }`}
+              >
+                <span>{cat.icon}</span>
+                {cat.nameZh}
+                <span className={`text-xs px-1 rounded ${selectedMediaCategory === cat.id ? 'bg-green-500' : 'bg-gray-100 text-gray-500'}`}>
                   {cat.count}
                 </span>
               </button>
@@ -706,6 +765,50 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
                         {tag}
                       </span>
                     ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Preset Media/SVG Section */}
+      {activeTab === 'media' && (
+        <div className="flex-1 overflow-y-auto p-3">
+          {filteredPresetMedia.length === 0 ? (
+            <div className="text-center py-12">
+              <span className="material-icons text-gray-300 text-5xl mb-3 block">search_off</span>
+              <p className="text-gray-500 text-sm">未找到匹配的SVG组件</p>
+              <p className="text-gray-400 text-xs mt-1">尝试其他搜索词或分类</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              {filteredPresetMedia.map((mediaMaterial) => (
+                <div
+                  key={mediaMaterial.id}
+                  className="group relative aspect-square bg-gradient-to-br from-green-50 to-white rounded-lg border border-green-100 hover:border-green-400 hover:shadow-md transition cursor-pointer p-3 flex flex-col items-center justify-center"
+                  onClick={() => handleUsePresetMedia(mediaMaterial)}
+                >
+                  {/* SVG Preview */}
+                  <div 
+                    className="w-full h-16 flex items-center justify-center mb-2"
+                    dangerouslySetInnerHTML={{ 
+                      __html: sanitizeSvg(mediaMaterial.content)
+                    }}
+                  />
+                  
+                  {/* Name */}
+                  <p className="text-xs text-gray-700 text-center font-medium truncate w-full">
+                    {mediaMaterial.nameZh}
+                  </p>
+                  
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-green-600/80 opacity-0 group-hover:opacity-100 transition rounded-lg flex items-center justify-center">
+                    <span className="text-white text-xs font-medium flex items-center gap-1">
+                      <span className="material-icons text-sm">add_circle</span>
+                      点击插入
+                    </span>
                   </div>
                 </div>
               ))}

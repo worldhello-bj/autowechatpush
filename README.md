@@ -1,17 +1,18 @@
 # 微信公众号 AI 自动化发布助手 (WeChat AI Publisher)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.2.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.3.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/React-18.3-61DAFB.svg" alt="React">
   <img src="https://img.shields.io/badge/TypeScript-5.5-3178C6.svg" alt="TypeScript">
   <img src="https://img.shields.io/badge/AI-Multi--Model-green.svg" alt="AI">
 </p>
 
-一个功能强大的 AI 驱动 Web 应用程序，旨在简化微信公众号内容的创作和发布流程。支持多AI模型、双AI并行架构、丰富的素材库和微信公众号一键发布。
+一个功能强大的 AI 驱动 Web 应用程序，旨在简化微信公众号内容的创作和发布流程。支持多AI模型、双AI并行架构、丰富的素材库（含40+预设文案、35+SVG组件）和微信公众号一键发布。
 
 ## 📋 目录
 
 - [功能特性](#-功能特性)
+- [素材库系统](#-素材库系统)
 - [技术架构](#-技术架构)
 - [快速开始](#-快速开始)
 - [项目结构](#-项目结构)
@@ -40,19 +41,6 @@
 - **美化AI (Design AI)**: 专注于排版设计、颜色搭配、视觉呈现
 - **记忆系统**: 自动记录用户偏好，优化后续生成效果
 
-### 📚 素材库系统
-
-#### 设计模板 (45+ 模板)
-- 标题样式: 绸带标题、括号标题、渐变背景、标签式等
-- 卡片样式: 数据统计、图文卡片、特性卡片、用户评价等
-- 列表样式: 图标列表、步骤流程、对比列表等
-- 特殊组件: 二维码区域、福利框、FAQ、联系方式、进度条、倒计时等
-
-#### 文案素材 (40+ 预设)
-- 开场白、结尾语、过渡语
-- 行动号召 (CTA)、名言警句
-- 问候语、公告、促销文案
-
 ### 🎨 21种内容块类型
 
 | 基础块 (12种) | 高级块 (9种) |
@@ -75,6 +63,61 @@
 
 ---
 
+## 📚 素材库系统
+
+素材库是本应用的核心功能之一，提供丰富的预设内容和用户自定义素材管理。
+
+### 我的素材
+
+支持上传和管理多种媒体类型：
+
+| 类型 | 格式 | 说明 |
+|------|------|------|
+| 🖼️ 图片 | JPG, PNG, WebP | 静态图片素材 |
+| 🎬 视频 | MP4, WebM | 视频素材，支持播放预览 |
+| 🎞️ GIF | GIF | 动态图片，带GIF标识 |
+| 🎨 SVG | SVG | 矢量图形，支持文件上传或代码粘贴 |
+| 📝 文字 | 文本 | 自定义文字模板 |
+
+### 预设文案库 (40+ 模板)
+
+专业文案模板，一键插入：
+
+| 分类 | 数量 | 说明 |
+|------|------|------|
+| 🎬 开场白 | 8个 | 提问式、故事式、数据式等开场方式 |
+| 🎯 结尾语 | 6个 | 总结式、励志式、金句式等结尾方式 |
+| 🔗 过渡语 | 6个 | 承上启下、举例说明、重点强调等 |
+| 📣 行动号召 | 7个 | 关注、分享、评论、点赞等CTA |
+| 💬 名言警句 | 8个 | 孔子、老子、爱因斯坦、乔布斯等名言 |
+| 👋 问候语 | 5个 | 早安、晚安、周末、节日问候 |
+| 📢 公告 | 4个 | 新功能、活动、重要通知、维护公告 |
+| 🎁 促销 | 5个 | 限时特惠、折扣、赠品、秒杀等 |
+
+### SVG组件库 (35+ 组件) 🆕
+
+精心设计的SVG小组件，支持直接插入文章：
+
+| 分类 | 数量 | 包含组件 |
+|------|------|----------|
+| ⭐ 图标 | 8个 | 星星、爱心、对勾、警告、信息、礼物、火焰、闪电 |
+| 🎀 装饰 | 6个 | 丝带横幅、NEW徽章、HOT徽章、促销标签、角标、引号装饰 |
+| ➖ 分割线 | 5个 | 波浪线、圆点线、菱形线、箭头线、叶子线 |
+| 🏷️ 徽章 | 5个 | VIP、官方认证、品质保证、免费、推荐 |
+| ➡️ 箭头 | 5个 | 右箭头、下箭头、弯曲箭头、双箭头、手指指向 |
+| 💬 社交 | 6个 | 微信、微博、QQ、电话、邮箱、位置图标 |
+
+### 设计模板库 (45+ 模板)
+
+丰富的HTML设计模板：
+
+- 标题样式: 绸带标题、括号标题、渐变背景、标签式等
+- 卡片样式: 数据统计、图文卡片、特性卡片、用户评价等
+- 列表样式: 图标列表、步骤流程、对比列表等
+- 特殊组件: 二维码区域、福利框、FAQ、联系方式、进度条、倒计时等
+
+---
+
 ## 🛠 技术架构
 
 ```
@@ -87,6 +130,8 @@
 │  ├── MaterialLibrary │  ├── deepSeekService │  └── ...       │
 │  ├── AIToolsPanel    │  ├── dualAIService   │                │
 │  └── ArticlePreview  │  ├── designTemplates │                │
+│                      │  ├── materialLibraryContent           │
+│                      │  ├── presetMediaMaterials (NEW)       │
 │                      │  └── wechatService   │                │
 ├─────────────────────────────────────────────────────────────┤
 │                     AI Providers                             │
@@ -105,6 +150,7 @@
 - **构建工具**: Vite 5.4
 - **UI样式**: Tailwind CSS + Material Icons
 - **AI SDK**: @google/genai
+- **安全**: DOMPurify (SVG/HTML 安全过滤)
 - **后端代理**: Express.js + http-proxy-middleware
 
 ---
@@ -147,28 +193,25 @@ start-prod.bat
 ```
 autowechatpush/
 ├── components/           # React 组件
-│   ├── README.md         # 组件文档
 │   ├── Editor.tsx        # 主编辑器
-│   ├── HtmlEditor.tsx    # HTML 编辑器
-│   ├── MaterialLibrary.tsx # 素材库
+│   ├── HtmlEditor.tsx    # HTML 编辑器 (支持光标位置保存)
+│   ├── MaterialLibrary.tsx # 素材库 (支持视频/GIF/SVG)
 │   ├── AIToolsPanel.tsx  # AI 工具面板
 │   └── ArticlePreview.tsx # 文章预览
-├── services/             # AI 服务层
-│   ├── README.md         # 服务文档
+├── services/             # 服务层
 │   ├── geminiService.ts  # Google Gemini
 │   ├── qwenService.ts    # 阿里云 Qwen
 │   ├── deepSeekService.ts # DeepSeek
 │   ├── dualAIService.ts  # 双AI系统
-│   ├── designTemplates.ts # 设计模板库
-│   ├── materialLibraryContent.ts # 文案素材库
+│   ├── designTemplates.ts # 设计模板库 (45+)
+│   ├── materialLibraryContent.ts # 文案素材库 (40+)
+│   ├── presetMediaMaterials.ts # SVG组件库 (35+) 🆕
 │   └── wechatService.ts  # 微信API
 ├── types.ts              # TypeScript 类型定义
 ├── App.tsx               # 应用入口
 ├── server.js             # Express 代理服务器
 └── vite.config.ts        # Vite 配置
 ```
-
-详细文档请查看各目录下的 README.md 文件。
 
 ---
 
@@ -223,8 +266,19 @@ autowechatpush/
 ### 使用素材库
 
 1. 点击 **素材库** 按钮
-2. 切换 **我的素材** / **预设文案** 标签
-3. 选择分类，点击素材即可插入
+2. 选择标签页：
+   - **我的素材**: 管理上传的图片/视频/GIF/SVG
+   - **预设文案**: 40+专业文案模板
+   - **SVG组件**: 35+精美SVG小组件 🆕
+3. 点击素材即可插入到光标位置
+
+### 上传素材
+
+支持多种媒体格式：
+- **图片**: 点击"图片"按钮上传
+- **视频**: 点击"视频"按钮上传MP4/WebM
+- **GIF**: 点击"GIF"按钮上传动态图片
+- **SVG**: 上传SVG文件或直接粘贴SVG代码
 
 ### 发布到微信
 
@@ -270,6 +324,16 @@ const result = await generateWithDualAI(topic, {
 }, aiMemory, imageContext);
 ```
 
+### HtmlEditor 光标保存
+
+```typescript
+// 保存光标位置 (用于模态框交互)
+htmlEditorRef.current.saveCursorPosition();
+
+// 在光标位置插入内容
+htmlEditorRef.current.insertHtmlAtCursor(htmlContent);
+```
+
 ---
 
 ## 💾 数据持久化
@@ -295,3 +359,18 @@ MIT License
 ## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！
+
+---
+
+## 🔄 更新日志
+
+### v1.3.0 (最新)
+- ✨ 新增35+ SVG组件库（图标、装饰、分割线、徽章、箭头、社交图标）
+- 🎬 素材库支持视频、GIF、SVG文件上传
+- 🔧 修复素材库插入时光标位置丢失问题
+- 🔒 使用DOMPurify进行SVG安全过滤
+
+### v1.2.0
+- 🤖 双AI并行架构
+- 📚 40+预设文案模板
+- 🎨 45+设计模板
