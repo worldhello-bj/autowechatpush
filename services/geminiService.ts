@@ -1,5 +1,8 @@
 import { GoogleGenAI, FunctionDeclaration, Type, Modality } from "@google/genai";
 import { ArticleBlock, BlockType, GroundingSource } from "../types";
+import { loggers } from './logger';
+
+const logger = loggers.gemini;
 
 // Helper to get AI instance dynamically
 const getAI = (apiKey?: string) => {
@@ -76,9 +79,10 @@ export const analyzeImage = async (base64Image: string, mimeType: string, apiKey
         ]
       }
     });
+    logger.info('Image analysis completed');
     return response.text || "Failed to analyze image.";
   } catch (error) {
-    console.error("Image analysis failed:", error);
+    logger.error("Image analysis failed:", error);
     throw error;
   }
 };
@@ -150,8 +154,10 @@ export const generateArticleStructure = async (
     tools.push({ googleSearch: {} });
   }
 
+  logger.time('generateArticleStructure');
   try {
     const ai = getAI(apiKey);
+    logger.info('Generating article structure...');
     const response = await ai.models.generateContent({
       model: modelId,
       contents: prompt,
@@ -184,6 +190,8 @@ export const generateArticleStructure = async (
         ...b
       }));
 
+      logger.timeEnd('generateArticleStructure');
+      logger.info('Article generated successfully:', args.title);
       return {
         title: args.title || "Untitled Article",
         digest: args.digest || "No summary available.",
@@ -195,7 +203,8 @@ export const generateArticleStructure = async (
     throw new Error("The model did not return a valid article layout. Please try again.");
 
   } catch (error) {
-    console.error("Article generation failed:", error);
+    logger.timeEnd('generateArticleStructure');
+    logger.error("Article generation failed:", error);
     throw error;
   }
 };

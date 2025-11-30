@@ -144,8 +144,24 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
 
     if (!contentRef.current) return;
 
+    // Find scrollable parent container
+    // Walk up the DOM tree to find the first scrollable ancestor
+    const findScrollableParent = (element: HTMLElement | null): HTMLElement | null => {
+      if (!element) return null;
+      let current: HTMLElement | null = element.parentElement;
+      while (current) {
+        const style = window.getComputedStyle(current);
+        const overflowY = style.overflowY;
+        if (overflowY === 'auto' || overflowY === 'scroll') {
+          return current;
+        }
+        current = current.parentElement;
+      }
+      return null;
+    };
+
     // Save scroll position before focus to prevent scroll jump
-    const scrollContainer = contentRef.current.closest('.overflow-y-auto');
+    const scrollContainer = findScrollableParent(contentRef.current);
     const savedScrollTop = scrollContainer?.scrollTop || 0;
 
     // Focus the editor first

@@ -1,4 +1,7 @@
 import { WeChatCredentials, WechatPayload } from '../types';
+import { loggers } from './logger';
+
+const logger = loggers.wechat;
 
 // Use local proxy path to handle CORS and logging on the server side
 // The server (server.js or Vite) will rewrite this to https://api.weixin.qq.com/cgi-bin
@@ -10,12 +13,12 @@ const BASE_API = '/api/wechat';
 async function handleResponse(response: Response, context: string): Promise<any> {
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`[WeChat Client] 🔴 HTTP Error: ${response.status} - ${errorText}`);
+    logger.error(`HTTP Error: ${response.status} - ${errorText}`);
     throw new Error(`${context} HTTP Error (${response.status}): ${errorText || 'Server error'}`);
   }
   
   const data = await response.json();
-  console.log(`[WeChat Client] Response Body:`, data);
+  logger.debug('Response Body:', data);
   return data;
 }
 
@@ -23,7 +26,7 @@ async function handleResponse(response: Response, context: string): Promise<any>
  * Helper function to handle and format errors consistently
  */
 function formatError(error: unknown, context: string, defaultMessage: string): Error {
-  console.error(`[WeChat Client] 🔴 ${context}:`, error);
+  logger.error(`${context}:`, error);
   
   if (error instanceof Error) {
     // Check for network-related errors
@@ -49,20 +52,21 @@ function formatError(error: unknown, context: string, defaultMessage: string): E
 export const getAccessToken = async (creds: WeChatCredentials): Promise<string> => {
   const url = `${BASE_API}/token?grant_type=client_credential&appid=${creds.appId}&secret=${creds.appSecret}`;
   
-  console.log(`[WeChat Client] 🔵 Requesting Access Token...`);
-  console.log(`[WeChat Client] URL: ${url}`);
+  logger.info('Requesting Access Token...');
+  logger.debug('URL:', url);
 
   try {
     const response = await fetch(url);
-    console.log(`[WeChat Client] Status: ${response.status}`);
+    logger.debug('Status:', response.status);
     
     const data = await handleResponse(response, 'Access Token');
     
     if (data.errcode) {
-      console.error(`[WeChat Client] 🔴 API Error: ${data.errcode} - ${data.errmsg}`);
+      logger.error(`API Error: ${data.errcode} - ${data.errmsg}`);
       throw new Error(`WeChat API Error (${data.errcode}): ${data.errmsg}`);
     }
     
+    logger.info('Access Token obtained successfully');
     return data.access_token;
   } catch (error: unknown) {
     throw formatError(error, 'Access Token Error', 'Network/CORS Error: Unable to connect to WeChat API. Check server logs.');
@@ -76,9 +80,9 @@ export const getAccessToken = async (creds: WeChatCredentials): Promise<string> 
 export const uploadImage = async (token: string, imageBlob: Blob): Promise<string> => {
     const url = `${BASE_API}/material/add_material?access_token=${token}&type=image`;
     
-    console.log(`[WeChat Client] 🔵 Uploading Image...`);
-    console.log(`[WeChat Client] URL: ${url}`);
-    console.log(`[WeChat Client] Image Size: ${imageBlob.size} bytes`);
+    logger.info('Uploading Image...');
+    logger.debug('URL:', url);
+    logger.debug('Image Size:', imageBlob.size, 'bytes');
 
     const formData = new FormData();
     formData.append('media', imageBlob, 'cover.jpg');
@@ -89,7 +93,7 @@ export const uploadImage = async (token: string, imageBlob: Blob): Promise<strin
             body: formData
         });
 
-        console.log(`[WeChat Client] Status: ${response.status}`);
+        logger.debug('Status:', response.status);
         
         const data = await handleResponse(response, 'Image Upload');
         
@@ -97,6 +101,7 @@ export const uploadImage = async (token: string, imageBlob: Blob): Promise<strin
              throw new Error(`Image Upload Error (${data.errcode}): ${data.errmsg}`);
         }
         
+        logger.info('Image uploaded successfully, media_id:', data.media_id);
         return data.media_id;
     } catch (error: unknown) {
         throw formatError(error, 'Image Upload Failed', 'Image Upload Failed: Network error. Check server logs.');
@@ -110,8 +115,8 @@ export const uploadImage = async (token: string, imageBlob: Blob): Promise<strin
 export const saveDraft = async (token: string, payload: WechatPayload): Promise<any> => {
   const url = `${BASE_API}/draft/add?access_token=${token}`;
   
-  console.log(`[WeChat Client] 🔵 Saving Draft...`);
-  console.log(`[WeChat Client] URL: ${url}`);
+  logger.info('Saving Draft...');
+  logger.debug('URL:', url);
 
   try {
     const response = await fetch(url, {
@@ -122,13 +127,15 @@ export const saveDraft = async (token: string, payload: WechatPayload): Promise<
       body: JSON.stringify(payload)
     });
     
-    console.log(`[WeChat Client] Status: ${response.status}`);
+    logger.debug('Status:', response.status);
     
     const data = await handleResponse(response, 'Draft Save');
 
     if (data.errcode && data.errcode !== 0) {
       throw new Error(`WeChat Draft Error (${data.errcode}): ${data.errmsg}`);
     }
+    
+    logger.info('Draft saved successfully');
     return data;
   } catch (error: unknown) {
     throw formatError(error, 'Draft Save Failed', 'Draft Save Failed: Network error. Check server logs.');

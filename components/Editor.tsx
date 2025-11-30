@@ -482,13 +482,20 @@ const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
         // SVG block for decorative graphics, icons, dividers, badges, etc.
         // content should be SVG code or a description for placeholder
         const svgContent = block.content.trim();
-        const isSvgCode = svgContent.startsWith('<svg') || svgContent.startsWith('<?xml');
+        // More robust SVG detection with case-insensitive check
+        const isSvgCode = /^\s*(<\?xml|<svg)/i.test(svgContent);
         if (isSvgCode) {
-          // Render actual SVG code
+          // Sanitize SVG using DOMPurify for security
+          const sanitizedSvg = DOMPurify.sanitize(svgContent, {
+            USE_PROFILES: { svg: true, svgFilters: true },
+            ADD_TAGS: ['use'],
+            ADD_ATTR: ['xlink:href']
+          });
+          // Render sanitized SVG code
           return `
             <section style="margin: 20px 0; text-align: ${alignment};">
               <span style="display: inline-block; vertical-align: middle;">
-                ${svgContent}
+                ${sanitizedSvg}
               </span>
               ${block.title ? `<section style="font-size: 12px; color: #888; margin-top: 8px;">${block.title}</section>` : ''}
             </section>

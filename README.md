@@ -41,9 +41,9 @@
 - **美化AI (Design AI)**: 专注于排版设计、颜色搭配、视觉呈现
 - **记忆系统**: 自动记录用户偏好，优化后续生成效果
 
-### 🎨 21种内容块类型
+### 🎨 22种内容块类型
 
-| 基础块 (12种) | 高级块 (9种) |
+| 基础块 (12种) | 高级块 (10种) |
 |--------------|--------------|
 | header, paragraph, card | qrcode (二维码) |
 | list, numbered_list | faq (问答区) |
@@ -54,6 +54,7 @@
 | | stats (数据统计) |
 | | testimonial (用户评价) |
 | | steps (步骤流程) |
+| | **svg (SVG图形)** |
 
 ### 📲 微信集成
 
@@ -205,7 +206,8 @@ autowechatpush/
 │   ├── dualAIService.ts  # 双AI系统
 │   ├── designTemplates.ts # 设计模板库 (45+)
 │   ├── materialLibraryContent.ts # 文案素材库 (40+)
-│   ├── presetMediaMaterials.ts # SVG组件库 (35+) 🆕
+│   ├── presetMediaMaterials.ts # SVG组件库 (35+)
+│   ├── logger.ts         # 统一日志系统 🆕
 │   └── wechatService.ts  # 微信API
 ├── types.ts              # TypeScript 类型定义
 ├── App.tsx               # 应用入口
@@ -299,7 +301,7 @@ enum BlockType {
   DIVIDER, CODE, CALLOUT, NUMBERED_LIST, HIGHLIGHT, TABLE,
   // 高级块
   QRCODE, FAQ, COUNTDOWN, PROGRESS, GIFT, 
-  CONTACT, STATS, TESTIMONIAL, STEPS
+  CONTACT, STATS, TESTIMONIAL, STEPS, SVG
 }
 ```
 
@@ -334,6 +336,47 @@ htmlEditorRef.current.saveCursorPosition();
 htmlEditorRef.current.insertHtmlAtCursor(htmlContent);
 ```
 
+### 日志系统 (Logger)
+
+统一的日志机制，支持多级日志、模块分类、性能计时：
+
+```typescript
+import { createLogger, loggers, setLogLevel, LogLevel } from './services/logger';
+
+// 使用预设日志器
+loggers.wechat.info('Requesting access token...');
+loggers.gemini.error('API call failed:', error);
+
+// 创建模块日志器
+const logger = createLogger('MyModule');
+logger.debug('Debug message');
+logger.info('Info message');
+logger.warn('Warning message');
+logger.error('Error message');
+
+// 性能计时
+logger.time('operation');
+// ... 执行操作
+logger.timeEnd('operation'); // 输出: MyModule: operation: 123.45ms
+
+// 分组日志
+logger.group('Batch operations');
+logger.info('Step 1');
+logger.info('Step 2');
+logger.groupEnd();
+
+// 设置日志级别
+setLogLevel(LogLevel.WARN); // 只显示 WARN 和 ERROR
+```
+
+| 日志级别 | 说明 |
+|---------|------|
+| DEBUG | 详细调试信息 (开发环境默认) |
+| INFO | 一般信息 (生产环境默认) |
+| WARN | 警告信息 |
+| ERROR | 错误信息 |
+| NONE | 禁用所有日志 |
+
 ---
 
 ## 💾 数据持久化
@@ -347,6 +390,7 @@ htmlEditorRef.current.insertHtmlAtCursor(htmlContent);
 | `ai_provider` | 当前AI模型 |
 | `dual_ai_memory` | 双AI记忆 |
 | `wechat_material_library` | 用户素材 |
+| `app_log_level` | 日志级别 |
 
 ---
 
