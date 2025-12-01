@@ -4,7 +4,7 @@
   "private": true,
   "version": "1.3.0",
   "type": "module",
-  "main": "electron/main.js",
+  "main": "electron/main.cjs",
   "author": {
     "name": "worldhello-bj",
     "email": "183915466+worldhello-bj@users.noreply.github.com"

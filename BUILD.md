@@ -98,6 +98,9 @@ release/
 
 ## 常见问题
 
+### Q: 出现 "require is not defined in ES module scope" 错误？
+A: 确保 Electron 文件使用 `.cjs` 扩展名。本项目使用 ES modules (`"type": "module"`)，但 Electron 主进程需要 CommonJS。Electron 文件已重命名为 `.cjs` 格式。
+
 ### Q: 打包时出现 "Electron Builder" 错误？
 A: 确保已安装所有依赖：`npm install`
 
