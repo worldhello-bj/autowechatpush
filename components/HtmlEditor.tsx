@@ -12,11 +12,20 @@ interface HtmlEditorProps {
 export interface HtmlEditorRef {
   insertHtmlAtCursor: (html: string) => void;
   focus: () => void;
+  saveCursorPosition: () => void;
+}
+
+// Saved cursor position info that survives DOM changes
+interface SavedCursorPosition {
+  range: Range;
+  // Also save character offset from start of editor as fallback
+  charOffset: number;
 }
 
 const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, onChange, title, author, date }, ref) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const savedPositionRef = useRef<SavedCursorPosition | null>(null);
   const [showSource, setShowSource] = useState(false);
   const [internalHtml, setInternalHtml] = useState(initialHtml);
 
@@ -68,6 +77,62 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
 
   // --- Insert Logic ---
 
+  // Helper: Calculate character offset from start of contentEditable
+  const getCharOffset = (container: Node, offset: number, root: HTMLElement): number => {
+    let charCount = 0;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let node: Node | null;
+    
+    while ((node = walker.nextNode())) {
+      if (node === container) {
+        return charCount + offset;
+      }
+      charCount += (node.textContent?.length || 0);
+    }
+    
+    // If we're at an element node, count up to that position
+    return charCount;
+  };
+
+  // Helper: Find position from character offset
+  const findPositionFromOffset = (targetOffset: number, root: HTMLElement): { node: Node; offset: number } | null => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let charCount = 0;
+    let node: Node | null;
+    let lastNode: Node | null = null;
+    
+    while ((node = walker.nextNode())) {
+      const length = node.textContent?.length || 0;
+      if (charCount + length >= targetOffset) {
+        return { node, offset: targetOffset - charCount };
+      }
+      charCount += length;
+      lastNode = node;
+    }
+    
+    // Return end of last text node or null
+    if (lastNode) {
+      return { node: lastNode, offset: lastNode.textContent?.length || 0 };
+    }
+    return null;
+  };
+
+  // Save the current cursor position for later use (e.g., before opening a modal)
+  const saveCursorPosition = () => {
+    if (showSource || !contentRef.current) return;
+    
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && sel.anchorNode && contentRef.current.contains(sel.anchorNode)) {
+      const range = sel.getRangeAt(0).cloneRange();
+      const charOffset = getCharOffset(range.startContainer, range.startOffset, contentRef.current);
+      
+      savedPositionRef.current = {
+        range: range,
+        charOffset: charOffset
+      };
+    }
+  };
+
   const insertHtmlAtCursor = (html: string) => {
     if (showSource) {
       // In source mode, append to end of text
@@ -77,49 +142,105 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
       return;
     }
 
+    if (!contentRef.current) return;
+
+    // Find scrollable parent container
+    // Walk up the DOM tree to find the first scrollable ancestor
+    const findScrollableParent = (element: HTMLElement | null): HTMLElement | null => {
+      if (!element) return null;
+      let current: HTMLElement | null = element.parentElement;
+      while (current) {
+        const style = window.getComputedStyle(current);
+        const overflowY = style.overflowY;
+        if (overflowY === 'auto' || overflowY === 'scroll') {
+          return current;
+        }
+        current = current.parentElement;
+      }
+      return null;
+    };
+
+    // Save scroll position before focus to prevent scroll jump
+    const scrollContainer = findScrollableParent(contentRef.current);
+    const savedScrollTop = scrollContainer?.scrollTop || 0;
+
     // Focus the editor first
-    if (contentRef.current) {
-        contentRef.current.focus();
+    contentRef.current.focus();
+
+    // Restore scroll position immediately after focus
+    if (scrollContainer) {
+      scrollContainer.scrollTop = savedScrollTop;
     }
 
     const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0 && contentRef.current?.contains(sel.anchorNode)) {
-        const range = sel.getRangeAt(0);
-        range.deleteContents();
-
-        // Create a temporary container for the HTML
-        const el = document.createElement("div");
-        el.innerHTML = html;
-        
-        const frag = document.createDocumentFragment();
-        let node; 
-        let lastNode;
-        while ((node = el.firstChild)) {
-            lastNode = frag.appendChild(node);
-        }
-        
-        range.insertNode(frag);
-
-        // Move cursor after inserted content
-        if (lastNode) {
-            range.setStartAfter(lastNode);
-            range.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(range);
-        }
-    } else {
-        // Fallback: Append to end if no selection
-        if (contentRef.current) {
-            contentRef.current.innerHTML += html;
-        }
+    
+    // Determine which range to use
+    // PRIORITY: Saved position > Current selection > Fallback
+    let rangeToUse: Range | null = null;
+    
+    // Try 1: Use saved range if its startContainer is still in the DOM
+    // This is prioritized because the modal interaction loses the real cursor position
+    // Wrap in try-catch in case the DOM node was removed or is invalid
+    try {
+      if (savedPositionRef.current?.range?.startContainer && 
+          contentRef.current && 
+          contentRef.current.contains(savedPositionRef.current.range.startContainer)) {
+        rangeToUse = savedPositionRef.current.range;
+      }
+    } catch {
+      // DOM node may have been removed, fall through to next option
+      rangeToUse = null;
     }
+    
+    // Try 2: Reconstruct range from character offset (if saved range was invalidated)
+    if (!rangeToUse && savedPositionRef.current && savedPositionRef.current.charOffset >= 0 && contentRef.current) {
+      const position = findPositionFromOffset(savedPositionRef.current.charOffset, contentRef.current);
+      if (position) {
+        rangeToUse = document.createRange();
+        try {
+          rangeToUse.setStart(position.node, position.offset);
+          rangeToUse.collapse(true);
+        } catch {
+          rangeToUse = null;
+        }
+      }
+    }
+    
+    // Try 3: Use current selection if no saved position (direct insert without modal)
+    if (!rangeToUse && sel && sel.rangeCount > 0 && sel.anchorNode && contentRef.current && contentRef.current.contains(sel.anchorNode)) {
+      rangeToUse = sel.getRangeAt(0);
+    }
+    
+    if (rangeToUse && sel && contentRef.current) {
+        // Apply the range to the selection
+        sel.removeAllRanges();
+        sel.addRange(rangeToUse);
+        
+        // Use execCommand insertHTML for contentEditable
+        // Note: execCommand is deprecated but still widely supported for contentEditable
+        // and provides better cross-browser behavior than manual DOM manipulation
+        document.execCommand('insertHTML', false, html);
+        
+        // Clear saved position after use
+        savedPositionRef.current = null;
+    } else if (contentRef.current) {
+        // Fallback: Append to end if no valid position found
+        contentRef.current.innerHTML += html;
+    }
+    
+    // Restore scroll position after insertion to prevent scroll jump
+    if (scrollContainer) {
+      scrollContainer.scrollTop = savedScrollTop;
+    }
+    
     handleInput();
   };
 
   // Expose methods to parent component via ref
   useImperativeHandle(ref, () => ({
     insertHtmlAtCursor,
-    focus: () => contentRef.current?.focus()
+    focus: () => contentRef.current?.focus(),
+    saveCursorPosition
   }));
 
   const insertCard = () => {
@@ -223,7 +344,11 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
                 className="prose max-w-none px-5 pb-10 focus:outline-none article-content min-h-[300px]"
                 contentEditable
                 onInput={handleInput}
-                onBlur={handleInput}
+                onBlur={() => {
+                    // Save cursor position before losing focus
+                    saveCursorPosition();
+                    handleInput();
+                }}
                 suppressContentEditableWarning={true}
             />
         )}

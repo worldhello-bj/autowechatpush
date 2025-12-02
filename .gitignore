@@ -22,3 +22,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Electron build output
+release/
+*.exe
+*.dmg
+*.AppImage
+*.deb
+*.snap
+*.rpm
+
+# Temporary files
+*.tmp
+*.temp

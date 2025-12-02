@@ -1,6 +1,10 @@
 
 import { ArticleBlock, GroundingSource } from "../types";
 import { GenerationResult } from "./geminiService";
+import { loggers } from './logger';
+import { safeParseJSON } from './jsonParser';
+
+const logger = loggers.qwen;
 
 const BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
 const TTS_URL = "https://dashscope.aliyuncs.com/api/v1/services/audio/tts/generation";
@@ -24,10 +28,10 @@ const tools = [
               properties: {
                 type: { 
                   type: "string", 
-                  enum: ["header", "paragraph", "card", "list", "quote", "image", "divider", "code", "callout", "numbered_list", "highlight", "table", "qrcode", "faq", "countdown", "progress", "gift", "contact", "stats", "testimonial", "steps"], 
-                  description: "Block type. Use 'header' for section titles, 'paragraph' for body text, 'card' for key points, 'list' for bullets, 'numbered_list' for steps, 'quote' for citations, 'image' for visual placeholders, 'divider' for section breaks, 'code' for code snippets, 'callout' for notices, 'highlight' for emphasized text, 'table' for structured data. Special types: 'qrcode' for QR code sections, 'faq' for Q&A blocks, 'countdown' for timers, 'progress' for progress bars, 'gift' for promotional boxes, 'contact' for contact info, 'stats' for statistics display, 'testimonial' for user reviews, 'steps' for step-by-step flows." 
+                  enum: ["header", "paragraph", "card", "list", "quote", "image", "divider", "code", "callout", "numbered_list", "highlight", "table", "qrcode", "faq", "countdown", "progress", "gift", "contact", "stats", "testimonial", "steps", "svg"], 
+                  description: "Block type. Use 'header' for section titles, 'paragraph' for body text, 'card' for key points, 'list' for bullets, 'numbered_list' for steps, 'quote' for citations, 'image' for visual placeholders, 'divider' for section breaks, 'code' for code snippets, 'callout' for notices, 'highlight' for emphasized text, 'table' for structured data, 'svg' for decorative SVG graphics. Special types: 'qrcode' for QR code sections, 'faq' for Q&A blocks, 'countdown' for timers, 'progress' for progress bars, 'gift' for promotional boxes, 'contact' for contact info, 'stats' for statistics display, 'testimonial' for user reviews, 'steps' for step-by-step flows." 
                 },
-                content: { type: "string", description: "The main text content. For images, provide a description. For divider, this can be empty." },
+                content: { type: "string", description: "The main text content. For images, provide a description. For divider, this can be empty. For svg, provide SVG code or description." },
                 title: { type: "string", description: "Title for card, header, callout, gift, faq, or table blocks." },
                 items: { 
                   type: "array", 
@@ -141,11 +145,35 @@ export const generateArticleStructureQwen = async (
     }
 
     const data = await response.json();
+    
+    // Log the raw API response
+    logger.group('Qwen API Response', true);
+    logger.debug('Raw response:', data);
+    logger.groupEnd();
+    
     const choice = data.choices?.[0];
     const toolCall = choice?.message?.tool_calls?.[0];
 
     if (toolCall && toolCall.function.name === 'layout_article') {
-        const args = JSON.parse(toolCall.function.arguments);
+        // Safely parse JSON with error handling
+        let args;
+        try {
+          let jsonStr = toolCall.function.arguments;
+          args = safeParseJSON(jsonStr, logger);
+        } catch (parseError) {
+          logger.error('Failed to parse AI response JSON:', parseError);
+          logger.error('Raw arguments:', toolCall.function.arguments);
+          throw new Error(`Failed to parse AI response: ${parseError}`);
+        }
+        
+        // Log generated content
+        logger.group('Generated Article', true);
+        logger.info('Title:', args.title);
+        logger.info('Digest:', args.digest);
+        logger.info('Blocks count:', args.blocks?.length || 0);
+        logger.debug('Blocks detail:', args.blocks);
+        logger.groupEnd();
+        
         const blocks = (args.blocks || []).map((b: any, index: number) => ({
             id: `qwen-${Date.now()}-${index}`,
             ...b
@@ -162,7 +190,7 @@ export const generateArticleStructureQwen = async (
     throw new Error("Qwen failed to generate structured content. Please try again.");
 
   } catch (error) {
-    console.error("Qwen generation failed:", error);
+    logger.error("Qwen generation failed:", error);
     throw error;
   }
 };

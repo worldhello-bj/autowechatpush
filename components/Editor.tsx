@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import { 
   generateArticleStructure, 
   analyzeImage, 
@@ -476,6 +477,40 @@ const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
             ${stepItems}
           </section>
         `;
+      
+      case BlockType.SVG:
+        // SVG block for decorative graphics, icons, dividers, badges, etc.
+        // content should be SVG code or a description for placeholder
+        const svgContent = block.content.trim();
+        // More robust SVG detection with case-insensitive check
+        const isSvgCode = /^\s*(<\?xml|<svg)/i.test(svgContent);
+        if (isSvgCode) {
+          // Sanitize SVG using DOMPurify for security
+          const sanitizedSvg = DOMPurify.sanitize(svgContent, {
+            USE_PROFILES: { svg: true, svgFilters: true },
+            ADD_TAGS: ['use'],
+            ADD_ATTR: ['xlink:href']
+          });
+          // Render sanitized SVG code
+          return `
+            <section style="margin: 20px 0; text-align: ${alignment};">
+              <span style="display: inline-block; vertical-align: middle;">
+                ${sanitizedSvg}
+              </span>
+              ${block.title ? `<section style="font-size: 12px; color: #888; margin-top: 8px;">${block.title}</section>` : ''}
+            </section>
+          `;
+        } else {
+          // Placeholder for SVG description
+          return `
+            <section style="margin: 20px 0; padding: 24px; border: 2px dashed ${colors.main}; background-color: ${colors.bg}; border-radius: 8px; text-align: center; color: #666;">
+              <section style="font-size: 24px; margin-bottom: 8px;">🎨</section>
+              <section style="font-weight: 600; font-size: 14px; margin-bottom: 5px; color: ${colors.main};">建议SVG图形</section>
+              <section style="font-size: 13px; color: #888;">"${svgContent}"</section>
+              ${block.title ? `<section style="font-size: 12px; color: #aaa; margin-top: 5px;">${block.title}</section>` : ''}
+            </section>
+          `;
+        }
 
       default:
         return '';
@@ -1057,10 +1092,15 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
 
   // --- Design Template Handler ---
   const handleInsertTemplate = (template: DesignTemplate) => {
-    // Insert the template HTML at the end of current content with proper spacing
-    const separator = htmlContent.trim() ? '\n' : '';
-    const newContent = htmlContent + separator + template.html;
-    setHtmlContent(newContent);
+    // Use ref to insert at cursor position if available
+    if (htmlEditorRef.current) {
+      htmlEditorRef.current.insertHtmlAtCursor(template.html);
+    } else {
+      // Fallback: append to end
+      const separator = htmlContent.trim() ? '\n' : '';
+      const newContent = htmlContent + separator + template.html;
+      setHtmlContent(newContent);
+    }
   };
 
   // --- Material Library Handlers ---
@@ -1082,14 +1122,69 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
 
   const handleInsertMaterialText = (text: string) => {
     const safeText = escapeHtml(text);
-    const textHtml = `<p style="font-size: 16px; line-height: 1.8; color: #444;">${safeText}</p>`;
-    // Use ref to insert at cursor position if available
+    // Insert text inline (without wrapper) to preserve cursor position
+    // Use a span for inline styling that works with cursor positioning
     if (htmlEditorRef.current) {
-      htmlEditorRef.current.insertHtmlAtCursor(textHtml);
+      htmlEditorRef.current.insertHtmlAtCursor(safeText);
     } else {
-      // Fallback: append to end
+      // Fallback: append with proper paragraph wrapper
+      const textHtml = `<p style="font-size: 16px; line-height: 1.8; color: #444;">${safeText}</p>`;
       const separator = htmlContent.trim() ? '\n' : '';
       setHtmlContent(htmlContent + separator + textHtml);
+    }
+  };
+
+  const handleInsertMaterialVideo = (videoDataUrl: string) => {
+    const videoHtml = `
+      <section style="margin: 20px 0; text-align: center;">
+        <video src="${videoDataUrl}" style="max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" controls></video>
+        <section style="font-size: 12px; color: #888; margin-top: 6px;">视频</section>
+      </section>
+    `;
+    if (htmlEditorRef.current) {
+      htmlEditorRef.current.insertHtmlAtCursor(videoHtml);
+    } else {
+      const separator = htmlContent.trim() ? '\n' : '';
+      setHtmlContent(htmlContent + separator + videoHtml);
+    }
+  };
+
+  const handleInsertMaterialGif = (gifDataUrl: string) => {
+    const gifHtml = `
+      <section style="margin: 20px 0; text-align: center;">
+        <img src="${gifDataUrl}" style="max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
+      </section>
+    `;
+    if (htmlEditorRef.current) {
+      htmlEditorRef.current.insertHtmlAtCursor(gifHtml);
+    } else {
+      const separator = htmlContent.trim() ? '\n' : '';
+      setHtmlContent(htmlContent + separator + gifHtml);
+    }
+  };
+
+  const handleInsertMaterialSvg = (svgContent: string) => {
+    // Sanitize SVG using DOMPurify for proper security
+    const sanitizedSvg = DOMPurify.sanitize(svgContent, {
+      USE_PROFILES: { svg: true, svgFilters: true },
+      ADD_TAGS: ['use'],
+      ADD_ATTR: ['xlink:href', 'href']
+    });
+    
+    // Wrap SVG in a span to make it inline and preserve cursor position
+    const inlineSvg = `<span style="display:inline-block; vertical-align:middle;">${sanitizedSvg}</span>`;
+    
+    if (htmlEditorRef.current) {
+      htmlEditorRef.current.insertHtmlAtCursor(inlineSvg);
+    } else {
+      // Fallback: append with wrapper for proper block display
+      const svgHtml = `
+        <section style="margin: 20px 0; text-align: center;">
+          ${sanitizedSvg}
+        </section>
+      `;
+      const separator = htmlContent.trim() ? '\n' : '';
+      setHtmlContent(htmlContent + separator + svgHtml);
     }
   };
 
@@ -1511,7 +1606,13 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         {/* Material Library Panel - Button Only */}
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <button 
-            onClick={() => setShowMaterialLibrary(true)}
+            onClick={() => {
+              // Save cursor position before opening the modal
+              if (htmlEditorRef.current) {
+                htmlEditorRef.current.saveCursorPosition();
+              }
+              setShowMaterialLibrary(true);
+            }}
             className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition"
           >
             <div className="flex items-center gap-2">
@@ -1541,7 +1642,13 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         {/* Design Templates Panel - Button Only */}
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <button 
-            onClick={() => setShowDesignTemplates(true)}
+            onClick={() => {
+              // Save cursor position before opening modal
+              if (htmlEditorRef.current) {
+                htmlEditorRef.current.saveCursorPosition();
+              }
+              setShowDesignTemplates(true);
+            }}
             className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-pink-50 to-orange-50 hover:from-pink-100 hover:to-orange-100 transition"
           >
             <div className="flex items-center gap-2">
@@ -1633,6 +1740,9 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                 onSelectMaterial={() => {}}
                 onInsertImage={(img) => { handleInsertMaterialImage(img); setShowMaterialLibrary(false); }}
                 onInsertText={(txt) => { handleInsertMaterialText(txt); setShowMaterialLibrary(false); }}
+                onInsertVideo={(video) => { handleInsertMaterialVideo(video); setShowMaterialLibrary(false); }}
+                onInsertGif={(gif) => { handleInsertMaterialGif(gif); setShowMaterialLibrary(false); }}
+                onInsertSvg={(svg) => { handleInsertMaterialSvg(svg); setShowMaterialLibrary(false); }}
               />
             </div>
           </div>
