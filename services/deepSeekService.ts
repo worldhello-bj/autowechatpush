@@ -8,6 +8,44 @@ const logger = loggers.deepseek;
 
 const BASE_URL = "https://api.deepseek.com/chat/completions";
 
+// DeepSeek model types
+export type DeepSeekModel = 'deepseek-chat' | 'deepseek-reasoner';
+
+// Whether to enable thinking mode (for deepseek-reasoner with tool calling)
+let thinkingModeEnabled: boolean = false;
+
+// Default model - can be changed to use reasoner mode
+let currentModel: DeepSeekModel = 'deepseek-chat';
+
+/**
+ * Set the DeepSeek model to use
+ * @param model - 'deepseek-chat' for regular chat or 'deepseek-reasoner' for reasoning mode with thinking
+ */
+export const setDeepSeekModel = (model: DeepSeekModel): void => {
+  currentModel = model;
+  // When using deepseek-reasoner, we use deepseek-chat with thinking enabled for tool calling support
+  thinkingModeEnabled = model === 'deepseek-reasoner';
+  logger.info(`DeepSeek model set to: ${model}, thinking mode: ${thinkingModeEnabled}`);
+};
+
+/**
+ * Get the current DeepSeek model
+ */
+export const getDeepSeekModel = (): DeepSeekModel => currentModel;
+
+/**
+ * Check if thinking mode is enabled
+ */
+export const isThinkingModeEnabled = (): boolean => thinkingModeEnabled;
+
+/**
+ * Enable or disable thinking mode manually
+ */
+export const setThinkingMode = (enabled: boolean): void => {
+  thinkingModeEnabled = enabled;
+  logger.info(`DeepSeek thinking mode set to: ${enabled}`);
+};
+
 // Re-use the structure but adapted for OpenAI-compatible tool definitions
 const tools = [
   {
@@ -68,119 +106,268 @@ const tools = [
   }
 ];
 
+/**
+ * Interface for DeepSeek message with reasoning content
+ */
+interface DeepSeekMessage {
+  role: string;
+  content: string;
+  reasoning_content?: string;
+  tool_calls?: Array<{
+    id: string;
+    type: string;
+    function: {
+      name: string;
+      arguments: string;
+    };
+  }>;
+}
+
+/**
+ * Make a single API call to DeepSeek
+ */
+const makeDeepSeekRequest = async (
+  apiKey: string,
+  messages: any[],
+  useThinking: boolean = false
+): Promise<any> => {
+  const requestBody: Record<string, unknown> = {
+    model: 'deepseek-chat', // Always use deepseek-chat, thinking mode is enabled via extra_body
+    messages,
+    tools,
+    tool_choice: "auto"
+  };
+
+  // Enable thinking mode for reasoner-style behavior with tool calling support
+  if (useThinking) {
+    // Note: In browser environment, we pass thinking config directly in the body
+    // Some API clients use extra_body, but fetch API accepts it in the main body
+    (requestBody as any).thinking = { type: "enabled" };
+  }
+
+  const response = await fetch(BASE_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(`DeepSeek API Error: ${err.error?.message || response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Clear reasoning_content from messages to save bandwidth
+ * Called when starting a new turn/question
+ */
+const clearReasoningContent = (messages: any[]): void => {
+  for (const message of messages) {
+    if (message.reasoning_content) {
+      delete message.reasoning_content;
+    }
+  }
+};
+
 export const generateArticleStructureDeepSeek = async (
   input: string,
   apiKey: string,
-  isFormattingMode: boolean = false
+  isFormattingMode: boolean = false,
+  useReasonerMode?: boolean
 ): Promise<GenerationResult> => {
   if (!apiKey) {
     throw new Error("DeepSeek API Key is required.");
   }
 
+  // Determine whether to use thinking mode
+  const useThinking = useReasonerMode !== undefined ? useReasonerMode : thinkingModeEnabled;
+  
+  logger.info(`Using DeepSeek with thinking mode: ${useThinking}`);
+
   let prompt = "";
   if (isFormattingMode) {
-      prompt = `
-        You are a professional WeChat Official Account editor.
-        Your task is to format the input text into a rich WeChat article structure using the 'layout_article' tool.
-        
-        Guidelines:
-        - **Content**: Keep the original text's meaning.
-        - **Colors**: Assign colorful styles (red, blue, purple, orange, green, pink, cyan, gradient) to headers and cards to make it visually appealing.
-        - **Structure**: Use 'card' blocks for emphasis, 'highlight' for key phrases.
-        - **Rich Elements**: Use 'divider' between sections, 'callout' for important notices, 'numbered_list' for steps.
-        - **Headers**: Use different header levels (1, 2, 3) for hierarchy.
-        
-        Input Text:
-        """
-        ${input}
-        """
-        
-        Call the function 'layout_article' to return the formatted result.
-      `;
+    prompt = `
+You are a professional WeChat Official Account editor.
+Your task is to format the input text into a rich WeChat article structure using the 'layout_article' tool.
+
+Guidelines:
+- **Content**: Keep the original text's meaning.
+- **Colors**: Assign colorful styles (red, blue, purple, orange, green, pink, cyan, gradient) to headers and cards to make it visually appealing.
+- **Structure**: Use 'card' blocks for emphasis, 'highlight' for key phrases.
+- **Rich Elements**: Use 'divider' between sections, 'callout' for important notices, 'numbered_list' for steps.
+- **Headers**: Use different header levels (1, 2, 3) for hierarchy.
+
+Input Text:
+"""
+${input}
+"""
+
+Call the function 'layout_article' to return the formatted result.
+    `;
   } else {
-      prompt = `
-        You are a professional WeChat Official Account editor known for creating visually engaging "Xiumi-style" articles.
-        Your task is to write a high-quality article about: "${input}".
-        
-        Structure the article using the 'layout_article' tool with the following guidelines:
-        - **Visual Variety**: Use 'card' blocks frequently for key takeaways, 'highlight' for important points.
-        - **Colors**: You MUST use specific colors ('red', 'blue', 'orange', 'purple', 'gold', 'green', 'pink', 'cyan', 'gradient') for different Cards and Headers.
-        - **Images**: Insert 'image' blocks where appropriate. Set the content to a description of the image.
-        - **Rich Formatting**: Use 'divider' between major sections, 'callout' for tips/warnings, 'numbered_list' for steps, 'table' for data comparisons.
-        - **Headers**: Use header levels (1=main, 2=sub, 3=minor) for proper hierarchy.
-        - **Code**: Use 'code' blocks with language specified for any code snippets.
-        
-        Call the function 'layout_article' to return the result.
-      `;
+    prompt = `
+You are a professional WeChat Official Account editor known for creating visually engaging "Xiumi-style" articles.
+Your task is to write a high-quality article about: "${input}".
+
+Structure the article using the 'layout_article' tool with the following guidelines:
+- **Visual Variety**: Use 'card' blocks frequently for key takeaways, 'highlight' for important points.
+- **Colors**: You MUST use specific colors ('red', 'blue', 'orange', 'purple', 'gold', 'green', 'pink', 'cyan', 'gradient') for different Cards and Headers.
+- **Images**: Insert 'image' blocks where appropriate. Set the content to a description of the image.
+- **Rich Formatting**: Use 'divider' between major sections, 'callout' for tips/warnings, 'numbered_list' for steps, 'table' for data comparisons.
+- **Headers**: Use header levels (1=main, 2=sub, 3=minor) for proper hierarchy.
+- **Code**: Use 'code' blocks with language specified for any code snippets.
+
+Call the function 'layout_article' to return the result.
+    `;
   }
 
   try {
-    const response = await fetch(BASE_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: [
-          { role: "system", content: "You are a helpful assistant that writes WeChat articles with colorful layouts." },
-          { role: "user", content: prompt }
-        ],
-        tools: tools,
-        tool_choice: "auto"
-      })
-    });
+    // Initialize messages array
+    const messages: any[] = [
+      { role: "system", content: "You are a helpful assistant that writes WeChat articles with colorful layouts." },
+      { role: "user", content: prompt }
+    ];
 
-    if (!response.ok) {
-        const err = await response.json();
-        throw new Error(`DeepSeek API Error: ${err.error?.message || response.statusText}`);
-    }
-
-    const data = await response.json();
+    let subTurn = 1;
+    const maxSubTurns = 10; // Safety limit to prevent infinite loops
     
-    // Log the raw API response
-    logger.group('DeepSeek API Response', true);
-    logger.debug('Raw response:', data);
-    logger.groupEnd();
-    
-    const choice = data.choices?.[0];
-    const toolCall = choice?.message?.tool_calls?.[0];
+    while (subTurn <= maxSubTurns) {
+      logger.info(`DeepSeek API call - Sub-turn ${subTurn}`);
+      
+      const data = await makeDeepSeekRequest(apiKey, messages, useThinking);
+      
+      // Log the raw API response
+      logger.group(`DeepSeek API Response (Sub-turn ${subTurn})`, true);
+      logger.debug('Raw response:', data);
+      logger.groupEnd();
+      
+      const choice = data.choices?.[0];
+      const message = choice?.message;
+      
+      if (!message) {
+        throw new Error("No message in API response");
+      }
 
-    if (toolCall && toolCall.function.name === 'layout_article') {
-        // Safely parse JSON with error handling
-        let args;
-        try {
-          let jsonStr = toolCall.function.arguments;
-          args = safeParseJSON(jsonStr, logger);
-        } catch (parseError) {
-          logger.error('Failed to parse AI response JSON:', parseError);
-          logger.error('Raw arguments:', toolCall.function.arguments);
-          throw new Error(`Failed to parse AI response: ${parseError}`);
+      // Log reasoning content if available (specific to thinking mode)
+      if (message.reasoning_content) {
+        logger.group('DeepSeek Reasoning', true);
+        logger.debug('Reasoning content:', message.reasoning_content);
+        logger.groupEnd();
+      }
+
+      // Append the assistant message to maintain conversation context
+      // This includes reasoning_content which needs to be passed back in thinking mode
+      messages.push(message);
+
+      const toolCalls = message.tool_calls;
+      
+      // If there are no tool calls, the model has given a final answer
+      if (!toolCalls || toolCalls.length === 0) {
+        // Check if we got the layout_article function call in any previous turn
+        // In this case, the final message might just be content without tool calls
+        logger.info('No more tool calls, processing final response');
+        
+        // Look for the layout_article tool call in the conversation
+        for (let i = messages.length - 1; i >= 0; i--) {
+          const msg = messages[i];
+          if (msg.role === 'assistant' && msg.tool_calls) {
+            for (const tc of msg.tool_calls) {
+              if (tc.function?.name === 'layout_article') {
+                // Found it! Parse and return
+                let args;
+                try {
+                  args = safeParseJSON(tc.function.arguments, logger);
+                } catch (parseError) {
+                  logger.error('Failed to parse AI response JSON:', parseError);
+                  logger.error('Raw arguments:', tc.function.arguments);
+                  throw new Error(`Failed to parse AI response: ${parseError}`);
+                }
+                
+                logger.group('Generated Article', true);
+                logger.info('Title:', args.title);
+                logger.info('Digest:', args.digest);
+                logger.info('Blocks count:', args.blocks?.length || 0);
+                logger.debug('Blocks detail:', args.blocks);
+                logger.groupEnd();
+                
+                const blocks = (args.blocks || []).map((b: any, index: number) => ({
+                  id: `ds-${Date.now()}-${index}`,
+                  ...b
+                }));
+
+                return {
+                  title: args.title || "Untitled Article",
+                  digest: args.digest || "No summary available.",
+                  blocks,
+                  sources: []
+                };
+              }
+            }
+          }
         }
         
-        // Log generated content
-        logger.group('Generated Article', true);
-        logger.info('Title:', args.title);
-        logger.info('Digest:', args.digest);
-        logger.info('Blocks count:', args.blocks?.length || 0);
-        logger.debug('Blocks detail:', args.blocks);
-        logger.groupEnd();
+        // If we reach here without finding layout_article, the generation failed
+        throw new Error("DeepSeek failed to generate structured content. Please try again.");
+      }
+
+      // Process tool calls
+      for (const toolCall of toolCalls) {
+        const functionName = toolCall.function?.name;
+        const functionArgs = toolCall.function?.arguments;
         
-        const blocks = (args.blocks || []).map((b: any, index: number) => ({
+        logger.info(`Tool call: ${functionName}`);
+        
+        if (functionName === 'layout_article') {
+          // This is our target function - parse and return the result
+          let args;
+          try {
+            args = safeParseJSON(functionArgs, logger);
+          } catch (parseError) {
+            logger.error('Failed to parse AI response JSON:', parseError);
+            logger.error('Raw arguments:', functionArgs);
+            throw new Error(`Failed to parse AI response: ${parseError}`);
+          }
+          
+          // Log generated content
+          logger.group('Generated Article', true);
+          logger.info('Title:', args.title);
+          logger.info('Digest:', args.digest);
+          logger.info('Blocks count:', args.blocks?.length || 0);
+          logger.debug('Blocks detail:', args.blocks);
+          logger.groupEnd();
+          
+          const blocks = (args.blocks || []).map((b: any, index: number) => ({
             id: `ds-${Date.now()}-${index}`,
             ...b
-        }));
+          }));
 
-        return {
+          return {
             title: args.title || "Untitled Article",
             digest: args.digest || "No summary available.",
             blocks,
-            sources: [] 
-        };
+            sources: []
+          };
+        } else {
+          // For other tool calls (if any), we would handle them here
+          // For now, just acknowledge the tool call
+          logger.warn(`Unknown tool call: ${functionName}, returning empty result`);
+          messages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: "Tool not implemented"
+          });
+        }
+      }
+      
+      subTurn++;
     }
 
-    throw new Error("DeepSeek failed to generate structured content. Please try again.");
+    throw new Error("DeepSeek exceeded maximum sub-turns without generating content.");
 
   } catch (error) {
     logger.error("DeepSeek generation failed:", error);
@@ -189,18 +376,40 @@ export const generateArticleStructureDeepSeek = async (
 };
 
 // --- Helper for DeepSeek API calls ---
-const callDeepSeekAPI = async (apiKey: string, messages: any[], temperature: number = 0.7): Promise<string> => {
+/**
+ * Helper function for DeepSeek API calls (simple text generation without tool calling)
+ * @param apiKey - DeepSeek API key
+ * @param messages - Chat messages
+ * @param temperature - Temperature (default 0.7)
+ * @param useThinkingMode - Whether to enable thinking mode for enhanced reasoning
+ * @returns The content from the AI response
+ */
+const callDeepSeekAPI = async (
+  apiKey: string, 
+  messages: any[], 
+  temperature: number = 0.7,
+  useThinkingMode?: boolean
+): Promise<string> => {
+  const useThinking = useThinkingMode !== undefined ? useThinkingMode : thinkingModeEnabled;
+
+  const requestBody: Record<string, unknown> = {
+    model: 'deepseek-chat', // Always use deepseek-chat
+    messages,
+    temperature
+  };
+
+  // Enable thinking mode for enhanced reasoning
+  if (useThinking) {
+    (requestBody as any).thinking = { type: "enabled" };
+  }
+
   const response = await fetch(BASE_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${apiKey}`
     },
-    body: JSON.stringify({
-      model: "deepseek-chat",
-      messages,
-      temperature
-    })
+    body: JSON.stringify(requestBody)
   });
 
   if (!response.ok) {
@@ -209,7 +418,16 @@ const callDeepSeekAPI = async (apiKey: string, messages: any[], temperature: num
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || "";
+  const message = data.choices?.[0]?.message;
+
+  // Log reasoning content if available (when thinking mode is enabled)
+  if (useThinking && message?.reasoning_content) {
+    logger.group('DeepSeek Reasoning', true);
+    logger.debug('Reasoning content:', message.reasoning_content);
+    logger.groupEnd();
+  }
+
+  return message?.content || "";
 };
 
 // --- New AI Methods for Design Richness ---

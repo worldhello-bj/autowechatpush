@@ -281,15 +281,59 @@ const designAITools = [
 const QWEN_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
 const DEEPSEEK_BASE_URL = "https://api.deepseek.com/chat/completions";
 
+// DeepSeek thinking mode configuration for dualAI
+let dualAIThinkingModeEnabled: boolean = false;
+
+/**
+ * Enable or disable thinking mode for Dual AI DeepSeek operations
+ * Thinking mode enables enhanced reasoning with tool calling support
+ */
+export const setDualAIThinkingMode = (enabled: boolean): void => {
+  dualAIThinkingModeEnabled = enabled;
+  logger.info(`Dual AI DeepSeek thinking mode set to: ${enabled}`);
+};
+
+/**
+ * Check if thinking mode is enabled for Dual AI
+ */
+export const isDualAIThinkingModeEnabled = (): boolean => dualAIThinkingModeEnabled;
+
+// For backward compatibility
+export type DeepSeekDualModel = 'deepseek-chat' | 'deepseek-reasoner';
+
+/**
+ * Set the DeepSeek model to use for Dual AI operations
+ * @deprecated Use setDualAIThinkingMode instead
+ */
+export const setDualAIDeepSeekModel = (model: DeepSeekDualModel): void => {
+  dualAIThinkingModeEnabled = model === 'deepseek-reasoner';
+  logger.info(`Dual AI DeepSeek thinking mode set to: ${dualAIThinkingModeEnabled} (via model: ${model})`);
+};
+
+/**
+ * Get the current DeepSeek model for Dual AI
+ * @deprecated Use isDualAIThinkingModeEnabled instead
+ */
+export const getDualAIDeepSeekModel = (): DeepSeekDualModel => 
+  dualAIThinkingModeEnabled ? 'deepseek-reasoner' : 'deepseek-chat';
+
+/**
+ * Make a single API call with optional multi-turn tool calling support for thinking mode
+ */
 const callAPI = async (
   provider: 'google' | 'deepseek' | 'qwen',
   apiKey: string,
   messages: any[],
   tools: any[],
-  temperature: number = 0.7
+  temperature: number = 0.7,
+  useThinkingMode?: boolean
 ): Promise<any> => {
   let url: string;
   let model: string;
+
+  // Determine if using thinking mode for deepseek
+  const isDeepSeekThinking = provider === 'deepseek' && 
+    (useThinkingMode !== undefined ? useThinkingMode : dualAIThinkingModeEnabled);
 
   switch (provider) {
     case 'qwen':
@@ -298,12 +342,28 @@ const callAPI = async (
       break;
     case 'deepseek':
       url = DEEPSEEK_BASE_URL;
-      model = 'deepseek-chat';
+      model = 'deepseek-chat'; // Always use deepseek-chat, thinking is enabled via extra param
       break;
     default:
       // For Google, we would use their SDK directly
       throw new Error('Google provider should use SDK directly');
   }
+
+  logger.info(`Calling ${provider} API with model: ${model}, thinking mode: ${isDeepSeekThinking}`);
+
+  // For DeepSeek with thinking mode, we need to handle multi-turn tool calling
+  if (isDeepSeekThinking) {
+    return callDeepSeekWithThinking(apiKey, messages, tools, temperature);
+  }
+
+  // Regular API call
+  const requestBody: Record<string, unknown> = {
+    model,
+    messages,
+    tools,
+    tool_choice: "auto",
+    temperature
+  };
 
   const response = await fetch(url, {
     method: "POST",
@@ -311,13 +371,7 @@ const callAPI = async (
       "Content-Type": "application/json",
       "Authorization": `Bearer ${apiKey}`
     },
-    body: JSON.stringify({
-      model,
-      messages,
-      tools,
-      tool_choice: "auto",
-      temperature
-    })
+    body: JSON.stringify(requestBody)
   });
 
   if (!response.ok) {
@@ -326,6 +380,97 @@ const callAPI = async (
   }
 
   return response.json();
+};
+
+/**
+ * DeepSeek API call with thinking mode enabled
+ * Handles multi-turn tool calling as required by the thinking mode
+ */
+const callDeepSeekWithThinking = async (
+  apiKey: string,
+  initialMessages: any[],
+  tools: any[],
+  temperature: number
+): Promise<any> => {
+  const messages = [...initialMessages];
+  let subTurn = 1;
+  const maxSubTurns = 10;
+
+  while (subTurn <= maxSubTurns) {
+    logger.info(`DeepSeek thinking mode - Sub-turn ${subTurn}`);
+
+    const requestBody: Record<string, unknown> = {
+      model: 'deepseek-chat',
+      messages,
+      tools,
+      tool_choice: "auto",
+      temperature,
+      thinking: { type: "enabled" }
+    };
+
+    const response = await fetch(DEEPSEEK_BASE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(`DeepSeek API Error: ${err.error?.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+    const message = data.choices?.[0]?.message;
+
+    if (!message) {
+      throw new Error("No message in API response");
+    }
+
+    // Log reasoning content if available
+    if (message.reasoning_content) {
+      logger.group(`DeepSeek Reasoning (Sub-turn ${subTurn})`, true);
+      logger.debug('Reasoning content:', message.reasoning_content);
+      logger.groupEnd();
+    }
+
+    // Append the assistant message to maintain conversation context
+    messages.push(message);
+
+    const toolCalls = message.tool_calls;
+
+    // If there are no tool calls, return the final response
+    if (!toolCalls || toolCalls.length === 0) {
+      return data;
+    }
+
+    // Check if this is the target tool call we're looking for
+    // For dualAI, we're looking for generate_article_content or beautify_article
+    for (const toolCall of toolCalls) {
+      const functionName = toolCall.function?.name;
+      if (functionName === 'generate_article_content' || functionName === 'beautify_article') {
+        // Return the data with this tool call
+        return data;
+      }
+    }
+
+    // For other tool calls, we would handle them here
+    // Currently just acknowledge and continue
+    for (const toolCall of toolCalls) {
+      logger.warn(`Unhandled tool call in thinking mode: ${toolCall.function?.name}`);
+      messages.push({
+        role: "tool",
+        tool_call_id: toolCall.id,
+        content: "Tool not implemented"
+      });
+    }
+
+    subTurn++;
+  }
+
+  throw new Error("DeepSeek exceeded maximum sub-turns in thinking mode");
 };
 
 // --- Content AI Service ---
@@ -348,9 +493,14 @@ export const generateContentWithAI = async (
   memory: AIMemory,
   provider: 'deepseek' | 'qwen',
   apiKey: string,
-  imageContext?: string
+  imageContext?: string,
+  useThinkingMode?: boolean
 ): Promise<ContentAIResult> => {
   const context = buildContentContext(memory, topic);
+  
+  // Determine if using thinking mode for enhanced reasoning
+  const useThinking = provider === 'deepseek' && 
+    (useThinkingMode !== undefined ? useThinkingMode : dualAIThinkingModeEnabled);
   
   const systemPrompt = `You are an expert content writer for WeChat Official Accounts.
 You specialize in creating engaging, well-structured articles that resonate with Chinese readers.
@@ -383,7 +533,8 @@ Requirements:
       { role: "user", content: userPrompt }
     ],
     contentAITools,
-    0.7
+    0.7,
+    useThinking
   );
 
   // Log the raw API response
@@ -391,10 +542,20 @@ Requirements:
   logger.debug('Raw response:', data);
   logger.groupEnd();
 
-  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  const message = data.choices?.[0]?.message;
+
+  // Log reasoning content if available (when thinking mode is enabled)
+  if (message?.reasoning_content) {
+    logger.group('Content AI Reasoning', true);
+    logger.debug('Reasoning content:', message.reasoning_content);
+    logger.groupEnd();
+  }
+
+  // Handle response with function calling (works for both regular and thinking modes)
+  const toolCall = message?.tool_calls?.[0];
   if (!toolCall || toolCall.function.name !== 'generate_article_content') {
     const receivedFunction = toolCall?.function?.name || 'none';
-    const messageContent = data.choices?.[0]?.message?.content?.slice(0, 100) || 'no content';
+    const messageContent = message?.content?.slice(0, 100) || 'no content';
     throw new Error(`Content AI failed to generate structured content. Expected 'generate_article_content', received: '${receivedFunction}'. Message: ${messageContent}`);
   }
 
@@ -432,7 +593,8 @@ export const beautifyWithAI = async (
   contentResult: ContentAIResult,
   memory: AIMemory,
   provider: 'deepseek' | 'qwen',
-  apiKey: string
+  apiKey: string,
+  useThinkingMode?: boolean
 ): Promise<DesignAIResult> => {
   // Build a simplified representation for the design AI
   const contentSummary = contentResult.sections.map(s => ({
@@ -444,6 +606,10 @@ export const beautifyWithAI = async (
 
   const context = buildDesignContext(memory, []);
   
+  // Determine if using thinking mode for enhanced reasoning
+  const useThinking = provider === 'deepseek' && 
+    (useThinkingMode !== undefined ? useThinkingMode : dualAIThinkingModeEnabled);
+
   const systemPrompt = `You are an expert visual designer for WeChat Official Accounts.
 You specialize in creating beautiful, engaging "Xiumi-style" article layouts.
 
@@ -483,7 +649,8 @@ Requirements:
       { role: "user", content: userPrompt }
     ],
     designAITools,
-    0.8
+    0.8,
+    useThinking
   );
 
   // Log the raw API response
@@ -491,10 +658,20 @@ Requirements:
   logger.debug('Raw response:', data);
   logger.groupEnd();
 
-  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  const message = data.choices?.[0]?.message;
+
+  // Log reasoning content if available (when thinking mode is enabled)
+  if (message?.reasoning_content) {
+    logger.group('Design AI Reasoning', true);
+    logger.debug('Reasoning content:', message.reasoning_content);
+    logger.groupEnd();
+  }
+
+  // Handle response with function calling (works for both regular and thinking modes)
+  const toolCall = message?.tool_calls?.[0];
   if (!toolCall || toolCall.function.name !== 'beautify_article') {
     const receivedFunction = toolCall?.function?.name || 'none';
-    const messageContent = data.choices?.[0]?.message?.content?.slice(0, 100) || 'no content';
+    const messageContent = message?.content?.slice(0, 100) || 'no content';
     throw new Error(`Design AI failed to beautify content. Expected 'beautify_article', received: '${receivedFunction}'. Message: ${messageContent}`);
   }
 
