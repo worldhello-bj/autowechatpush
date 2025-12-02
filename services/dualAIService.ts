@@ -286,7 +286,8 @@ let dualAIThinkingModeEnabled: boolean = false;
 
 /**
  * Enable or disable thinking mode for Dual AI DeepSeek operations
- * Thinking mode enables enhanced reasoning with tool calling support
+ * When enabled, DeepSeek uses enhanced reasoning capabilities with multi-turn tool calling support.
+ * @param enabled - true to enable thinking mode
  */
 export const setDualAIThinkingMode = (enabled: boolean): void => {
   dualAIThinkingModeEnabled = enabled;
@@ -295,6 +296,7 @@ export const setDualAIThinkingMode = (enabled: boolean): void => {
 
 /**
  * Check if thinking mode is enabled for Dual AI
+ * @returns true if thinking mode is enabled
  */
 export const isDualAIThinkingModeEnabled = (): boolean => dualAIThinkingModeEnabled;
 
@@ -303,16 +305,20 @@ export type DeepSeekDualModel = 'deepseek-chat' | 'deepseek-reasoner';
 
 /**
  * Set the DeepSeek model to use for Dual AI operations
- * @deprecated Use setDualAIThinkingMode instead
+ * @deprecated Use setDualAIThinkingMode(true) instead. When 'deepseek-reasoner' is selected,
+ *             the service uses 'deepseek-chat' with thinking mode enabled for tool calling support.
+ * @param model - 'deepseek-chat' for regular mode, 'deepseek-reasoner' to enable thinking mode
  */
 export const setDualAIDeepSeekModel = (model: DeepSeekDualModel): void => {
   dualAIThinkingModeEnabled = model === 'deepseek-reasoner';
-  logger.info(`Dual AI DeepSeek thinking mode set to: ${dualAIThinkingModeEnabled} (via model: ${model})`);
+  logger.info(`Dual AI DeepSeek thinking mode set to: ${dualAIThinkingModeEnabled} (via deprecated setDualAIDeepSeekModel with model: ${model})`);
 };
 
 /**
  * Get the current DeepSeek model for Dual AI
- * @deprecated Use isDualAIThinkingModeEnabled instead
+ * @deprecated Use isDualAIThinkingModeEnabled() instead. This returns 'deepseek-reasoner' when
+ *             thinking mode is enabled, but the actual API calls use 'deepseek-chat' with thinking parameter.
+ * @returns 'deepseek-reasoner' if thinking mode is enabled, otherwise 'deepseek-chat'
  */
 export const getDualAIDeepSeekModel = (): DeepSeekDualModel => 
   dualAIThinkingModeEnabled ? 'deepseek-reasoner' : 'deepseek-chat';
@@ -456,14 +462,14 @@ const callDeepSeekWithThinking = async (
       }
     }
 
-    // For other tool calls, we would handle them here
-    // Currently just acknowledge and continue
+    // For other tool calls, provide helpful guidance to the AI
     for (const toolCall of toolCalls) {
-      logger.warn(`Unhandled tool call in thinking mode: ${toolCall.function?.name}`);
+      const functionName = toolCall.function?.name;
+      logger.warn(`Unexpected tool call in thinking mode: ${functionName}`);
       messages.push({
         role: "tool",
         tool_call_id: toolCall.id,
-        content: "Tool not implemented"
+        content: `This tool (${functionName}) is not available. Please use either 'generate_article_content' for content generation or 'beautify_article' for design beautification.`
       });
     }
 

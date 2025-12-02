@@ -20,6 +20,9 @@ let currentModel: DeepSeekModel = 'deepseek-chat';
 /**
  * Set the DeepSeek model to use
  * @param model - 'deepseek-chat' for regular chat or 'deepseek-reasoner' for reasoning mode with thinking
+ * @description When 'deepseek-reasoner' is selected, the service uses 'deepseek-chat' with 
+ *              `thinking: { type: "enabled" }` to enable enhanced reasoning with tool calling support.
+ *              This is the recommended approach per DeepSeek's API documentation.
  */
 export const setDeepSeekModel = (model: DeepSeekModel): void => {
   currentModel = model;
@@ -29,17 +32,21 @@ export const setDeepSeekModel = (model: DeepSeekModel): void => {
 };
 
 /**
- * Get the current DeepSeek model
+ * Get the current DeepSeek model setting
+ * @description Note: When 'deepseek-reasoner' is returned, the actual API calls use 'deepseek-chat' 
+ *              with thinking mode enabled for tool calling support.
  */
 export const getDeepSeekModel = (): DeepSeekModel => currentModel;
 
 /**
  * Check if thinking mode is enabled
+ * When enabled, DeepSeek uses enhanced reasoning capabilities with multi-turn tool calling support.
  */
 export const isThinkingModeEnabled = (): boolean => thinkingModeEnabled;
 
 /**
  * Enable or disable thinking mode manually
+ * @param enabled - true to enable thinking mode (enhanced reasoning with tool calling)
  */
 export const setThinkingMode = (enabled: boolean): void => {
   thinkingModeEnabled = enabled;
@@ -353,13 +360,12 @@ Call the function 'layout_article' to return the result.
             sources: []
           };
         } else {
-          // For other tool calls (if any), we would handle them here
-          // For now, just acknowledge the tool call
-          logger.warn(`Unknown tool call: ${functionName}, returning empty result`);
+          // For other tool calls, provide a helpful response to guide the AI back to the main task
+          logger.warn(`Unexpected tool call: ${functionName}, guiding AI back to main task`);
           messages.push({
             role: "tool",
             tool_call_id: toolCall.id,
-            content: "Tool not implemented"
+            content: `This tool (${functionName}) is not available. Please use the 'layout_article' function to generate the article structure directly.`
           });
         }
       }
