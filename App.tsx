@@ -327,7 +327,7 @@ const SettingsPage: React.FC = () => {
                            />
                            <div>
                                <span className="font-medium block text-gray-900">DeepSeek</span>
-                               <span className="text-xs text-gray-500">Text Generation only</span>
+                               <span className="text-xs text-gray-500">文本生成，支持思考模式 (Thinking Mode)</span>
                            </div>
                        </label>
 
