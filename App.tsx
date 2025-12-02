@@ -4,6 +4,7 @@ import Editor from './components/Editor';
 import LogSettings from './components/LogSettings';
 import { AIProvider } from './types';
 import { setThinkingMode, setMaxThinkingRounds } from './services/deepSeekService';
+import { setDualAIThinkingMode, setDualAIMaxThinkingRounds } from './services/dualAIService';
 
 // --- Shared Types ---
 interface UserProfile {
@@ -225,6 +226,7 @@ const SettingsPage: React.FC = () => {
       const enabled = savedThinkingMode === 'true';
       setDeepSeekThinkingMode(enabled);
       setThinkingMode(enabled);
+      setDualAIThinkingMode(enabled);
     }
     
     const savedThinkingRounds = localStorage.getItem('deepseek_thinking_rounds');
@@ -232,6 +234,7 @@ const SettingsPage: React.FC = () => {
       const rounds = parseInt(savedThinkingRounds, 10);
       setDeepSeekThinkingRounds(rounds);
       setMaxThinkingRounds(rounds);
+      setDualAIMaxThinkingRounds(rounds);
     }
     
     const savedDashKey = localStorage.getItem('dashscope_key');
@@ -252,11 +255,13 @@ const SettingsPage: React.FC = () => {
     localStorage.setItem('deepseek_key', deepSeekKey);
     localStorage.setItem('dashscope_key', dashScopeKey);
     
-    // Save DeepSeek thinking mode and rounds
+    // Save DeepSeek thinking mode and rounds (apply to both deepSeekService and dualAIService)
     localStorage.setItem('deepseek_thinking_mode', String(deepSeekThinkingMode));
     localStorage.setItem('deepseek_thinking_rounds', String(deepSeekThinkingRounds));
     setThinkingMode(deepSeekThinkingMode);
     setMaxThinkingRounds(deepSeekThinkingRounds);
+    setDualAIThinkingMode(deepSeekThinkingMode);
+    setDualAIMaxThinkingRounds(deepSeekThinkingRounds);
     
     alert("Configuration saved!");
   };
