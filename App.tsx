@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
 import Editor from './components/Editor';
 import LogSettings from './components/LogSettings';
 import { AIProvider } from './types';
+import { setThinkingMode } from './services/deepSeekService';
 
 // --- Shared Types ---
 interface UserProfile {
@@ -197,6 +198,7 @@ const SettingsPage: React.FC = () => {
 
   const [deepSeekKey, setDeepSeekKey] = useState('');
   const [showDeepSeekKey, setShowDeepSeekKey] = useState(false);
+  const [deepSeekThinkingMode, setDeepSeekThinkingMode] = useState(false);
   
   const [dashScopeKey, setDashScopeKey] = useState('');
   const [showDashScopeKey, setShowDashScopeKey] = useState(false);
@@ -217,6 +219,13 @@ const SettingsPage: React.FC = () => {
     const savedDSKey = localStorage.getItem('deepseek_key');
     if (savedDSKey) setDeepSeekKey(savedDSKey);
     
+    const savedThinkingMode = localStorage.getItem('deepseek_thinking_mode');
+    if (savedThinkingMode) {
+      const enabled = savedThinkingMode === 'true';
+      setDeepSeekThinkingMode(enabled);
+      setThinkingMode(enabled);
+    }
+    
     const savedDashKey = localStorage.getItem('dashscope_key');
     if (savedDashKey) setDashScopeKey(savedDashKey);
   }, []);
@@ -234,6 +243,10 @@ const SettingsPage: React.FC = () => {
     localStorage.setItem('google_api_key', googleKey);
     localStorage.setItem('deepseek_key', deepSeekKey);
     localStorage.setItem('dashscope_key', dashScopeKey);
+    
+    // Save DeepSeek thinking mode
+    localStorage.setItem('deepseek_thinking_mode', String(deepSeekThinkingMode));
+    setThinkingMode(deepSeekThinkingMode);
     
     alert("Configuration saved!");
   };
@@ -389,6 +402,20 @@ const SettingsPage: React.FC = () => {
                                 className="absolute right-2 top-1.5 text-gray-400 hover:text-gray-600"
                             >
                                 <span className="material-icons text-lg">{showDeepSeekKey ? 'visibility_off' : 'visibility'}</span>
+                            </button>
+                        </div>
+                        
+                        {/* Thinking Mode Toggle */}
+                        <div className="mt-4 flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <div>
+                                <div className="font-medium text-gray-800 text-sm">思考模式 (Thinking Mode)</div>
+                                <div className="text-xs text-gray-500">启用后，DeepSeek 将进行深度思考以提升回答质量</div>
+                            </div>
+                            <button 
+                                onClick={() => setDeepSeekThinkingMode(!deepSeekThinkingMode)}
+                                className={`w-12 h-6 rounded-full relative transition-colors focus:outline-none ${deepSeekThinkingMode ? 'bg-blue-500' : 'bg-gray-300'}`}
+                            >
+                                <div className={`w-4 h-4 bg-white rounded-full absolute top-1 shadow-sm transition-all ${deepSeekThinkingMode ? 'right-1' : 'left-1'}`}></div>
                             </button>
                         </div>
                     </div>
