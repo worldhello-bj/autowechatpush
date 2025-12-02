@@ -14,6 +14,9 @@ export type DeepSeekModel = 'deepseek-chat' | 'deepseek-reasoner';
 // Whether to enable thinking mode (for deepseek-reasoner with tool calling)
 let thinkingModeEnabled: boolean = false;
 
+// Maximum number of thinking rounds/sub-turns (safety limit to prevent infinite loops)
+let maxThinkingRounds: number = 10;
+
 // Default model - can be changed to use reasoner mode
 let currentModel: DeepSeekModel = 'deepseek-chat';
 
@@ -51,6 +54,21 @@ export const isThinkingModeEnabled = (): boolean => thinkingModeEnabled;
 export const setThinkingMode = (enabled: boolean): void => {
   thinkingModeEnabled = enabled;
   logger.info(`DeepSeek thinking mode set to: ${enabled}`);
+};
+
+/**
+ * Get the maximum number of thinking rounds
+ * @returns The current maximum thinking rounds limit
+ */
+export const getMaxThinkingRounds = (): number => maxThinkingRounds;
+
+/**
+ * Set the maximum number of thinking rounds
+ * @param rounds - Number of rounds (1-20, default 10)
+ */
+export const setMaxThinkingRounds = (rounds: number): void => {
+  maxThinkingRounds = Math.max(1, Math.min(20, rounds)); // Clamp between 1 and 20
+  logger.info(`DeepSeek max thinking rounds set to: ${maxThinkingRounds}`);
 };
 
 // Re-use the structure but adapted for OpenAI-compatible tool definitions
@@ -241,10 +259,10 @@ Call the function 'layout_article' to return the result.
     ];
 
     let subTurn = 1;
-    const maxSubTurns = 10; // Safety limit to prevent infinite loops
+    const maxSubTurns = maxThinkingRounds; // Use configurable thinking rounds
     
     while (subTurn <= maxSubTurns) {
-      logger.info(`DeepSeek API call - Sub-turn ${subTurn}`);
+      logger.info(`DeepSeek API call - Sub-turn ${subTurn}/${maxSubTurns}`);
       
       const data = await makeDeepSeekRequest(apiKey, messages, useThinking);
       

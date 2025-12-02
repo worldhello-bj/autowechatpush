@@ -283,6 +283,7 @@ const DEEPSEEK_BASE_URL = "https://api.deepseek.com/chat/completions";
 
 // DeepSeek thinking mode configuration for dualAI
 let dualAIThinkingModeEnabled: boolean = false;
+let dualAIMaxThinkingRounds: number = 10;
 
 /**
  * Enable or disable thinking mode for Dual AI DeepSeek operations
@@ -299,6 +300,21 @@ export const setDualAIThinkingMode = (enabled: boolean): void => {
  * @returns true if thinking mode is enabled
  */
 export const isDualAIThinkingModeEnabled = (): boolean => dualAIThinkingModeEnabled;
+
+/**
+ * Get the maximum number of thinking rounds for Dual AI
+ * @returns The current maximum thinking rounds limit
+ */
+export const getDualAIMaxThinkingRounds = (): number => dualAIMaxThinkingRounds;
+
+/**
+ * Set the maximum number of thinking rounds for Dual AI
+ * @param rounds - Number of rounds (1-20, default 10)
+ */
+export const setDualAIMaxThinkingRounds = (rounds: number): void => {
+  dualAIMaxThinkingRounds = Math.max(1, Math.min(20, rounds)); // Clamp between 1 and 20
+  logger.info(`Dual AI max thinking rounds set to: ${dualAIMaxThinkingRounds}`);
+};
 
 // For backward compatibility
 export type DeepSeekDualModel = 'deepseek-chat' | 'deepseek-reasoner';
@@ -400,10 +416,10 @@ const callDeepSeekWithThinking = async (
 ): Promise<any> => {
   const messages = [...initialMessages];
   let subTurn = 1;
-  const maxSubTurns = 10;
+  const maxSubTurns = dualAIMaxThinkingRounds; // Use configurable thinking rounds
 
   while (subTurn <= maxSubTurns) {
-    logger.info(`DeepSeek thinking mode - Sub-turn ${subTurn}`);
+    logger.info(`DeepSeek thinking mode - Sub-turn ${subTurn}/${maxSubTurns}`);
 
     const requestBody: Record<string, unknown> = {
       model: 'deepseek-chat',
