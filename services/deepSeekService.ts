@@ -119,7 +119,23 @@ const tools = [
                 countdown: { type: "object", description: "Countdown values: {days, hours, minutes, seconds}." },
                 percentage: { type: "number", description: "Progress percentage (0-100) for progress blocks." },
                 author: { type: "string", description: "Author name for testimonial blocks." },
-                role: { type: "string", description: "Author role/position for testimonial blocks." }
+                role: { type: "string", description: "Author role/position for testimonial blocks." },
+                // Typography properties for emphasis
+                fontSize: { 
+                  type: "string", 
+                  enum: ["small", "normal", "large", "xlarge"], 
+                  description: "Font size for visual hierarchy. Use 'large' or 'xlarge' for important text, 'small' for footnotes or secondary info." 
+                },
+                fontWeight: { 
+                  type: "string", 
+                  enum: ["normal", "bold", "light"], 
+                  description: "Font weight for emphasis. Use 'bold' for key points and important statements." 
+                },
+                fontStyle: { 
+                  type: "string", 
+                  enum: ["normal", "italic"], 
+                  description: "Font style. Use 'italic' for quotes, emphasis, or foreign words." 
+                }
               },
               required: ["type", "content"]
             }
@@ -217,15 +233,23 @@ export const generateArticleStructureDeepSeek = async (
   let prompt = "";
   if (isFormattingMode) {
     prompt = `
-You are a professional WeChat Official Account editor.
+You are a professional WeChat Official Account editor with a flair for creative, engaging writing.
 Your task is to format the input text into a rich WeChat article structure using the 'layout_article' tool.
 
 Guidelines:
-- **Content**: Keep the original text's meaning.
+- **Content**: Keep the original text's meaning but enhance the language with vivid, expressive writing.
+- **Writing Style**: Use diverse sentence structures - mix short punchy sentences with flowing longer ones. Add rhetorical questions, metaphors, and analogies to make content more engaging.
 - **Colors**: Assign colorful styles (red, blue, purple, orange, green, pink, cyan, gradient) to headers and cards to make it visually appealing.
-- **Structure**: Use 'card' blocks for emphasis, 'highlight' for key phrases.
-- **Rich Elements**: Use 'divider' between sections, 'callout' for important notices, 'numbered_list' for steps.
-- **Headers**: Use different header levels (1, 2, 3) for hierarchy.
+- **Typography**: Use different font sizes and weights for emphasis:
+  - Use 'fontSize: xlarge' for main headlines and key statistics
+  - Use 'fontSize: large' for important points and subheadings
+  - Use 'fontSize: small' for footnotes or supplementary info
+  - Use 'fontWeight: bold' for key phrases and important statements
+  - Use 'fontStyle: italic' for quotes, emphasis, or special terms
+- **Structure**: Use 'card' blocks for emphasis, 'highlight' for key phrases and memorable quotes.
+- **Rich Elements**: Use 'divider' between sections, 'callout' for important notices with emoji icons, 'numbered_list' for steps, 'quote' for inspiring statements.
+- **Headers**: Use different header levels (1, 2, 3) for hierarchy with creative, attention-grabbing titles.
+- **Engagement**: Start sections with hooks, use storytelling techniques, and end with thought-provoking conclusions.
 
 Input Text:
 """
@@ -236,16 +260,43 @@ Call the function 'layout_article' to return the formatted result.
     `;
   } else {
     prompt = `
-You are a professional WeChat Official Account editor known for creating visually engaging "Xiumi-style" articles.
+You are a professional WeChat Official Account editor known for creating visually engaging "Xiumi-style" articles with captivating, diverse writing styles.
 Your task is to write a high-quality article about: "${input}".
 
 Structure the article using the 'layout_article' tool with the following guidelines:
-- **Visual Variety**: Use 'card' blocks frequently for key takeaways, 'highlight' for important points.
-- **Colors**: You MUST use specific colors ('red', 'blue', 'orange', 'purple', 'gold', 'green', 'pink', 'cyan', 'gradient') for different Cards and Headers.
-- **Images**: Insert 'image' blocks where appropriate. Set the content to a description of the image.
-- **Rich Formatting**: Use 'divider' between major sections, 'callout' for tips/warnings, 'numbered_list' for steps, 'table' for data comparisons.
-- **Headers**: Use header levels (1=main, 2=sub, 3=minor) for proper hierarchy.
-- **Code**: Use 'code' blocks with language specified for any code snippets.
+
+**Writing Excellence:**
+- Use varied sentence structures: mix short impactful statements with descriptive passages
+- Incorporate storytelling elements: hooks, conflicts, resolutions
+- Add rhetorical questions to engage readers: "Have you ever wondered...?"
+- Use metaphors and analogies to explain complex concepts
+- Include emotional triggers and relatable scenarios
+- Vary paragraph lengths for rhythm and pacing
+- Use transitions that flow naturally between ideas
+
+**Typography & Visual Hierarchy:**
+- Use fontSize: 'xlarge' for dramatic headlines and key statistics (e.g., "10倍增长！")
+- Use fontSize: 'large' for important points, section highlights, and memorable quotes
+- Use fontSize: 'normal' for regular body text
+- Use fontSize: 'small' for footnotes, credits, or supplementary information
+- Use fontWeight: 'bold' for key phrases, important statements, and emphasis
+- Use fontWeight: 'light' for softer, secondary text
+- Use fontStyle: 'italic' for quotes, foreign words, or special emphasis
+- Combine typography with colors for maximum visual impact
+
+**Visual Design:**
+- Use 'card' blocks frequently for key takeaways with catchy titles
+- Apply specific colors ('red', 'blue', 'orange', 'purple', 'gold', 'green', 'pink', 'cyan', 'gradient') for different Cards and Headers
+- Insert 'image' blocks where appropriate with vivid descriptions
+- Use 'divider' between major sections, 'callout' for tips/warnings with relevant emoji
+- Use 'numbered_list' for steps, 'table' for data comparisons
+- Use 'quote' blocks for memorable statements or inspirational lines
+- Use 'highlight' to draw attention to surprising facts or key phrases
+
+**Headers & Structure:**
+- Use header levels (1=main, 2=sub, 3=minor) with creative, click-worthy titles
+- Make headers intriguing: use questions, numbers, or power words
+- Example: Instead of "Benefits" use "5 Surprising Benefits That Will Change Your Mind"
 
 Call the function 'layout_article' to return the result.
     `;
@@ -254,7 +305,7 @@ Call the function 'layout_article' to return the result.
   try {
     // Initialize messages array
     const messages: any[] = [
-      { role: "system", content: "You are a helpful assistant that writes WeChat articles with colorful layouts." },
+      { role: "system", content: "You are a talented content creator who writes engaging WeChat articles with colorful layouts and diverse, captivating language styles. You excel at using varied sentence structures, storytelling techniques, rhetorical questions, metaphors, and emotional hooks to create compelling content that resonates with readers." },
       { role: "user", content: prompt }
     ];
 

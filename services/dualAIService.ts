@@ -224,7 +224,7 @@ const designAITools = [
     type: "function",
     function: {
       name: "beautify_article",
-      description: "Takes raw article content and transforms it into a visually stunning WeChat layout with proper formatting, colors, and visual elements.",
+      description: "Takes raw article content and transforms it into a visually stunning WeChat layout with proper formatting, colors, typography, and visual elements.",
       parameters: {
         type: "object",
         properties: {
@@ -250,6 +250,22 @@ const designAITools = [
                 level: { type: "number", enum: [1, 2, 3], description: "Header level" },
                 alignment: { type: "string", enum: ["left", "center", "right"], description: "Text alignment" },
                 icon: { type: "string", enum: ["info", "warning", "success", "error", "tip", "note"], description: "Callout icon" },
+                // Typography properties for emphasis
+                fontSize: { 
+                  type: "string", 
+                  enum: ["small", "normal", "large", "xlarge"], 
+                  description: "Font size for visual hierarchy. Use 'large' or 'xlarge' for important text." 
+                },
+                fontWeight: { 
+                  type: "string", 
+                  enum: ["normal", "bold", "light"], 
+                  description: "Font weight for emphasis. Use 'bold' for key points." 
+                },
+                fontStyle: { 
+                  type: "string", 
+                  enum: ["normal", "italic"], 
+                  description: "Font style. Use 'italic' for quotes or emphasis." 
+                },
                 // New properties for special blocks
                 values: { type: "array", items: { type: "string" }, description: "Values for stats blocks (e.g., ['1000+', '50%', '99%'])" },
                 labels: { type: "array", items: { type: "string" }, description: "Labels for stats/progress blocks (e.g., ['用户数', '增长率', '满意度'])" },
@@ -524,17 +540,20 @@ export const generateContentWithAI = async (
   const useThinking = provider === 'deepseek' && 
     (useThinkingMode !== undefined ? useThinkingMode : dualAIThinkingModeEnabled);
   
-  const systemPrompt = `You are an expert content writer for WeChat Official Accounts.
-You specialize in creating engaging, well-structured articles that resonate with Chinese readers.
+  const systemPrompt = `You are an expert content writer for WeChat Official Accounts with a gift for creative, engaging storytelling.
+You specialize in creating articles that captivate readers through diverse writing styles and rich language.
 
 ${context}
 
 Focus on:
-- Clear, compelling writing
-- Logical structure
-- Engaging storytelling
-- Accurate information
-- Cultural relevance for Chinese audience
+- **Clear, compelling writing** with varied sentence structures
+- **Storytelling techniques**: hooks, conflicts, resolutions, emotional arcs
+- **Diverse language**: metaphors, analogies, rhetorical questions, vivid descriptions
+- **Rhythm and pacing**: mix short punchy sentences with flowing longer ones
+- **Engaging hooks**: start sections with attention-grabbing openings
+- **Relatable examples**: use scenarios readers can connect with
+- **Accurate information** presented in an entertaining way
+- **Cultural relevance** for Chinese audience with appropriate idioms and references
 
 Call the 'generate_article_content' function to return your result.`;
 
@@ -542,8 +561,11 @@ Call the 'generate_article_content' function to return your result.`;
 ${imageContext ? `\n\nImage context: ${imageContext}` : ''}
 
 Requirements:
-- Create 3-5 well-structured sections
-- Include key points for each section
+- Create 3-5 well-structured sections with creative, attention-grabbing titles
+- Use diverse writing techniques: storytelling, metaphors, rhetorical questions
+- Vary sentence structures for engaging rhythm
+- Include key points for each section with memorable phrasing
+- Add emotional hooks and relatable scenarios
 - Suggest visual elements where appropriate
 - Extract relevant keywords for SEO`;
 
@@ -632,17 +654,24 @@ export const beautifyWithAI = async (
   const useThinking = provider === 'deepseek' && 
     (useThinkingMode !== undefined ? useThinkingMode : dualAIThinkingModeEnabled);
 
-  const systemPrompt = `You are an expert visual designer for WeChat Official Accounts.
-You specialize in creating beautiful, engaging "Xiumi-style" article layouts.
+  const systemPrompt = `You are an expert visual designer and creative writer for WeChat Official Accounts.
+You specialize in creating beautiful, engaging "Xiumi-style" article layouts with rich, diverse content presentation and typography.
 
 ${context}
 
 Focus on:
-- Visual variety (use different block types)
-- Colorful, eye-catching design
-- Proper visual hierarchy
-- Engaging formatting
-- Mobile-friendly layouts
+- **Visual variety**: Use different block types (cards, callouts, quotes, highlights, tables)
+- **Colorful design**: Apply vibrant colors (red, blue, purple, orange, gold, green, pink, cyan, gradient)
+- **Typography excellence**: Use different font sizes and weights for visual hierarchy:
+  - fontSize: 'xlarge' for dramatic headlines and key statistics
+  - fontSize: 'large' for important points and memorable quotes
+  - fontSize: 'small' for footnotes and secondary information
+  - fontWeight: 'bold' for key phrases and emphasis
+  - fontStyle: 'italic' for quotes and special terms
+- **Language diversity**: Enhance content with varied sentence structures and engaging phrasing
+- **Proper visual hierarchy**: Use headers, subheaders, and emphasis blocks effectively
+- **Engaging formatting**: Add emoji icons, creative titles, and attention-grabbing elements
+- **Mobile-friendly layouts**: Ensure readability on mobile devices
 
 Call the 'beautify_article' function to return your design.`;
 
@@ -656,12 +685,20 @@ Sections:
 ${JSON.stringify(contentSummary, null, 2)}
 
 Requirements:
-- Use at least 3 different colors for visual variety
-- Include cards for key points
-- Use headers with appropriate levels
-- Add dividers between sections
-- Use callouts for important tips
-- Make each section visually distinct`;
+- Use at least 4-5 different colors for visual variety
+- Apply typography variations:
+  - Use fontSize: 'xlarge' for main headline and key statistics
+  - Use fontSize: 'large' for section highlights and important quotes
+  - Use fontWeight: 'bold' for key phrases and important statements
+  - Use fontStyle: 'italic' for quotations and emphasis
+- Include cards for key points with creative, catchy titles
+- Use headers with appropriate levels (1, 2, 3) and engaging language
+- Add dividers between sections with style variations
+- Use callouts for important tips with relevant emoji icons
+- Add quote blocks for memorable statements or inspirational lines
+- Use highlight blocks for surprising facts or key phrases
+- Make each section visually distinct with its own color theme and typography
+- Vary content presentation: mix short impactful statements with detailed explanations`;
 
   const data = await callAPI(
     provider,
