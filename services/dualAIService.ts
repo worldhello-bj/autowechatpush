@@ -456,8 +456,14 @@ const callDeepSeekWithThinking = async (
     });
 
     if (!response.ok) {
-      const err = await response.json();
-      throw new Error(`DeepSeek API Error: ${err.error?.message || response.statusText}`);
+      let errorMessage = response.statusText;
+      try {
+        const err = await response.json();
+        errorMessage = err.error?.message || errorMessage;
+      } catch {
+        // Failed to parse error response, use statusText
+      }
+      throw new Error(`DeepSeek API Error: ${errorMessage}`);
     }
 
     const data = await response.json();

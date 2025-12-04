@@ -173,7 +173,7 @@ const makeDeepSeekRequest = async (
   useThinking: boolean = false
 ): Promise<any> => {
   const requestBody: Record<string, unknown> = {
-    model: 'deepseek-chat', // Always use deepseek-chat, thinking mode is enabled via extra_body
+    model: 'deepseek-chat', // Always use deepseek-chat, thinking mode is enabled via 'thinking' parameter
     messages,
     tools,
     tool_choice: "auto"
@@ -196,8 +196,14 @@ const makeDeepSeekRequest = async (
   });
 
   if (!response.ok) {
-    const err = await response.json();
-    throw new Error(`DeepSeek API Error: ${err.error?.message || response.statusText}`);
+    let errorMessage = response.statusText;
+    try {
+      const err = await response.json();
+      errorMessage = err.error?.message || errorMessage;
+    } catch {
+      // Failed to parse error response, use statusText
+    }
+    throw new Error(`DeepSeek API Error: ${errorMessage}`);
   }
 
   return response.json();

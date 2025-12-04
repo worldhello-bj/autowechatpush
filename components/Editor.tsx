@@ -52,6 +52,7 @@ import {
   saveMemory,
   AIMemory
 } from '../services/dualAIService';
+import { saveDataSync, loadDataSync, saveData } from '../services/storageService';
 import HtmlEditor, { HtmlEditorRef } from './HtmlEditor';
 import MaterialLibrary from './MaterialLibrary';
 import AIToolsPanel, { AISettings, DEFAULT_AI_SETTINGS } from './AIToolsPanel';
@@ -813,7 +814,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
 
   // --- Draft Logic ---
   
-  const saveLocalDraft = () => {
+  const saveLocalDraft = async () => {
     const draft = {
       title: articleTitle,
       digest: articleDigest,
@@ -821,14 +822,15 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       topic: topic,
       timestamp: Date.now()
     };
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-    alert("Draft saved locally!");
+    // Save to disk (async) and localStorage (sync)
+    await saveData(DRAFT_KEY, draft);
+    saveDataSync(DRAFT_KEY, draft);
+    alert("草稿已保存到磁盘！ (Draft saved to disk!)");
   };
 
   const loadLocalDraft = () => {
-    const raw = localStorage.getItem(DRAFT_KEY);
-    if (!raw) return;
-    const draft = JSON.parse(raw);
+    const draft = loadDataSync<{title: string; digest: string; content: string; topic: string}>(DRAFT_KEY);
+    if (!draft) return;
     
     setArticleTitle(draft.title || 'Untitled');
     setArticleDigest(draft.digest || '');
@@ -837,8 +839,9 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     setFoundDraft(false);
   };
 
-  const handleConfigSave = () => {
-      localStorage.setItem(CREDS_KEY, JSON.stringify(wechatCreds));
+  const handleConfigSave = async () => {
+      await saveData(CREDS_KEY, wechatCreds);
+      saveDataSync(CREDS_KEY, wechatCreds);
       setShowConfig(false);
   };
 
@@ -1203,28 +1206,27 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   };
 
   useEffect(() => {
-    const raw = localStorage.getItem(DRAFT_KEY);
-    if (raw) {
+    // Check for draft in sync storage first
+    const draft = loadDataSync(DRAFT_KEY);
+    if (draft) {
         setFoundDraft(true);
     }
 
-    const rawCreds = localStorage.getItem(CREDS_KEY);
-    if (rawCreds) {
-        try {
-            setWechatCreds(JSON.parse(rawCreds));
-        } catch(e) {}
+    const creds = loadDataSync<WeChatCredentials>(CREDS_KEY);
+    if (creds) {
+        setWechatCreds(creds);
     }
 
-    const savedProvider = localStorage.getItem(PROVIDER_KEY);
-    if (savedProvider) setAiProvider(savedProvider as AIProvider);
+    const savedProvider = loadDataSync<AIProvider>(PROVIDER_KEY);
+    if (savedProvider) setAiProvider(savedProvider);
 
-    const savedGoogleKey = localStorage.getItem(GOOGLE_KEY);
+    const savedGoogleKey = loadDataSync<string>(GOOGLE_KEY);
     if (savedGoogleKey) setGoogleApiKey(savedGoogleKey);
 
-    const savedDSKey = localStorage.getItem(DEEPSEEK_KEY);
+    const savedDSKey = loadDataSync<string>(DEEPSEEK_KEY);
     if (savedDSKey) setDeepSeekApiKey(savedDSKey);
 
-    const savedDashKey = localStorage.getItem(DASHSCOPE_KEY);
+    const savedDashKey = loadDataSync<string>(DASHSCOPE_KEY);
     if (savedDashKey) setDashScopeApiKey(savedDashKey);
 
     return () => {
