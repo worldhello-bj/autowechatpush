@@ -16,22 +16,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
   
   // Check if running in Electron
-  isElectron: true,
-  
-  // Storage APIs for persistent data
-  storage: {
-    // Save data to disk
-    save: (key, data) => ipcRenderer.invoke('storage-save', key, data),
-    
-    // Load data from disk
-    load: (key) => ipcRenderer.invoke('storage-load', key),
-    
-    // Delete data from disk
-    delete: (key) => ipcRenderer.invoke('storage-delete', key),
-    
-    // List all stored keys
-    list: () => ipcRenderer.invoke('storage-list')
-  }
+  isElectron: true
 });
 
 // Log that preload script is loaded

@@ -4,7 +4,6 @@
  */
 const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron');
 const path = require('path');
-const fs = require('fs');
 const { spawn } = require('child_process');
 
 // Keep a global reference of the window object
@@ -14,19 +13,6 @@ let serverProcess = null;
 // Environment detection
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const PORT = 3000;
-
-// Get storage directory path
-function getStoragePath() {
-  const userDataPath = app.getPath('userData');
-  const storagePath = path.join(userDataPath, 'data');
-  
-  // Ensure the storage directory exists
-  if (!fs.existsSync(storagePath)) {
-    fs.mkdirSync(storagePath, { recursive: true });
-  }
-  
-  return storagePath;
-}
 
 /**
  * Create the main application window
@@ -269,67 +255,4 @@ ipcMain.handle('get-app-version', () => {
 
 ipcMain.handle('get-app-path', () => {
   return app.getPath('userData');
-});
-
-// File storage IPC handlers for persistent data storage
-ipcMain.handle('storage-save', async (event, key, data) => {
-  try {
-    const storagePath = getStoragePath();
-    const filePath = path.join(storagePath, `${key}.json`);
-    
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
-    console.log(`[Storage] Saved: ${key}`);
-    return { success: true };
-  } catch (error) {
-    console.error(`[Storage] Error saving ${key}:`, error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('storage-load', async (event, key) => {
-  try {
-    const storagePath = getStoragePath();
-    const filePath = path.join(storagePath, `${key}.json`);
-    
-    if (!fs.existsSync(filePath)) {
-      return { success: true, data: null };
-    }
-    
-    const content = fs.readFileSync(filePath, 'utf8');
-    const data = JSON.parse(content);
-    console.log(`[Storage] Loaded: ${key}`);
-    return { success: true, data };
-  } catch (error) {
-    console.error(`[Storage] Error loading ${key}:`, error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('storage-delete', async (event, key) => {
-  try {
-    const storagePath = getStoragePath();
-    const filePath = path.join(storagePath, `${key}.json`);
-    
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      console.log(`[Storage] Deleted: ${key}`);
-    }
-    return { success: true };
-  } catch (error) {
-    console.error(`[Storage] Error deleting ${key}:`, error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('storage-list', async () => {
-  try {
-    const storagePath = getStoragePath();
-    const files = fs.readdirSync(storagePath)
-      .filter(f => f.endsWith('.json'))
-      .map(f => f.replace('.json', ''));
-    return { success: true, keys: files };
-  } catch (error) {
-    console.error('[Storage] Error listing:', error);
-    return { success: false, error: error.message };
-  }
 });

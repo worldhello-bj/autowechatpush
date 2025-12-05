@@ -14,7 +14,6 @@ import {
   PresetMediaMaterial,
   PresetMediaCategory
 } from '../services/presetMediaMaterials';
-import { saveDataSync, loadDataSync, saveData } from '../services/storageService';
 
 // Configure DOMPurify for SVG sanitization
 const sanitizeSvg = (svgContent: string): string => {
@@ -88,19 +87,22 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
   const presetMaterialsCount = React.useMemo(() => allTextMaterials.length, []);
   const presetMediaCount = React.useMemo(() => allPresetMediaMaterials.length, []);
 
-  // Load materials from storage (disk in Electron, localStorage in browser)
+  // Load materials from localStorage
   useEffect(() => {
-    const saved = loadDataSync<Material[]>(STORAGE_KEY);
+    const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      setMaterials(saved);
+      try {
+        setMaterials(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load materials:', e);
+      }
     }
   }, []);
 
-  // Save materials to storage (disk + localStorage)
-  const saveMaterials = async (newMaterials: Material[]) => {
+  // Save materials to localStorage
+  const saveMaterials = (newMaterials: Material[]) => {
     setMaterials(newMaterials);
-    await saveData(STORAGE_KEY, newMaterials);
-    saveDataSync(STORAGE_KEY, newMaterials);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newMaterials));
   };
 
   // Handle image file upload

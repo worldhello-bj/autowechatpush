@@ -228,8 +228,7 @@ export const loggers = {
   editor: createLogger('Editor'),
   material: createLogger('Material'),
   design: createLogger('Design'),
-  app: createLogger('App'),
-  storage: createLogger('Storage')
+  app: createLogger('App')
 };
 
 // Default export for convenience

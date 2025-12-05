@@ -5,7 +5,6 @@ import LogSettings from './components/LogSettings';
 import { AIProvider } from './types';
 import { setThinkingMode, setMaxThinkingRounds } from './services/deepSeekService';
 import { setDualAIThinkingMode, setDualAIMaxThinkingRounds } from './services/dualAIService';
-import { saveDataSync, loadDataSync, initializeStorage, loadData, saveData } from './services/storageService';
 
 // --- Shared Types ---
 interface UserProfile {
@@ -25,18 +24,14 @@ const DraftsPage: React.FC = () => {
   const [draft, setDraft] = useState<any>(null);
 
   useEffect(() => {
-    // Load draft from storage (disk in Electron, localStorage in browser)
-    const loadDraft = async () => {
-      const data = await loadData('wechat_editor_draft');
-      if (data) {
-        setDraft(data);
-      } else {
-        // Fallback to sync localStorage for backwards compatibility
-        const raw = loadDataSync('wechat_editor_draft');
-        if (raw) setDraft(raw);
+    const raw = localStorage.getItem('wechat_editor_draft');
+    if (raw) {
+      try {
+        setDraft(JSON.parse(raw));
+      } catch (e) {
+        console.error("Failed to parse draft", e);
       }
-    };
-    loadDraft();
+    }
   }, []);
 
   return (
@@ -79,9 +74,14 @@ const AnalyticsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
 
-  const handleSyncData = async () => {
-    const creds = await loadData<{appId: string; appSecret: string}>('wechat_creds');
-    if (!creds || !creds.appId || !creds.appSecret) {
+  const handleSyncData = () => {
+    const rawCreds = localStorage.getItem('wechat_creds');
+    if (!rawCreds) {
+      alert("Please configure your WeChat API Credentials in Settings first.");
+      return;
+    }
+    const creds = JSON.parse(rawCreds);
+    if (!creds.appId || !creds.appSecret) {
       alert("Please configure your WeChat API Credentials in Settings first.");
       return;
     }
@@ -206,72 +206,60 @@ const SettingsPage: React.FC = () => {
   const [showDashScopeKey, setShowDashScopeKey] = useState(false);
 
   useEffect(() => {
-    // Initialize storage and load settings (async for Electron disk storage)
-    const loadSettings = async () => {
-      await initializeStorage();
-      
-      const savedProfile = await loadData<UserProfile>('user_profile');
-      if (savedProfile) setProfile(savedProfile);
+    const savedProfile = localStorage.getItem('user_profile');
+    if (savedProfile) setProfile(JSON.parse(savedProfile));
 
-      const savedCreds = await loadData<WeChatConfig>('wechat_creds');
-      if (savedCreds) setConfig(savedCreds);
+    const savedCreds = localStorage.getItem('wechat_creds');
+    if (savedCreds) setConfig(JSON.parse(savedCreds));
 
-      const savedProvider = await loadData<AIProvider>('ai_provider');
-      if (savedProvider) setAiProvider(savedProvider);
+    const savedProvider = localStorage.getItem('ai_provider');
+    if (savedProvider) setAiProvider(savedProvider as AIProvider);
 
-      const savedGoogleKey = await loadData<string>('google_api_key');
-      if (savedGoogleKey) setGoogleKey(savedGoogleKey);
+    const savedGoogleKey = localStorage.getItem('google_api_key');
+    if (savedGoogleKey) setGoogleKey(savedGoogleKey);
 
-      const savedDSKey = await loadData<string>('deepseek_key');
-      if (savedDSKey) setDeepSeekKey(savedDSKey);
-      
-      const savedThinkingMode = await loadData<boolean>('deepseek_thinking_mode');
-      if (savedThinkingMode !== null) {
-        setDeepSeekThinkingMode(savedThinkingMode);
-        setThinkingMode(savedThinkingMode);
-        setDualAIThinkingMode(savedThinkingMode);
-      }
-      
-      const savedThinkingRounds = await loadData<number>('deepseek_thinking_rounds');
-      if (savedThinkingRounds !== null && !isNaN(savedThinkingRounds) && savedThinkingRounds > 0) {
-        setDeepSeekThinkingRounds(savedThinkingRounds);
-        setMaxThinkingRounds(savedThinkingRounds);
-        setDualAIMaxThinkingRounds(savedThinkingRounds);
-      }
-      
-      const savedDashKey = await loadData<string>('dashscope_key');
-      if (savedDashKey) setDashScopeKey(savedDashKey);
-    };
+    const savedDSKey = localStorage.getItem('deepseek_key');
+    if (savedDSKey) setDeepSeekKey(savedDSKey);
     
-    loadSettings();
+    const savedThinkingMode = localStorage.getItem('deepseek_thinking_mode');
+    if (savedThinkingMode) {
+      const enabled = savedThinkingMode === 'true';
+      setDeepSeekThinkingMode(enabled);
+      setThinkingMode(enabled);
+      setDualAIThinkingMode(enabled);
+    }
+    
+    const savedThinkingRounds = localStorage.getItem('deepseek_thinking_rounds');
+    if (savedThinkingRounds) {
+      const rounds = parseInt(savedThinkingRounds, 10);
+      if (!isNaN(rounds) && rounds > 0) {
+        setDeepSeekThinkingRounds(rounds);
+        setMaxThinkingRounds(rounds);
+        setDualAIMaxThinkingRounds(rounds);
+      }
+    }
+    
+    const savedDashKey = localStorage.getItem('dashscope_key');
+    if (savedDashKey) setDashScopeKey(savedDashKey);
   }, []);
 
-  const handleSaveProfile = async () => {
-    await saveData('user_profile', profile);
-    saveDataSync('user_profile', profile); // Also sync to localStorage for immediate access
+  const handleSaveProfile = () => {
+    localStorage.setItem('user_profile', JSON.stringify(profile));
     setIsEditingProfile(false);
   };
 
-  const handleSaveConfig = async () => {
-    // Save to disk (async) and localStorage (sync)
-    await saveData('wechat_creds', config);
-    await saveData('ai_provider', aiProvider);
-    await saveData('google_api_key', googleKey);
-    await saveData('deepseek_key', deepSeekKey);
-    await saveData('dashscope_key', dashScopeKey);
-    await saveData('deepseek_thinking_mode', deepSeekThinkingMode);
-    await saveData('deepseek_thinking_rounds', deepSeekThinkingRounds);
+  const handleSaveConfig = () => {
+    localStorage.setItem('wechat_creds', JSON.stringify(config));
+    localStorage.setItem('ai_provider', aiProvider);
     
-    // Also save to localStorage for immediate sync access
-    saveDataSync('wechat_creds', config);
-    saveDataSync('ai_provider', aiProvider);
-    saveDataSync('google_api_key', googleKey);
-    saveDataSync('deepseek_key', deepSeekKey);
-    saveDataSync('dashscope_key', dashScopeKey);
-    saveDataSync('deepseek_thinking_mode', deepSeekThinkingMode);
-    saveDataSync('deepseek_thinking_rounds', deepSeekThinkingRounds);
+    // Save API Keys
+    localStorage.setItem('google_api_key', googleKey);
+    localStorage.setItem('deepseek_key', deepSeekKey);
+    localStorage.setItem('dashscope_key', dashScopeKey);
     
-    // Apply DeepSeek thinking mode settings to services
+    // Save DeepSeek thinking mode and rounds (apply to both deepSeekService and dualAIService)
+    localStorage.setItem('deepseek_thinking_mode', String(deepSeekThinkingMode));
+    localStorage.setItem('deepseek_thinking_rounds', String(deepSeekThinkingRounds));
     setThinkingMode(deepSeekThinkingMode);
     setMaxThinkingRounds(deepSeekThinkingRounds);
     setDualAIThinkingMode(deepSeekThinkingMode);
