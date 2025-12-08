@@ -233,7 +233,6 @@ const SettingsPage: React.FC = () => {
     if (savedMultiRoundLayoutMode) {
       const enabled = savedMultiRoundLayoutMode === 'true';
       setMultiRoundLayoutMode(enabled);
-      setMultiRoundLayoutMode(enabled);
       setDualAIMultiRoundLayoutMode(enabled);
     }
     

@@ -921,8 +921,9 @@ export const generateWithDualAIMultiRound = async (
     allKeywords.push(...round3Content.keywords);
     colorSchemes.push(...round3Design.colorScheme);
   } catch (error) {
-    logger.warn('Round 3 had issues (continuing):', error);
-    // Round 3 failure is not critical, continue
+    logger.warn('⚠️  Round 3 failed - visual elements will be skipped:', error);
+    logger.info('📄 Continuing with text-only article...');
+    // Round 3 failure is not critical, continue without visual elements
   } finally {
     logger.timeEnd('Round 3');
     logger.groupEnd();
@@ -959,8 +960,9 @@ export const generateWithDualAIMultiRound = async (
     allKeywords.push(...round4Content.keywords);
     colorSchemes.push(...round4Design.colorScheme);
   } catch (error) {
-    logger.warn('Round 4 had issues (continuing):', error);
-    // Round 4 failure is not critical, continue with what we have
+    logger.warn('⚠️  Round 4 failed - using preliminary title and digest:', error);
+    logger.info('📝 Article will use working title and digest from earlier rounds');
+    // Round 4 failure is not critical, continue with preliminary title/digest
   } finally {
     logger.timeEnd('Round 4');
     logger.groupEnd();
@@ -991,7 +993,7 @@ export const generateWithDualAIMultiRound = async (
       {
         timestamp: Date.now(),
         colorScheme: [...new Set(colorSchemes)],
-        preferredBlocks: allBlocks.map(b => b.type as BlockType)
+        preferredBlocks: allBlocks.map(b => b.type).filter((t): t is BlockType => Object.values(BlockType).includes(t as BlockType))
       }
     ]
   };
