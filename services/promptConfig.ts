@@ -183,11 +183,13 @@ export const getDefaultPrompts = (): PromptConfig => {
 
 /**
  * Replace template variables in prompts
+ * Uses simple string replacement to avoid ReDoS vulnerabilities
  */
 export const interpolatePrompt = (template: string, variables: Record<string, string>): string => {
   let result = template;
   for (const [key, value] of Object.entries(variables)) {
-    result = result.replace(new RegExp(`{{${key}}}`, 'g'), value);
+    // Use split/join for safe replacement without regex
+    result = result.split(`{{${key}}}`).join(value);
   }
   return result;
 };

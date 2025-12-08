@@ -139,7 +139,7 @@ const PromptEditor: React.FC = () => {
               placeholder="定义如何从主题生成完整文章..."
             />
             <p className="text-xs text-gray-500 mt-1">
-              变量：{{`{topic}`}} - 将被替换为用户输入的主题
+              变量：{'{{topic}}'} - 将被替换为用户输入的主题
             </p>
           </div>
         )}
@@ -156,7 +156,7 @@ const PromptEditor: React.FC = () => {
               placeholder="定义如何格式化现有文本..."
             />
             <p className="text-xs text-gray-500 mt-1">
-              变量：{{`{input}`}} - 将被替换为用户输入的文本
+              变量：{'{{input}}'} - 将被替换为用户输入的文本
             </p>
           </div>
         )}
@@ -236,7 +236,7 @@ const PromptEditor: React.FC = () => {
             </div>
 
             <p className="text-xs text-gray-500">
-              变量：{{`{topic}`}} - 将被替换为用户输入的主题
+              变量：{'{{topic}}'} - 将被替换为用户输入的主题
             </p>
           </div>
         )}
