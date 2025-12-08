@@ -38,6 +38,10 @@ export interface ArticleBlock {
   icon?: 'info' | 'warning' | 'success' | 'error' | 'tip' | 'note'; // For Callout
   rows?: string[][]; // For Table
   headers?: string[]; // For Table headers
+  // Typography properties for emphasis
+  fontSize?: 'small' | 'normal' | 'large' | 'xlarge'; // Font size variation
+  fontWeight?: 'normal' | 'bold' | 'light'; // Font weight for emphasis
+  fontStyle?: 'normal' | 'italic'; // Italic text
   // New properties for special blocks
   values?: string[]; // For stats blocks (e.g., ['1000+', '50%', '99%'])
   labels?: string[]; // For stats/progress blocks (e.g., ['用户数', '增长率', '满意度'])

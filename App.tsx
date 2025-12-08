@@ -3,6 +3,8 @@ import { HashRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
 import Editor from './components/Editor';
 import LogSettings from './components/LogSettings';
 import { AIProvider } from './types';
+import { setThinkingMode, setMaxThinkingRounds } from './services/deepSeekService';
+import { setDualAIThinkingMode, setDualAIMaxThinkingRounds } from './services/dualAIService';
 
 // --- Shared Types ---
 interface UserProfile {
@@ -197,6 +199,8 @@ const SettingsPage: React.FC = () => {
 
   const [deepSeekKey, setDeepSeekKey] = useState('');
   const [showDeepSeekKey, setShowDeepSeekKey] = useState(false);
+  const [deepSeekThinkingMode, setDeepSeekThinkingMode] = useState(false);
+  const [deepSeekThinkingRounds, setDeepSeekThinkingRounds] = useState(10);
   
   const [dashScopeKey, setDashScopeKey] = useState('');
   const [showDashScopeKey, setShowDashScopeKey] = useState(false);
@@ -217,6 +221,24 @@ const SettingsPage: React.FC = () => {
     const savedDSKey = localStorage.getItem('deepseek_key');
     if (savedDSKey) setDeepSeekKey(savedDSKey);
     
+    const savedThinkingMode = localStorage.getItem('deepseek_thinking_mode');
+    if (savedThinkingMode) {
+      const enabled = savedThinkingMode === 'true';
+      setDeepSeekThinkingMode(enabled);
+      setThinkingMode(enabled);
+      setDualAIThinkingMode(enabled);
+    }
+    
+    const savedThinkingRounds = localStorage.getItem('deepseek_thinking_rounds');
+    if (savedThinkingRounds) {
+      const rounds = parseInt(savedThinkingRounds, 10);
+      if (!isNaN(rounds) && rounds > 0) {
+        setDeepSeekThinkingRounds(rounds);
+        setMaxThinkingRounds(rounds);
+        setDualAIMaxThinkingRounds(rounds);
+      }
+    }
+    
     const savedDashKey = localStorage.getItem('dashscope_key');
     if (savedDashKey) setDashScopeKey(savedDashKey);
   }, []);
@@ -234,6 +256,14 @@ const SettingsPage: React.FC = () => {
     localStorage.setItem('google_api_key', googleKey);
     localStorage.setItem('deepseek_key', deepSeekKey);
     localStorage.setItem('dashscope_key', dashScopeKey);
+    
+    // Save DeepSeek thinking mode and rounds (apply to both deepSeekService and dualAIService)
+    localStorage.setItem('deepseek_thinking_mode', String(deepSeekThinkingMode));
+    localStorage.setItem('deepseek_thinking_rounds', String(deepSeekThinkingRounds));
+    setThinkingMode(deepSeekThinkingMode);
+    setMaxThinkingRounds(deepSeekThinkingRounds);
+    setDualAIThinkingMode(deepSeekThinkingMode);
+    setDualAIMaxThinkingRounds(deepSeekThinkingRounds);
     
     alert("Configuration saved!");
   };
@@ -327,7 +357,7 @@ const SettingsPage: React.FC = () => {
                            />
                            <div>
                                <span className="font-medium block text-gray-900">DeepSeek</span>
-                               <span className="text-xs text-gray-500">Text Generation only</span>
+                               <span className="text-xs text-gray-500">文本生成，支持思考模式 (Thinking Mode)</span>
                            </div>
                        </label>
 
@@ -391,6 +421,55 @@ const SettingsPage: React.FC = () => {
                                 <span className="material-icons text-lg">{showDeepSeekKey ? 'visibility_off' : 'visibility'}</span>
                             </button>
                         </div>
+                        
+                        {/* Thinking Mode Toggle */}
+                        <div className="mt-4 flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <div>
+                                <div className="font-medium text-gray-800 text-sm">思考模式 (Thinking Mode)</div>
+                                <div className="text-xs text-gray-500">启用后，DeepSeek 将进行深度思考以提升回答质量</div>
+                            </div>
+                            <button 
+                                onClick={() => setDeepSeekThinkingMode(!deepSeekThinkingMode)}
+                                role="switch"
+                                aria-checked={deepSeekThinkingMode}
+                                aria-label="思考模式 (Thinking Mode)"
+                                className={`w-12 h-6 rounded-full relative transition-colors focus:outline-none ${deepSeekThinkingMode ? 'bg-blue-500' : 'bg-gray-300'}`}
+                            >
+                                <div className={`w-4 h-4 bg-white rounded-full absolute top-1 shadow-sm transition-all ${deepSeekThinkingMode ? 'right-1' : 'left-1'}`}></div>
+                            </button>
+                        </div>
+                        
+                        {/* Thinking Rounds Selector - only shown when thinking mode is enabled */}
+                        {deepSeekThinkingMode && (
+                            <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div>
+                                        <div className="font-medium text-gray-800 text-sm">思考轮次 (Thinking Rounds)</div>
+                                        <div className="text-xs text-gray-500">设置最大思考轮次数 (1-20)</div>
+                                    </div>
+                                    <span className="text-blue-600 font-bold text-lg">{deepSeekThinkingRounds}</span>
+                                </div>
+                                <input 
+                                    type="range" 
+                                    min="1" 
+                                    max="20" 
+                                    value={deepSeekThinkingRounds}
+                                    onChange={e => setDeepSeekThinkingRounds(parseInt(e.target.value, 10))}
+                                    aria-label="思考轮次 (Thinking Rounds)"
+                                    aria-valuemin={1}
+                                    aria-valuemax={20}
+                                    aria-valuenow={deepSeekThinkingRounds}
+                                    className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                                />
+                                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                                    <span>1</span>
+                                    <span>5</span>
+                                    <span>10</span>
+                                    <span>15</span>
+                                    <span>20</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
                 

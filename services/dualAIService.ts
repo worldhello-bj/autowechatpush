@@ -224,7 +224,7 @@ const designAITools = [
     type: "function",
     function: {
       name: "beautify_article",
-      description: "Takes raw article content and transforms it into a visually stunning WeChat layout with proper formatting, colors, and visual elements.",
+      description: "Takes raw article content and transforms it into a visually stunning WeChat layout with proper formatting, colors, typography, and visual elements.",
       parameters: {
         type: "object",
         properties: {
@@ -250,6 +250,22 @@ const designAITools = [
                 level: { type: "number", enum: [1, 2, 3], description: "Header level" },
                 alignment: { type: "string", enum: ["left", "center", "right"], description: "Text alignment" },
                 icon: { type: "string", enum: ["info", "warning", "success", "error", "tip", "note"], description: "Callout icon" },
+                // Typography properties for emphasis
+                fontSize: { 
+                  type: "string", 
+                  enum: ["small", "normal", "large", "xlarge"], 
+                  description: "Font size for visual hierarchy. Use 'large' or 'xlarge' for important text." 
+                },
+                fontWeight: { 
+                  type: "string", 
+                  enum: ["normal", "bold", "light"], 
+                  description: "Font weight for emphasis. Use 'bold' for key points." 
+                },
+                fontStyle: { 
+                  type: "string", 
+                  enum: ["normal", "italic"], 
+                  description: "Font style. Use 'italic' for quotes or emphasis." 
+                },
                 // New properties for special blocks
                 values: { type: "array", items: { type: "string" }, description: "Values for stats blocks (e.g., ['1000+', '50%', '99%'])" },
                 labels: { type: "array", items: { type: "string" }, description: "Labels for stats/progress blocks (e.g., ['用户数', '增长率', '满意度'])" },
@@ -281,15 +297,81 @@ const designAITools = [
 const QWEN_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
 const DEEPSEEK_BASE_URL = "https://api.deepseek.com/chat/completions";
 
+// DeepSeek thinking mode configuration for dualAI
+let dualAIThinkingModeEnabled: boolean = false;
+let dualAIMaxThinkingRounds: number = 10;
+
+/**
+ * Enable or disable thinking mode for Dual AI DeepSeek operations
+ * When enabled, DeepSeek uses enhanced reasoning capabilities with multi-turn tool calling support.
+ * @param enabled - true to enable thinking mode
+ */
+export const setDualAIThinkingMode = (enabled: boolean): void => {
+  dualAIThinkingModeEnabled = enabled;
+  logger.info(`Dual AI DeepSeek thinking mode set to: ${enabled}`);
+};
+
+/**
+ * Check if thinking mode is enabled for Dual AI
+ * @returns true if thinking mode is enabled
+ */
+export const isDualAIThinkingModeEnabled = (): boolean => dualAIThinkingModeEnabled;
+
+/**
+ * Get the maximum number of thinking rounds for Dual AI
+ * @returns The current maximum thinking rounds limit
+ */
+export const getDualAIMaxThinkingRounds = (): number => dualAIMaxThinkingRounds;
+
+/**
+ * Set the maximum number of thinking rounds for Dual AI
+ * @param rounds - Number of rounds (1-20, default 10)
+ */
+export const setDualAIMaxThinkingRounds = (rounds: number): void => {
+  dualAIMaxThinkingRounds = Math.max(1, Math.min(20, rounds)); // Clamp between 1 and 20
+  logger.info(`Dual AI max thinking rounds set to: ${dualAIMaxThinkingRounds}`);
+};
+
+// For backward compatibility
+export type DeepSeekDualModel = 'deepseek-chat' | 'deepseek-reasoner';
+
+/**
+ * Set the DeepSeek model to use for Dual AI operations
+ * @deprecated Use setDualAIThinkingMode(true) instead. When 'deepseek-reasoner' is selected,
+ *             the service uses 'deepseek-chat' with thinking mode enabled for tool calling support.
+ * @param model - 'deepseek-chat' for regular mode, 'deepseek-reasoner' to enable thinking mode
+ */
+export const setDualAIDeepSeekModel = (model: DeepSeekDualModel): void => {
+  dualAIThinkingModeEnabled = model === 'deepseek-reasoner';
+  logger.info(`Dual AI DeepSeek thinking mode set to: ${dualAIThinkingModeEnabled} (via deprecated setDualAIDeepSeekModel with model: ${model})`);
+};
+
+/**
+ * Get the current DeepSeek model for Dual AI
+ * @deprecated Use isDualAIThinkingModeEnabled() instead. This returns 'deepseek-reasoner' when
+ *             thinking mode is enabled, but the actual API calls use 'deepseek-chat' with thinking parameter.
+ * @returns 'deepseek-reasoner' if thinking mode is enabled, otherwise 'deepseek-chat'
+ */
+export const getDualAIDeepSeekModel = (): DeepSeekDualModel => 
+  dualAIThinkingModeEnabled ? 'deepseek-reasoner' : 'deepseek-chat';
+
+/**
+ * Make a single API call with optional multi-turn tool calling support for thinking mode
+ */
 const callAPI = async (
   provider: 'google' | 'deepseek' | 'qwen',
   apiKey: string,
   messages: any[],
   tools: any[],
-  temperature: number = 0.7
+  temperature: number = 0.7,
+  useThinkingMode?: boolean
 ): Promise<any> => {
   let url: string;
   let model: string;
+
+  // Determine if using thinking mode for deepseek
+  const isDeepSeekThinking = provider === 'deepseek' && 
+    (useThinkingMode !== undefined ? useThinkingMode : dualAIThinkingModeEnabled);
 
   switch (provider) {
     case 'qwen':
@@ -298,12 +380,28 @@ const callAPI = async (
       break;
     case 'deepseek':
       url = DEEPSEEK_BASE_URL;
-      model = 'deepseek-chat';
+      model = 'deepseek-chat'; // Always use deepseek-chat, thinking is enabled via extra param
       break;
     default:
       // For Google, we would use their SDK directly
       throw new Error('Google provider should use SDK directly');
   }
+
+  logger.info(`Calling ${provider} API with model: ${model}, thinking mode: ${isDeepSeekThinking}`);
+
+  // For DeepSeek with thinking mode, we need to handle multi-turn tool calling
+  if (isDeepSeekThinking) {
+    return callDeepSeekWithThinking(apiKey, messages, tools, temperature);
+  }
+
+  // Regular API call
+  const requestBody: Record<string, unknown> = {
+    model,
+    messages,
+    tools,
+    tool_choice: "auto",
+    temperature
+  };
 
   const response = await fetch(url, {
     method: "POST",
@@ -311,13 +409,7 @@ const callAPI = async (
       "Content-Type": "application/json",
       "Authorization": `Bearer ${apiKey}`
     },
-    body: JSON.stringify({
-      model,
-      messages,
-      tools,
-      tool_choice: "auto",
-      temperature
-    })
+    body: JSON.stringify(requestBody)
   });
 
   if (!response.ok) {
@@ -326,6 +418,103 @@ const callAPI = async (
   }
 
   return response.json();
+};
+
+/**
+ * DeepSeek API call with thinking mode enabled
+ * Handles multi-turn tool calling as required by the thinking mode
+ */
+const callDeepSeekWithThinking = async (
+  apiKey: string,
+  initialMessages: any[],
+  tools: any[],
+  temperature: number
+): Promise<any> => {
+  const messages = [...initialMessages];
+  let subTurn = 1;
+  const maxSubTurns = dualAIMaxThinkingRounds; // Use configurable thinking rounds
+
+  while (subTurn <= maxSubTurns) {
+    logger.info(`DeepSeek thinking mode - Sub-turn ${subTurn}/${maxSubTurns}`);
+
+    const requestBody: Record<string, unknown> = {
+      model: 'deepseek-chat',
+      messages,
+      tools,
+      tool_choice: "auto",
+      temperature,
+      thinking: { type: "enabled" }
+    };
+
+    const response = await fetch(DEEPSEEK_BASE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      let errorMessage = response.statusText;
+      try {
+        const err = await response.json();
+        errorMessage = err.error?.message || errorMessage;
+      } catch {
+        // Failed to parse error response, use statusText
+      }
+      throw new Error(`DeepSeek API Error: ${errorMessage}`);
+    }
+
+    const data = await response.json();
+    const message = data.choices?.[0]?.message;
+
+    if (!message) {
+      throw new Error("No message in API response");
+    }
+
+    // Log reasoning content if available
+    if (message.reasoning_content) {
+      logger.group(`DeepSeek Reasoning (Sub-turn ${subTurn})`, true);
+      logger.debug('Reasoning content:', message.reasoning_content);
+      logger.groupEnd();
+    }
+
+    // Append the assistant message to maintain conversation context
+    messages.push(message);
+
+    const toolCalls = message.tool_calls;
+
+    // If there are no tool calls, return the final response
+    if (!toolCalls || toolCalls.length === 0) {
+      return data;
+    }
+
+    // Check if this is the target tool call we're looking for
+    // For dualAI, we're looking for generate_article_content or beautify_article
+    for (const toolCall of toolCalls) {
+      const functionName = toolCall.function?.name;
+      if (functionName === 'generate_article_content' || functionName === 'beautify_article') {
+        // Return the data with this tool call
+        return data;
+      }
+    }
+
+    // For other tool calls, provide helpful guidance to the AI
+    for (const toolCall of toolCalls) {
+      const functionName = toolCall.function?.name;
+      logger.warn(`Unexpected tool call in thinking mode: ${functionName}`);
+      messages.push({
+        role: "tool",
+        tool_call_id: toolCall.id,
+        content: `This tool (${functionName}) is not available. Please use either 'generate_article_content' for content generation or 'beautify_article' for design beautification.`
+      });
+    }
+
+    subTurn++;
+  }
+
+  throw new Error("DeepSeek exceeded maximum sub-turns in thinking mode");
 };
 
 // --- Content AI Service ---
@@ -348,21 +537,29 @@ export const generateContentWithAI = async (
   memory: AIMemory,
   provider: 'deepseek' | 'qwen',
   apiKey: string,
-  imageContext?: string
+  imageContext?: string,
+  useThinkingMode?: boolean
 ): Promise<ContentAIResult> => {
   const context = buildContentContext(memory, topic);
   
-  const systemPrompt = `You are an expert content writer for WeChat Official Accounts.
-You specialize in creating engaging, well-structured articles that resonate with Chinese readers.
+  // Determine if using thinking mode for enhanced reasoning
+  const useThinking = provider === 'deepseek' && 
+    (useThinkingMode !== undefined ? useThinkingMode : dualAIThinkingModeEnabled);
+  
+  const systemPrompt = `You are an expert content writer for WeChat Official Accounts with a gift for creative, engaging storytelling.
+You specialize in creating articles that captivate readers through diverse writing styles and rich language.
 
 ${context}
 
 Focus on:
-- Clear, compelling writing
-- Logical structure
-- Engaging storytelling
-- Accurate information
-- Cultural relevance for Chinese audience
+- **Clear, compelling writing** with varied sentence structures
+- **Storytelling techniques**: hooks, conflicts, resolutions, emotional arcs
+- **Diverse language**: metaphors, analogies, rhetorical questions, vivid descriptions
+- **Rhythm and pacing**: mix short punchy sentences with flowing longer ones
+- **Engaging hooks**: start sections with attention-grabbing openings
+- **Relatable examples**: use scenarios readers can connect with
+- **Accurate information** presented in an entertaining way
+- **Cultural relevance** for Chinese audience with appropriate idioms and references
 
 Call the 'generate_article_content' function to return your result.`;
 
@@ -370,8 +567,11 @@ Call the 'generate_article_content' function to return your result.`;
 ${imageContext ? `\n\nImage context: ${imageContext}` : ''}
 
 Requirements:
-- Create 3-5 well-structured sections
-- Include key points for each section
+- Create 3-5 well-structured sections with creative, attention-grabbing titles
+- Use diverse writing techniques: storytelling, metaphors, rhetorical questions
+- Vary sentence structures for engaging rhythm
+- Include key points for each section with memorable phrasing
+- Add emotional hooks and relatable scenarios
 - Suggest visual elements where appropriate
 - Extract relevant keywords for SEO`;
 
@@ -383,7 +583,8 @@ Requirements:
       { role: "user", content: userPrompt }
     ],
     contentAITools,
-    0.7
+    0.7,
+    useThinking
   );
 
   // Log the raw API response
@@ -391,10 +592,20 @@ Requirements:
   logger.debug('Raw response:', data);
   logger.groupEnd();
 
-  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  const message = data.choices?.[0]?.message;
+
+  // Log reasoning content if available (when thinking mode is enabled)
+  if (message?.reasoning_content) {
+    logger.group('Content AI Reasoning', true);
+    logger.debug('Reasoning content:', message.reasoning_content);
+    logger.groupEnd();
+  }
+
+  // Handle response with function calling (works for both regular and thinking modes)
+  const toolCall = message?.tool_calls?.[0];
   if (!toolCall || toolCall.function.name !== 'generate_article_content') {
     const receivedFunction = toolCall?.function?.name || 'none';
-    const messageContent = data.choices?.[0]?.message?.content?.slice(0, 100) || 'no content';
+    const messageContent = message?.content?.slice(0, 100) || 'no content';
     throw new Error(`Content AI failed to generate structured content. Expected 'generate_article_content', received: '${receivedFunction}'. Message: ${messageContent}`);
   }
 
@@ -432,7 +643,8 @@ export const beautifyWithAI = async (
   contentResult: ContentAIResult,
   memory: AIMemory,
   provider: 'deepseek' | 'qwen',
-  apiKey: string
+  apiKey: string,
+  useThinkingMode?: boolean
 ): Promise<DesignAIResult> => {
   // Build a simplified representation for the design AI
   const contentSummary = contentResult.sections.map(s => ({
@@ -444,17 +656,28 @@ export const beautifyWithAI = async (
 
   const context = buildDesignContext(memory, []);
   
-  const systemPrompt = `You are an expert visual designer for WeChat Official Accounts.
-You specialize in creating beautiful, engaging "Xiumi-style" article layouts.
+  // Determine if using thinking mode for enhanced reasoning
+  const useThinking = provider === 'deepseek' && 
+    (useThinkingMode !== undefined ? useThinkingMode : dualAIThinkingModeEnabled);
+
+  const systemPrompt = `You are an expert visual designer and creative writer for WeChat Official Accounts.
+You specialize in creating beautiful, engaging "Xiumi-style" article layouts with rich, diverse content presentation and typography.
 
 ${context}
 
 Focus on:
-- Visual variety (use different block types)
-- Colorful, eye-catching design
-- Proper visual hierarchy
-- Engaging formatting
-- Mobile-friendly layouts
+- **Visual variety**: Use different block types (cards, callouts, quotes, highlights, tables)
+- **Colorful design**: Apply vibrant colors (red, blue, purple, orange, gold, green, pink, cyan, gradient)
+- **Typography excellence**: Use different font sizes and weights for visual hierarchy:
+  - fontSize: 'xlarge' for dramatic headlines and key statistics
+  - fontSize: 'large' for important points and memorable quotes
+  - fontSize: 'small' for footnotes and secondary information
+  - fontWeight: 'bold' for key phrases and emphasis
+  - fontStyle: 'italic' for quotes and special terms
+- **Language diversity**: Enhance content with varied sentence structures and engaging phrasing
+- **Proper visual hierarchy**: Use headers, subheaders, and emphasis blocks effectively
+- **Engaging formatting**: Add emoji icons, creative titles, and attention-grabbing elements
+- **Mobile-friendly layouts**: Ensure readability on mobile devices
 
 Call the 'beautify_article' function to return your design.`;
 
@@ -468,12 +691,20 @@ Sections:
 ${JSON.stringify(contentSummary, null, 2)}
 
 Requirements:
-- Use at least 3 different colors for visual variety
-- Include cards for key points
-- Use headers with appropriate levels
-- Add dividers between sections
-- Use callouts for important tips
-- Make each section visually distinct`;
+- Use at least 4-5 different colors for visual variety
+- Apply typography variations:
+  - Use fontSize: 'xlarge' for main headline and key statistics
+  - Use fontSize: 'large' for section highlights and important quotes
+  - Use fontWeight: 'bold' for key phrases and important statements
+  - Use fontStyle: 'italic' for quotations and emphasis
+- Include cards for key points with creative, catchy titles
+- Use headers with appropriate levels (1, 2, 3) and engaging language
+- Add dividers between sections with style variations
+- Use callouts for important tips with relevant emoji icons
+- Add quote blocks for memorable statements or inspirational lines
+- Use highlight blocks for surprising facts or key phrases
+- Make each section visually distinct with its own color theme and typography
+- Vary content presentation: mix short impactful statements with detailed explanations`;
 
   const data = await callAPI(
     provider,
@@ -483,7 +714,8 @@ Requirements:
       { role: "user", content: userPrompt }
     ],
     designAITools,
-    0.8
+    0.8,
+    useThinking
   );
 
   // Log the raw API response
@@ -491,10 +723,20 @@ Requirements:
   logger.debug('Raw response:', data);
   logger.groupEnd();
 
-  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  const message = data.choices?.[0]?.message;
+
+  // Log reasoning content if available (when thinking mode is enabled)
+  if (message?.reasoning_content) {
+    logger.group('Design AI Reasoning', true);
+    logger.debug('Reasoning content:', message.reasoning_content);
+    logger.groupEnd();
+  }
+
+  // Handle response with function calling (works for both regular and thinking modes)
+  const toolCall = message?.tool_calls?.[0];
   if (!toolCall || toolCall.function.name !== 'beautify_article') {
     const receivedFunction = toolCall?.function?.name || 'none';
-    const messageContent = data.choices?.[0]?.message?.content?.slice(0, 100) || 'no content';
+    const messageContent = message?.content?.slice(0, 100) || 'no content';
     throw new Error(`Design AI failed to beautify content. Expected 'beautify_article', received: '${receivedFunction}'. Message: ${messageContent}`);
   }
 
