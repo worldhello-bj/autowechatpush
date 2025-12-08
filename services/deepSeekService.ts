@@ -14,8 +14,8 @@ export type DeepSeekModel = 'deepseek-chat' | 'deepseek-reasoner';
 // Whether to enable thinking mode (for deepseek-reasoner with tool calling)
 let thinkingModeEnabled: boolean = false;
 
-// Maximum number of thinking rounds/sub-turns (safety limit to prevent infinite loops)
-let maxThinkingRounds: number = 10;
+// Whether to enable multi-round layout mode (phased generation)
+let multiRoundLayoutModeEnabled: boolean = false;
 
 // Default model - can be changed to use reasoner mode
 let currentModel: DeepSeekModel = 'deepseek-chat';
@@ -57,18 +57,18 @@ export const setThinkingMode = (enabled: boolean): void => {
 };
 
 /**
- * Get the maximum number of thinking rounds
- * @returns The current maximum thinking rounds limit
+ * Check if multi-round layout mode is enabled
+ * When enabled, article generation is split into phases: background, content, images, summary
  */
-export const getMaxThinkingRounds = (): number => maxThinkingRounds;
+export const isMultiRoundLayoutModeEnabled = (): boolean => multiRoundLayoutModeEnabled;
 
 /**
- * Set the maximum number of thinking rounds
- * @param rounds - Number of rounds (1-20, default 10)
+ * Enable or disable multi-round layout mode
+ * @param enabled - true to enable multi-round layout generation (higher token consumption)
  */
-export const setMaxThinkingRounds = (rounds: number): void => {
-  maxThinkingRounds = Math.max(1, Math.min(20, rounds)); // Clamp between 1 and 20
-  logger.info(`DeepSeek max thinking rounds set to: ${maxThinkingRounds}`);
+export const setMultiRoundLayoutMode = (enabled: boolean): void => {
+  multiRoundLayoutModeEnabled = enabled;
+  logger.info(`DeepSeek multi-round layout mode set to: ${enabled}`);
 };
 
 // Re-use the structure but adapted for OpenAI-compatible tool definitions
@@ -221,6 +221,208 @@ const clearReasoningContent = (messages: any[]): void => {
   }
 };
 
+/**
+ * Generate article structure using multi-round layout mode
+ * This splits the generation into 4 phases: background, content, images, summary
+ */
+const generateArticleMultiRoundLayout = async (
+  input: string,
+  apiKey: string,
+  isFormattingMode: boolean = false,
+  useReasonerMode?: boolean
+): Promise<GenerationResult> => {
+  const useThinking = useReasonerMode !== undefined ? useReasonerMode : thinkingModeEnabled;
+  
+  logger.info(`Using DeepSeek Multi-Round Layout Mode with thinking: ${useThinking}`);
+
+  const topic = input;
+  
+  // Round 1: Generate background/context
+  logger.info('Multi-Round Layout - Round 1: Background/Context');
+  const round1Prompt = `You are a professional WeChat Official Account editor. For the topic "${topic}", generate ONLY the background and context section of the article.
+
+Focus on:
+- Opening hook or introduction
+- Background information
+- Context setting
+- Why this topic matters
+
+Use the 'layout_article' tool with:
+- A working title (can be refined later)
+- A brief digest
+- 2-4 blocks for background/context (use 'header', 'paragraph', 'card', or 'callout' types)
+
+Keep it concise - this is just the background section.`;
+
+  const round1Messages = [
+    { role: "system", content: "You are a talented content creator specializing in engaging WeChat articles." },
+    { role: "user", content: round1Prompt }
+  ];
+
+  const round1Data = await makeDeepSeekRequest(apiKey, round1Messages, useThinking);
+  const round1Result = extractLayoutFromResponse(round1Data);
+  
+  if (!round1Result) {
+    throw new Error("Failed to generate background section");
+  }
+
+  // Round 2: Generate main content/copy
+  logger.info('Multi-Round Layout - Round 2: Main Content/Copy');
+  const round2Prompt = `Continue the article about "${topic}". You have the background. Now generate the MAIN CONTENT section with detailed text and copy.
+
+Previous context:
+${JSON.stringify(round1Result.blocks)}
+
+Focus on:
+- Main arguments and key points
+- Detailed explanations
+- Supporting evidence
+- Rich text content
+
+Use the 'layout_article' tool to ADD content blocks (use 'paragraph', 'card', 'list', 'numbered_list', 'quote', 'highlight' types).
+
+Do NOT repeat the background - only provide NEW content blocks for the main body.`;
+
+  const round2Messages = [
+    { role: "system", content: "You are a talented content creator specializing in engaging WeChat articles." },
+    { role: "user", content: round2Prompt }
+  ];
+
+  const round2Data = await makeDeepSeekRequest(apiKey, round2Messages, useThinking);
+  const round2Result = extractLayoutFromResponse(round2Data);
+  
+  if (!round2Result) {
+    throw new Error("Failed to generate main content section");
+  }
+
+  // Round 3: Add images and visual widgets
+  logger.info('Multi-Round Layout - Round 3: Images and Visual Widgets');
+  const round3Prompt = `Continue the article about "${topic}". You have background and main content. Now add IMAGES and VISUAL WIDGETS.
+
+Previous sections:
+Background: ${round1Result.blocks.length} blocks
+Main Content: ${round2Result.blocks.length} blocks
+
+Focus on:
+- Image blocks with vivid descriptions
+- Visual elements (divider, svg, stats, progress, etc.)
+- Special widgets (qrcode, countdown, testimonial, etc.)
+
+Use the 'layout_article' tool to ADD visual blocks (use 'image', 'divider', 'svg', 'stats', 'progress', 'countdown', 'testimonial' types).
+
+Do NOT repeat previous content - only provide NEW visual/widget blocks.`;
+
+  const round3Messages = [
+    { role: "system", content: "You are a talented content creator specializing in engaging WeChat articles." },
+    { role: "user", content: round3Prompt }
+  ];
+
+  const round3Data = await makeDeepSeekRequest(apiKey, round3Messages, useThinking);
+  const round3Result = extractLayoutFromResponse(round3Data);
+  
+  if (!round3Result) {
+    throw new Error("Failed to generate images and widgets section");
+  }
+
+  // Round 4: Generate summary and conclusion
+  logger.info('Multi-Round Layout - Round 4: Summary and Conclusion');
+  const round4Prompt = `Complete the article about "${topic}". You have background, content, and visuals. Now add a SUMMARY and CONCLUSION.
+
+Article structure so far:
+- Background: ${round1Result.blocks.length} blocks
+- Main Content: ${round2Result.blocks.length} blocks  
+- Visuals: ${round3Result.blocks.length} blocks
+
+Focus on:
+- Key takeaways summary
+- Conclusion or call-to-action
+- Final thoughts
+
+Use the 'layout_article' tool to ADD conclusion blocks (use 'card', 'highlight', 'callout', 'quote' types).
+
+Also provide:
+- A refined final TITLE for the complete article
+- A polished DIGEST/summary
+
+Do NOT repeat previous content - only provide NEW conclusion blocks, final title, and digest.`;
+
+  const round4Messages = [
+    { role: "system", content: "You are a talented content creator specializing in engaging WeChat articles." },
+    { role: "user", content: round4Prompt }
+  ];
+
+  const round4Data = await makeDeepSeekRequest(apiKey, round4Messages, useThinking);
+  const round4Result = extractLayoutFromResponse(round4Data);
+  
+  if (!round4Result) {
+    throw new Error("Failed to generate summary section");
+  }
+
+  // Combine all rounds
+  logger.info('Multi-Round Layout - Combining all rounds');
+  const allBlocks = [
+    ...round1Result.blocks,
+    ...round2Result.blocks,
+    ...round3Result.blocks,
+    ...round4Result.blocks
+  ];
+
+  // Use the final title and digest from round 4, or fall back to round 1
+  const finalTitle = round4Result.title || round1Result.title || "Untitled Article";
+  const finalDigest = round4Result.digest || round1Result.digest || "No summary available.";
+
+  logger.group('Generated Multi-Round Article', true);
+  logger.info('Final Title:', finalTitle);
+  logger.info('Final Digest:', finalDigest);
+  logger.info('Total Blocks:', allBlocks.length);
+  logger.info('Round 1 (Background):', round1Result.blocks.length);
+  logger.info('Round 2 (Content):', round2Result.blocks.length);
+  logger.info('Round 3 (Visuals):', round3Result.blocks.length);
+  logger.info('Round 4 (Summary):', round4Result.blocks.length);
+  logger.groupEnd();
+
+  return {
+    title: finalTitle,
+    digest: finalDigest,
+    blocks: allBlocks,
+    sources: []
+  };
+};
+
+/**
+ * Extract layout_article result from API response
+ */
+const extractLayoutFromResponse = (data: any): { title: string; digest: string; blocks: any[] } | null => {
+  const message = data.choices?.[0]?.message;
+  if (!message) return null;
+
+  const toolCalls = message.tool_calls;
+  if (!toolCalls || toolCalls.length === 0) return null;
+
+  for (const toolCall of toolCalls) {
+    if (toolCall.function?.name === 'layout_article') {
+      try {
+        const args = safeParseJSON(toolCall.function.arguments, logger);
+        const blocks = (args.blocks || []).map((b: any, index: number) => ({
+          id: `ds-${Date.now()}-${index}-${Math.random()}`,
+          ...b
+        }));
+        
+        return {
+          title: args.title || "",
+          digest: args.digest || "",
+          blocks
+        };
+      } catch (error) {
+        logger.error('Failed to parse layout_article response:', error);
+        return null;
+      }
+    }
+  }
+
+  return null;
+};
+
 export const generateArticleStructureDeepSeek = async (
   input: string,
   apiKey: string,
@@ -229,6 +431,11 @@ export const generateArticleStructureDeepSeek = async (
 ): Promise<GenerationResult> => {
   if (!apiKey) {
     throw new Error("DeepSeek API Key is required.");
+  }
+
+  // Check if multi-round layout mode is enabled
+  if (multiRoundLayoutModeEnabled) {
+    return await generateArticleMultiRoundLayout(input, apiKey, isFormattingMode, useReasonerMode);
   }
 
   // Determine whether to use thinking mode
@@ -316,7 +523,7 @@ Call the function 'layout_article' to return the result.
     ];
 
     let subTurn = 1;
-    const maxSubTurns = maxThinkingRounds; // Use configurable thinking rounds
+    const maxSubTurns = 10; // Fixed limit for tool calling iterations
     
     while (subTurn <= maxSubTurns) {
       logger.info(`DeepSeek API call - Sub-turn ${subTurn}/${maxSubTurns}`);
