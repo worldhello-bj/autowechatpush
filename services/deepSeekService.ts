@@ -403,8 +403,10 @@ const extractLayoutFromResponse = (data: any): { title: string; digest: string; 
     if (toolCall.function?.name === 'layout_article') {
       try {
         const args = safeParseJSON(toolCall.function.arguments, logger);
+        const timestamp = Date.now();
+        const random = Math.floor(Math.random() * 1000000);
         const blocks = (args.blocks || []).map((b: any, index: number) => ({
-          id: `ds-${Date.now()}-${index}-${Math.random()}`,
+          id: `ds-${timestamp}-${index}-${random}`,
           ...b
         }));
         
