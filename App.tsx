@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
 import Editor from './components/Editor';
 import LogSettings from './components/LogSettings';
+import PromptEditor from './components/PromptEditor';
 import { AIProvider } from './types';
 import { setThinkingMode, setMultiRoundLayoutMode } from './services/deepSeekService';
 import { setDualAIThinkingMode, setDualAIMultiRoundLayoutMode } from './services/dualAIService';
@@ -547,6 +548,11 @@ const SettingsPage: React.FC = () => {
                     <div className="w-4 h-4 bg-white rounded-full absolute top-1 right-1 shadow-sm"></div>
                 </button>
              </div>
+          </div>
+
+          {/* Prompt Configuration */}
+          <div className="border-t border-gray-100">
+             <PromptEditor />
           </div>
 
           {/* Log Settings */}

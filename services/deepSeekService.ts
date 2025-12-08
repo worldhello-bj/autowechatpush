@@ -3,6 +3,7 @@ import { ArticleBlock, BlockType, GroundingSource } from "../types";
 import { GenerationResult } from "./geminiService";
 import { loggers } from './logger';
 import { safeParseJSON } from './jsonParser';
+import { loadPrompts, interpolatePrompt } from './promptConfig';
 
 const logger = loggers.deepseek;
 
@@ -241,26 +242,16 @@ const generateArticleMultiRoundLayout = async (
 
   const topic = input;
   
+  // Load custom prompts
+  const prompts = loadPrompts();
+  
   // Round 1: Generate background/context
   logger.group('📘 Round 1: Background/Context', true);
   logger.time('Round 1');
-  const round1Prompt = `You are a professional WeChat Official Account editor. For the topic "${topic}", generate ONLY the background and context section of the article.
-
-Focus on:
-- Opening hook or introduction
-- Background information
-- Context setting
-- Why this topic matters
-
-Use the 'layout_article' tool with:
-- A working title (can be refined later)
-- A brief digest
-- 2-4 blocks for background/context (use 'header', 'paragraph', 'card', or 'callout' types)
-
-Keep it concise - this is just the background section.`;
+  const round1Prompt = interpolatePrompt(prompts.multiRound.round1, { topic });
 
   const round1Messages = [
-    { role: "system", content: "You are a talented content creator specializing in engaging WeChat articles." },
+    { role: "system", content: prompts.systemPrompt },
     { role: "user", content: round1Prompt }
   ];
 
@@ -278,23 +269,10 @@ Keep it concise - this is just the background section.`;
   // Round 2: Generate main content/copy
   logger.group('📝 Round 2: Main Content/Copy', true);
   logger.time('Round 2');
-  const round2Prompt = `Continue the article about "${topic}". You have the background. Now generate the MAIN CONTENT section with detailed text and copy.
-
-Previous context:
-${JSON.stringify(round1Result.blocks)}
-
-Focus on:
-- Main arguments and key points
-- Detailed explanations
-- Supporting evidence
-- Rich text content
-
-Use the 'layout_article' tool to ADD content blocks (use 'paragraph', 'card', 'list', 'numbered_list', 'quote', 'highlight' types).
-
-Do NOT repeat the background - only provide NEW content blocks for the main body.`;
+  const round2Prompt = interpolatePrompt(prompts.multiRound.round2, { topic });
 
   const round2Messages = [
-    { role: "system", content: "You are a talented content creator specializing in engaging WeChat articles." },
+    { role: "system", content: prompts.systemPrompt },
     { role: "user", content: round2Prompt }
   ];
 
@@ -312,23 +290,10 @@ Do NOT repeat the background - only provide NEW content blocks for the main body
   // Round 3: Add images and visual widgets
   logger.group('🎨 Round 3: Images and Visual Widgets', true);
   logger.time('Round 3');
-  const round3Prompt = `Continue the article about "${topic}". You have background and main content. Now add IMAGES and VISUAL WIDGETS.
-
-Previous sections:
-Background: ${round1Result.blocks.length} blocks
-Main Content: ${round2Result.blocks.length} blocks
-
-Focus on:
-- Image blocks with vivid descriptions
-- Visual elements (divider, svg, stats, progress, etc.)
-- Special widgets (qrcode, countdown, testimonial, etc.)
-
-Use the 'layout_article' tool to ADD visual blocks (use 'image', 'divider', 'svg', 'stats', 'progress', 'countdown', 'testimonial' types).
-
-Do NOT repeat previous content - only provide NEW visual/widget blocks.`;
+  const round3Prompt = interpolatePrompt(prompts.multiRound.round3, { topic });
 
   const round3Messages = [
-    { role: "system", content: "You are a talented content creator specializing in engaging WeChat articles." },
+    { role: "system", content: prompts.systemPrompt },
     { role: "user", content: round3Prompt }
   ];
 
@@ -346,28 +311,10 @@ Do NOT repeat previous content - only provide NEW visual/widget blocks.`;
   // Round 4: Generate summary and conclusion
   logger.group('📊 Round 4: Summary and Conclusion', true);
   logger.time('Round 4');
-  const round4Prompt = `Complete the article about "${topic}". You have background, content, and visuals. Now add a SUMMARY and CONCLUSION.
-
-Article structure so far:
-- Background: ${round1Result.blocks.length} blocks
-- Main Content: ${round2Result.blocks.length} blocks  
-- Visuals: ${round3Result.blocks.length} blocks
-
-Focus on:
-- Key takeaways summary
-- Conclusion or call-to-action
-- Final thoughts
-
-Use the 'layout_article' tool to ADD conclusion blocks (use 'card', 'highlight', 'callout', 'quote' types).
-
-Also provide:
-- A refined final TITLE for the complete article
-- A polished DIGEST/summary
-
-Do NOT repeat previous content - only provide NEW conclusion blocks, final title, and digest.`;
+  const round4Prompt = interpolatePrompt(prompts.multiRound.round4, { topic });
 
   const round4Messages = [
-    { role: "system", content: "You are a talented content creator specializing in engaging WeChat articles." },
+    { role: "system", content: prompts.systemPrompt },
     { role: "user", content: round4Prompt }
   ];
 
@@ -471,82 +418,23 @@ export const generateArticleStructureDeepSeek = async (
   
   logger.info(`Using DeepSeek with thinking mode: ${useThinking}`);
 
+  // Load custom prompts
+  const prompts = loadPrompts();
+
   let prompt = "";
+  let systemPrompt = prompts.systemPrompt;
+  
   if (isFormattingMode) {
-    prompt = `
-You are a professional WeChat Official Account editor with a flair for creative, engaging writing.
-Your task is to format the input text into a rich WeChat article structure using the 'layout_article' tool.
+    prompt = interpolatePrompt(prompts.formattingPrompt, { input });
 
-Guidelines:
-- **Content**: Keep the original text's meaning but enhance the language with vivid, expressive writing.
-- **Writing Style**: Use diverse sentence structures - mix short punchy sentences with flowing longer ones. Add rhetorical questions, metaphors, and analogies to make content more engaging.
-- **Colors**: Assign colorful styles (red, blue, purple, orange, green, pink, cyan, gradient) to headers and cards to make it visually appealing.
-- **Typography**: Use different font sizes and weights for emphasis:
-  - Use 'fontSize: xlarge' for main headlines and key statistics
-  - Use 'fontSize: large' for important points and subheadings
-  - Use 'fontSize: small' for footnotes or supplementary info
-  - Use 'fontWeight: bold' for key phrases and important statements
-  - Use 'fontStyle: italic' for quotes, emphasis, or special terms
-- **Structure**: Use 'card' blocks for emphasis, 'highlight' for key phrases and memorable quotes.
-- **Rich Elements**: Use 'divider' between sections, 'callout' for important notices with emoji icons, 'numbered_list' for steps, 'quote' for inspiring statements.
-- **Headers**: Use different header levels (1, 2, 3) for hierarchy with creative, attention-grabbing titles.
-- **Engagement**: Start sections with hooks, use storytelling techniques, and end with thought-provoking conclusions.
-
-Input Text:
-"""
-${input}
-"""
-
-Call the function 'layout_article' to return the formatted result.
-    `;
   } else {
-    prompt = `
-You are a professional WeChat Official Account editor known for creating visually engaging "Xiumi-style" articles with captivating, diverse writing styles.
-Your task is to write a high-quality article about: "${input}".
-
-Structure the article using the 'layout_article' tool with the following guidelines:
-
-**Writing Excellence:**
-- Use varied sentence structures: mix short impactful statements with descriptive passages
-- Incorporate storytelling elements: hooks, conflicts, resolutions
-- Add rhetorical questions to engage readers: "Have you ever wondered...?"
-- Use metaphors and analogies to explain complex concepts
-- Include emotional triggers and relatable scenarios
-- Vary paragraph lengths for rhythm and pacing
-- Use transitions that flow naturally between ideas
-
-**Typography & Visual Hierarchy:**
-- Use fontSize: 'xlarge' for dramatic headlines and key statistics (e.g., "10倍增长！")
-- Use fontSize: 'large' for important points, section highlights, and memorable quotes
-- Use fontSize: 'normal' for regular body text
-- Use fontSize: 'small' for footnotes, credits, or supplementary information
-- Use fontWeight: 'bold' for key phrases, important statements, and emphasis
-- Use fontWeight: 'light' for softer, secondary text
-- Use fontStyle: 'italic' for quotes, foreign words, or special emphasis
-- Combine typography with colors for maximum visual impact
-
-**Visual Design:**
-- Use 'card' blocks frequently for key takeaways with catchy titles
-- Apply specific colors ('red', 'blue', 'orange', 'purple', 'gold', 'green', 'pink', 'cyan', 'gradient') for different Cards and Headers
-- Insert 'image' blocks where appropriate with vivid descriptions
-- Use 'divider' between major sections, 'callout' for tips/warnings with relevant emoji
-- Use 'numbered_list' for steps, 'table' for data comparisons
-- Use 'quote' blocks for memorable statements or inspirational lines
-- Use 'highlight' to draw attention to surprising facts or key phrases
-
-**Headers & Structure:**
-- Use header levels (1=main, 2=sub, 3=minor) with creative, click-worthy titles
-- Make headers intriguing: use questions, numbers, or power words
-- Example: Instead of "Benefits" use "5 Surprising Benefits That Will Change Your Mind"
-
-Call the function 'layout_article' to return the result.
-    `;
+    prompt = interpolatePrompt(prompts.generationPrompt, { topic: input });
   }
 
   try {
     // Initialize messages array
     const messages: any[] = [
-      { role: "system", content: "You are a talented content creator who writes engaging WeChat articles with colorful layouts and diverse, captivating language styles. You excel at using varied sentence structures, storytelling techniques, rhetorical questions, metaphors, and emotional hooks to create compelling content that resonates with readers." },
+      { role: "system", content: systemPrompt },
       { role: "user", content: prompt }
     ];
 
