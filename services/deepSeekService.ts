@@ -233,12 +233,17 @@ const generateArticleMultiRoundLayout = async (
 ): Promise<GenerationResult> => {
   const useThinking = useReasonerMode !== undefined ? useReasonerMode : thinkingModeEnabled;
   
-  logger.info(`Using DeepSeek Multi-Round Layout Mode with thinking: ${useThinking}`);
+  logger.group('=== DeepSeek Multi-Round Layout Generation ===', true);
+  logger.info(`📝 Topic: ${input}`);
+  logger.info(`🧠 Thinking Mode: ${useThinking ? 'Enabled' : 'Disabled'}`);
+  logger.info(`📋 Mode: ${isFormattingMode ? 'Formatting' : 'Generation'}`);
+  logger.info('⚠️  Note: This will make 4 separate API calls');
 
   const topic = input;
   
   // Round 1: Generate background/context
-  logger.info('Multi-Round Layout - Round 1: Background/Context');
+  logger.group('📘 Round 1: Background/Context', true);
+  logger.time('Round 1');
   const round1Prompt = `You are a professional WeChat Official Account editor. For the topic "${topic}", generate ONLY the background and context section of the article.
 
 Focus on:
@@ -262,12 +267,17 @@ Keep it concise - this is just the background section.`;
   const round1Data = await makeDeepSeekRequest(apiKey, round1Messages, useThinking);
   const round1Result = extractLayoutFromResponse(round1Data);
   
+  logger.timeEnd('Round 1');
   if (!round1Result) {
+    logger.error('❌ Round 1 failed to generate content');
     throw new Error("Failed to generate background section");
   }
+  logger.info(`✅ Generated ${round1Result.blocks.length} blocks for background`);
+  logger.groupEnd();
 
   // Round 2: Generate main content/copy
-  logger.info('Multi-Round Layout - Round 2: Main Content/Copy');
+  logger.group('📝 Round 2: Main Content/Copy', true);
+  logger.time('Round 2');
   const round2Prompt = `Continue the article about "${topic}". You have the background. Now generate the MAIN CONTENT section with detailed text and copy.
 
 Previous context:
@@ -291,12 +301,17 @@ Do NOT repeat the background - only provide NEW content blocks for the main body
   const round2Data = await makeDeepSeekRequest(apiKey, round2Messages, useThinking);
   const round2Result = extractLayoutFromResponse(round2Data);
   
+  logger.timeEnd('Round 2');
   if (!round2Result) {
+    logger.error('❌ Round 2 failed to generate content');
     throw new Error("Failed to generate main content section");
   }
+  logger.info(`✅ Generated ${round2Result.blocks.length} blocks for main content`);
+  logger.groupEnd();
 
   // Round 3: Add images and visual widgets
-  logger.info('Multi-Round Layout - Round 3: Images and Visual Widgets');
+  logger.group('🎨 Round 3: Images and Visual Widgets', true);
+  logger.time('Round 3');
   const round3Prompt = `Continue the article about "${topic}". You have background and main content. Now add IMAGES and VISUAL WIDGETS.
 
 Previous sections:
@@ -320,12 +335,17 @@ Do NOT repeat previous content - only provide NEW visual/widget blocks.`;
   const round3Data = await makeDeepSeekRequest(apiKey, round3Messages, useThinking);
   const round3Result = extractLayoutFromResponse(round3Data);
   
+  logger.timeEnd('Round 3');
   if (!round3Result) {
+    logger.error('❌ Round 3 failed to generate content');
     throw new Error("Failed to generate images and widgets section");
   }
+  logger.info(`✅ Generated ${round3Result.blocks.length} blocks for visuals`);
+  logger.groupEnd();
 
   // Round 4: Generate summary and conclusion
-  logger.info('Multi-Round Layout - Round 4: Summary and Conclusion');
+  logger.group('📊 Round 4: Summary and Conclusion', true);
+  logger.time('Round 4');
   const round4Prompt = `Complete the article about "${topic}". You have background, content, and visuals. Now add a SUMMARY and CONCLUSION.
 
 Article structure so far:
@@ -354,12 +374,17 @@ Do NOT repeat previous content - only provide NEW conclusion blocks, final title
   const round4Data = await makeDeepSeekRequest(apiKey, round4Messages, useThinking);
   const round4Result = extractLayoutFromResponse(round4Data);
   
+  logger.timeEnd('Round 4');
   if (!round4Result) {
+    logger.error('❌ Round 4 failed to generate content');
     throw new Error("Failed to generate summary section");
   }
+  logger.info(`✅ Generated ${round4Result.blocks.length} blocks for summary`);
+  logger.groupEnd();
 
   // Combine all rounds
-  logger.info('Multi-Round Layout - Combining all rounds');
+  logger.group('🔄 Combining All Rounds', true);
+  logger.info('Merging all rounds into final article...');
   const allBlocks = [
     ...round1Result.blocks,
     ...round2Result.blocks,
@@ -371,14 +396,15 @@ Do NOT repeat previous content - only provide NEW conclusion blocks, final title
   const finalTitle = round4Result.title || round1Result.title || "Untitled Article";
   const finalDigest = round4Result.digest || round1Result.digest || "No summary available.";
 
-  logger.group('Generated Multi-Round Article', true);
-  logger.info('Final Title:', finalTitle);
-  logger.info('Final Digest:', finalDigest);
-  logger.info('Total Blocks:', allBlocks.length);
-  logger.info('Round 1 (Background):', round1Result.blocks.length);
-  logger.info('Round 2 (Content):', round2Result.blocks.length);
-  logger.info('Round 3 (Visuals):', round3Result.blocks.length);
-  logger.info('Round 4 (Summary):', round4Result.blocks.length);
+  logger.group('✅ Multi-Round Article Generation Complete', true);
+  logger.info(`📌 Final Title: ${finalTitle}`);
+  logger.info(`📝 Final Digest: ${finalDigest}`);
+  logger.info(`📊 Total Blocks: ${allBlocks.length}`);
+  logger.info(`  └─ Round 1 (Background): ${round1Result.blocks.length} blocks`);
+  logger.info(`  └─ Round 2 (Content): ${round2Result.blocks.length} blocks`);
+  logger.info(`  └─ Round 3 (Visuals): ${round3Result.blocks.length} blocks`);
+  logger.info(`  └─ Round 4 (Summary): ${round4Result.blocks.length} blocks`);
+  logger.groupEnd();
   logger.groupEnd();
 
   return {

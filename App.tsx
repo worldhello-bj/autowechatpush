@@ -4,7 +4,7 @@ import Editor from './components/Editor';
 import LogSettings from './components/LogSettings';
 import { AIProvider } from './types';
 import { setThinkingMode, setMultiRoundLayoutMode } from './services/deepSeekService';
-import { setDualAIThinkingMode } from './services/dualAIService';
+import { setDualAIThinkingMode, setDualAIMultiRoundLayoutMode } from './services/dualAIService';
 
 // --- Shared Types ---
 interface UserProfile {
@@ -231,7 +231,10 @@ const SettingsPage: React.FC = () => {
     
     const savedMultiRoundLayoutMode = localStorage.getItem('multi_round_layout_mode');
     if (savedMultiRoundLayoutMode) {
-      setMultiRoundLayoutMode(savedMultiRoundLayoutMode === 'true');
+      const enabled = savedMultiRoundLayoutMode === 'true';
+      setMultiRoundLayoutMode(enabled);
+      setMultiRoundLayoutMode(enabled);
+      setDualAIMultiRoundLayoutMode(enabled);
     }
     
     const savedDashKey = localStorage.getItem('dashscope_key');
@@ -257,9 +260,10 @@ const SettingsPage: React.FC = () => {
     setThinkingMode(deepSeekThinkingMode);
     setDualAIThinkingMode(deepSeekThinkingMode);
     
-    // Save multi-round layout mode
+    // Save multi-round layout mode (apply to both deepSeekService and dualAIService)
     localStorage.setItem('multi_round_layout_mode', String(multiRoundLayoutMode));
     setMultiRoundLayoutMode(multiRoundLayoutMode);
+    setDualAIMultiRoundLayoutMode(multiRoundLayoutMode);
     
     alert("Configuration saved!");
   };
