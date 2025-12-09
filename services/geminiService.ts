@@ -23,13 +23,23 @@ const sanitizeColor = (value?: string): string => {
   if (!value) return 'transparent';
   const trimmed = value.trim();
   if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(trimmed)) return trimmed;
-  if (/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(,\s*(0|1|0?\.\d+))?\s*\)$/i.test(trimmed)) return trimmed;
+  const rgbMatch = trimmed.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0|1|0?\.\d+))?\s*\)$/i);
+  if (rgbMatch) {
+    const [, r, g, b, a] = rgbMatch;
+    const withinRange = [r, g, b].every((val) => {
+      const num = Number(val);
+      return num >= 0 && num <= 255;
+    });
+    const alphaOk = a === undefined || (Number(a) >= 0 && Number(a) <= 1);
+    if (withinRange && alphaOk) return trimmed;
+  }
   return 'transparent';
 };
 
 const sanitizePadding = (value?: string): string => {
   if (!value) return '20px';
   const trimmed = value.trim();
+  if (trimmed === '0') return '0';
   if (/^[0-9]+$/.test(trimmed)) return `${trimmed}px`;
   if (/^[0-9]+(px|rem|em|%)$/.test(trimmed)) return trimmed;
   return '20px';
@@ -70,7 +80,7 @@ export const generateSeamlessWechatHtml = (blocks: SeamlessBlock[], globalWidth:
       }
       htmlOutput += `
             <section style="line-height: 0; font-size: 0; background-color: ${bgColor};">
-                <img src="${safeSrc}" alt="" style="vertical-align: top; width: 100%; display: block;" />
+                <img src="${safeSrc}" alt="Seamless stitched block" style="vertical-align: top; width: 100%; display: block;" />
             </section>
             `;
     } else if (bType === 'text') {
