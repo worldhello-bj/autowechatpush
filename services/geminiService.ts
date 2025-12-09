@@ -12,13 +12,15 @@ export interface SeamlessBlock {
   alt?: string;
 }
 
-const escapeHtmlSafe = (value: string): string =>
-  value
+const escapeHtmlSafe = (value: string | null | undefined): string => {
+  const safeValue = value ?? '';
+  return safeValue
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+};
 
 const sanitizeColor = (value?: string): string => {
   if (!value) return 'transparent';
@@ -49,7 +51,8 @@ const sanitizePadding = (value?: string): string => {
 const sanitizeUrl = (value: string): string | null => {
   const trimmed = value.trim();
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  if (/^data:image\//i.test(trimmed)) return trimmed;
+  const dataUrlPattern = /^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+\s*$/;
+  if (dataUrlPattern.test(trimmed)) return trimmed;
   return null;
 };
 
@@ -84,19 +87,18 @@ export const generateSeamlessWechatHtml = (blocks: SeamlessBlock[], globalWidth:
         return;
       }
       const altText = escapeHtmlSafe(block.alt || 'Seamless stitched block');
+      const safeSrcEscaped = escapeHtmlSafe(safeSrc);
       htmlOutput += `
-            <section style="line-height: 0; font-size: 0; background-color: ${bgColor};">
-                <img src="${safeSrc}" alt="${altText}" style="vertical-align: top; width: 100%; display: block;" />
-            </section>
-            `;
+<section style="line-height: 0; font-size: 0; background-color: ${bgColor};">
+  <img src="${safeSrcEscaped}" alt="${altText}" style="vertical-align: top; width: 100%; display: block;" />
+</section>`;
     } else if (bType === 'text') {
       const padding = sanitizePadding(block.padding);
       const safeContent = escapeHtmlSafe(content);
       htmlOutput += `
-            <section style="margin-top: ${SEAMLESS_TEXT_MARGIN}; background-color: ${bgColor}; padding: ${padding}; ${SEAMLESS_TEXT_STYLE}">
-                ${safeContent}
-            </section>
-            `;
+<section style="margin-top: ${SEAMLESS_TEXT_MARGIN}; background-color: ${bgColor}; padding: ${padding}; ${SEAMLESS_TEXT_STYLE}">
+  ${safeContent}
+</section>`;
     }
   });
 
