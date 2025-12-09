@@ -9,6 +9,7 @@ export interface SeamlessBlock {
   content: string;
   backgroundColor?: string;
   padding?: string;
+  alt?: string;
 }
 
 const escapeHtmlSafe = (value: string): string =>
@@ -22,7 +23,7 @@ const escapeHtmlSafe = (value: string): string =>
 const sanitizeColor = (value?: string): string => {
   if (!value) return 'transparent';
   const trimmed = value.trim();
-  if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(trimmed)) return trimmed;
+  if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(trimmed)) return trimmed;
   const rgbMatch = trimmed.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0|1|0?\.\d+))?\s*\)$/i);
   if (rgbMatch) {
     const [, r, g, b, a] = rgbMatch;
@@ -52,6 +53,10 @@ const sanitizeUrl = (value: string): string | null => {
   return null;
 };
 
+// Keep text snug against images to avoid thin seams on some renderers
+const SEAMLESS_TEXT_MARGIN = '-1px';
+const SEAMLESS_TEXT_STYLE = 'line-height: 1.75; font-size: 16px; color: #3e3e3e;';
+
 // Helper to get AI instance dynamically
 const getAI = (apiKey?: string) => {
   const key = apiKey || process.env.API_KEY;
@@ -78,17 +83,17 @@ export const generateSeamlessWechatHtml = (blocks: SeamlessBlock[], globalWidth:
         logger.warn('Skipped unsafe image URL in seamless layout');
         return;
       }
+      const altText = escapeHtmlSafe(block.alt || 'Seamless stitched block');
       htmlOutput += `
             <section style="line-height: 0; font-size: 0; background-color: ${bgColor};">
-                <img src="${safeSrc}" alt="Seamless stitched block" style="vertical-align: top; width: 100%; display: block;" />
+                <img src="${safeSrc}" alt="${altText}" style="vertical-align: top; width: 100%; display: block;" />
             </section>
             `;
     } else if (bType === 'text') {
       const padding = sanitizePadding(block.padding);
       const safeContent = escapeHtmlSafe(content);
-      // margin-top: -1px prevents thin white seams between adjacent blocks on certain devices/renderers
       htmlOutput += `
-            <section style="margin-top: -1px; background-color: ${bgColor}; padding: ${padding}; line-height: 1.75; font-size: 16px; color: #3e3e3e;">
+            <section style="margin-top: ${SEAMLESS_TEXT_MARGIN}; background-color: ${bgColor}; padding: ${padding}; ${SEAMLESS_TEXT_STYLE}">
                 ${safeContent}
             </section>
             `;
