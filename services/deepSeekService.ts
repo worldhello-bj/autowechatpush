@@ -3,6 +3,7 @@ import { ArticleBlock, BlockType, GroundingSource } from "../types";
 import { GenerationResult } from "./geminiService";
 import { loggers } from './logger';
 import { safeParseJSON } from './jsonParser';
+import { loadPrompts, interpolatePrompt } from './promptConfig';
 
 const logger = loggers.deepseek;
 
@@ -14,8 +15,8 @@ export type DeepSeekModel = 'deepseek-chat' | 'deepseek-reasoner';
 // Whether to enable thinking mode (for deepseek-reasoner with tool calling)
 let thinkingModeEnabled: boolean = false;
 
-// Maximum number of thinking rounds/sub-turns (safety limit to prevent infinite loops)
-let maxThinkingRounds: number = 10;
+// Whether to enable multi-round layout mode (phased generation)
+let multiRoundLayoutModeEnabled: boolean = false;
 
 // Default model - can be changed to use reasoner mode
 let currentModel: DeepSeekModel = 'deepseek-chat';
@@ -57,18 +58,18 @@ export const setThinkingMode = (enabled: boolean): void => {
 };
 
 /**
- * Get the maximum number of thinking rounds
- * @returns The current maximum thinking rounds limit
+ * Check if multi-round layout mode is enabled
+ * When enabled, article generation is split into phases: background, content, images, summary
  */
-export const getMaxThinkingRounds = (): number => maxThinkingRounds;
+export const isMultiRoundLayoutModeEnabled = (): boolean => multiRoundLayoutModeEnabled;
 
 /**
- * Set the maximum number of thinking rounds
- * @param rounds - Number of rounds (1-20, default 10)
+ * Enable or disable multi-round layout mode
+ * @param enabled - true to enable multi-round layout generation (higher token consumption)
  */
-export const setMaxThinkingRounds = (rounds: number): void => {
-  maxThinkingRounds = Math.max(1, Math.min(20, rounds)); // Clamp between 1 and 20
-  logger.info(`DeepSeek max thinking rounds set to: ${maxThinkingRounds}`);
+export const setMultiRoundLayoutMode = (enabled: boolean): void => {
+  multiRoundLayoutModeEnabled = enabled;
+  logger.info(`DeepSeek multi-round layout mode set to: ${enabled}`);
 };
 
 // Re-use the structure but adapted for OpenAI-compatible tool definitions
@@ -221,6 +222,182 @@ const clearReasoningContent = (messages: any[]): void => {
   }
 };
 
+/**
+ * Generate article structure using multi-round layout mode
+ * This splits the generation into 4 phases: background, content, images, summary
+ */
+const generateArticleMultiRoundLayout = async (
+  input: string,
+  apiKey: string,
+  isFormattingMode: boolean = false,
+  useReasonerMode?: boolean
+): Promise<GenerationResult> => {
+  const useThinking = useReasonerMode !== undefined ? useReasonerMode : thinkingModeEnabled;
+  
+  logger.group('=== DeepSeek Multi-Round Layout Generation ===', true);
+  logger.info(`📝 Topic: ${input}`);
+  logger.info(`🧠 Thinking Mode: ${useThinking ? 'Enabled' : 'Disabled'}`);
+  logger.info(`📋 Mode: ${isFormattingMode ? 'Formatting' : 'Generation'}`);
+  logger.info('⚠️  Note: This will make 4 separate API calls');
+
+  const topic = input;
+  
+  // Load custom prompts
+  const prompts = loadPrompts();
+  
+  // Round 1: Generate background/context
+  logger.group('📘 Round 1: Background/Context', true);
+  logger.time('Round 1');
+  const round1Prompt = interpolatePrompt(prompts.multiRound.round1, { topic });
+
+  const round1Messages = [
+    { role: "system", content: prompts.systemPrompt },
+    { role: "user", content: round1Prompt }
+  ];
+
+  const round1Data = await makeDeepSeekRequest(apiKey, round1Messages, useThinking);
+  const round1Result = extractLayoutFromResponse(round1Data);
+  
+  logger.timeEnd('Round 1');
+  if (!round1Result) {
+    logger.error('❌ Round 1 failed to generate content');
+    throw new Error("Failed to generate background section");
+  }
+  logger.info(`✅ Generated ${round1Result.blocks.length} blocks for background`);
+  logger.groupEnd();
+
+  // Round 2: Generate main content/copy
+  logger.group('📝 Round 2: Main Content/Copy', true);
+  logger.time('Round 2');
+  const round2Prompt = interpolatePrompt(prompts.multiRound.round2, { topic });
+
+  const round2Messages = [
+    { role: "system", content: prompts.systemPrompt },
+    { role: "user", content: round2Prompt }
+  ];
+
+  const round2Data = await makeDeepSeekRequest(apiKey, round2Messages, useThinking);
+  const round2Result = extractLayoutFromResponse(round2Data);
+  
+  logger.timeEnd('Round 2');
+  if (!round2Result) {
+    logger.error('❌ Round 2 failed to generate content');
+    throw new Error("Failed to generate main content section");
+  }
+  logger.info(`✅ Generated ${round2Result.blocks.length} blocks for main content`);
+  logger.groupEnd();
+
+  // Round 3: Add images and visual widgets
+  logger.group('🎨 Round 3: Images and Visual Widgets', true);
+  logger.time('Round 3');
+  const round3Prompt = interpolatePrompt(prompts.multiRound.round3, { topic });
+
+  const round3Messages = [
+    { role: "system", content: prompts.systemPrompt },
+    { role: "user", content: round3Prompt }
+  ];
+
+  const round3Data = await makeDeepSeekRequest(apiKey, round3Messages, useThinking);
+  const round3Result = extractLayoutFromResponse(round3Data);
+  
+  logger.timeEnd('Round 3');
+  if (!round3Result) {
+    logger.error('❌ Round 3 failed to generate content');
+    throw new Error("Failed to generate images and widgets section");
+  }
+  logger.info(`✅ Generated ${round3Result.blocks.length} blocks for visuals`);
+  logger.groupEnd();
+
+  // Round 4: Generate summary and conclusion
+  logger.group('📊 Round 4: Summary and Conclusion', true);
+  logger.time('Round 4');
+  const round4Prompt = interpolatePrompt(prompts.multiRound.round4, { topic });
+
+  const round4Messages = [
+    { role: "system", content: prompts.systemPrompt },
+    { role: "user", content: round4Prompt }
+  ];
+
+  const round4Data = await makeDeepSeekRequest(apiKey, round4Messages, useThinking);
+  const round4Result = extractLayoutFromResponse(round4Data);
+  
+  logger.timeEnd('Round 4');
+  if (!round4Result) {
+    logger.error('❌ Round 4 failed to generate content');
+    throw new Error("Failed to generate summary section");
+  }
+  logger.info(`✅ Generated ${round4Result.blocks.length} blocks for summary`);
+  logger.groupEnd();
+
+  // Combine all rounds
+  logger.group('🔄 Combining All Rounds', true);
+  logger.info('Merging all rounds into final article...');
+  const allBlocks = [
+    ...round1Result.blocks,
+    ...round2Result.blocks,
+    ...round3Result.blocks,
+    ...round4Result.blocks
+  ];
+
+  // Use the final title and digest from round 4, or fall back to round 1
+  const finalTitle = round4Result.title || round1Result.title || "Untitled Article";
+  const finalDigest = round4Result.digest || round1Result.digest || "No summary available.";
+
+  logger.group('✅ Multi-Round Article Generation Complete', true);
+  logger.info(`📌 Final Title: ${finalTitle}`);
+  logger.info(`📝 Final Digest: ${finalDigest}`);
+  logger.info(`📊 Total Blocks: ${allBlocks.length}`);
+  logger.info(`  └─ Round 1 (Background): ${round1Result.blocks.length} blocks`);
+  logger.info(`  └─ Round 2 (Content): ${round2Result.blocks.length} blocks`);
+  logger.info(`  └─ Round 3 (Visuals): ${round3Result.blocks.length} blocks`);
+  logger.info(`  └─ Round 4 (Summary): ${round4Result.blocks.length} blocks`);
+  logger.groupEnd();
+  logger.groupEnd();
+
+  return {
+    title: finalTitle,
+    digest: finalDigest,
+    blocks: allBlocks,
+    sources: []
+  };
+};
+
+/**
+ * Extract layout_article result from API response
+ */
+const extractLayoutFromResponse = (data: any): { title: string; digest: string; blocks: any[] } | null => {
+  const message = data.choices?.[0]?.message;
+  if (!message) return null;
+
+  const toolCalls = message.tool_calls;
+  if (!toolCalls || toolCalls.length === 0) return null;
+
+  for (const toolCall of toolCalls) {
+    if (toolCall.function?.name === 'layout_article') {
+      try {
+        const args = safeParseJSON(toolCall.function.arguments, logger);
+        const timestamp = Date.now();
+        const random = Math.floor(Math.random() * 1000000);
+        const blocks = (args.blocks || []).map((b: any, index: number) => ({
+          id: `ds-${timestamp}-${index}-${random}`,
+          ...b
+        }));
+        
+        return {
+          title: args.title || "",
+          digest: args.digest || "",
+          blocks
+        };
+      } catch (error) {
+        logger.error('Failed to parse layout_article response:', error);
+        return null;
+      }
+    }
+  }
+
+  return null;
+};
+
 export const generateArticleStructureDeepSeek = async (
   input: string,
   apiKey: string,
@@ -231,92 +408,38 @@ export const generateArticleStructureDeepSeek = async (
     throw new Error("DeepSeek API Key is required.");
   }
 
+  // Check if multi-round layout mode is enabled
+  if (multiRoundLayoutModeEnabled) {
+    return await generateArticleMultiRoundLayout(input, apiKey, isFormattingMode, useReasonerMode);
+  }
+
   // Determine whether to use thinking mode
   const useThinking = useReasonerMode !== undefined ? useReasonerMode : thinkingModeEnabled;
   
   logger.info(`Using DeepSeek with thinking mode: ${useThinking}`);
 
+  // Load custom prompts
+  const prompts = loadPrompts();
+
   let prompt = "";
+  let systemPrompt = prompts.systemPrompt;
+  
   if (isFormattingMode) {
-    prompt = `
-You are a professional WeChat Official Account editor with a flair for creative, engaging writing.
-Your task is to format the input text into a rich WeChat article structure using the 'layout_article' tool.
+    prompt = interpolatePrompt(prompts.formattingPrompt, { input });
 
-Guidelines:
-- **Content**: Keep the original text's meaning but enhance the language with vivid, expressive writing.
-- **Writing Style**: Use diverse sentence structures - mix short punchy sentences with flowing longer ones. Add rhetorical questions, metaphors, and analogies to make content more engaging.
-- **Colors**: Assign colorful styles (red, blue, purple, orange, green, pink, cyan, gradient) to headers and cards to make it visually appealing.
-- **Typography**: Use different font sizes and weights for emphasis:
-  - Use 'fontSize: xlarge' for main headlines and key statistics
-  - Use 'fontSize: large' for important points and subheadings
-  - Use 'fontSize: small' for footnotes or supplementary info
-  - Use 'fontWeight: bold' for key phrases and important statements
-  - Use 'fontStyle: italic' for quotes, emphasis, or special terms
-- **Structure**: Use 'card' blocks for emphasis, 'highlight' for key phrases and memorable quotes.
-- **Rich Elements**: Use 'divider' between sections, 'callout' for important notices with emoji icons, 'numbered_list' for steps, 'quote' for inspiring statements.
-- **Headers**: Use different header levels (1, 2, 3) for hierarchy with creative, attention-grabbing titles.
-- **Engagement**: Start sections with hooks, use storytelling techniques, and end with thought-provoking conclusions.
-
-Input Text:
-"""
-${input}
-"""
-
-Call the function 'layout_article' to return the formatted result.
-    `;
   } else {
-    prompt = `
-You are a professional WeChat Official Account editor known for creating visually engaging "Xiumi-style" articles with captivating, diverse writing styles.
-Your task is to write a high-quality article about: "${input}".
-
-Structure the article using the 'layout_article' tool with the following guidelines:
-
-**Writing Excellence:**
-- Use varied sentence structures: mix short impactful statements with descriptive passages
-- Incorporate storytelling elements: hooks, conflicts, resolutions
-- Add rhetorical questions to engage readers: "Have you ever wondered...?"
-- Use metaphors and analogies to explain complex concepts
-- Include emotional triggers and relatable scenarios
-- Vary paragraph lengths for rhythm and pacing
-- Use transitions that flow naturally between ideas
-
-**Typography & Visual Hierarchy:**
-- Use fontSize: 'xlarge' for dramatic headlines and key statistics (e.g., "10倍增长！")
-- Use fontSize: 'large' for important points, section highlights, and memorable quotes
-- Use fontSize: 'normal' for regular body text
-- Use fontSize: 'small' for footnotes, credits, or supplementary information
-- Use fontWeight: 'bold' for key phrases, important statements, and emphasis
-- Use fontWeight: 'light' for softer, secondary text
-- Use fontStyle: 'italic' for quotes, foreign words, or special emphasis
-- Combine typography with colors for maximum visual impact
-
-**Visual Design:**
-- Use 'card' blocks frequently for key takeaways with catchy titles
-- Apply specific colors ('red', 'blue', 'orange', 'purple', 'gold', 'green', 'pink', 'cyan', 'gradient') for different Cards and Headers
-- Insert 'image' blocks where appropriate with vivid descriptions
-- Use 'divider' between major sections, 'callout' for tips/warnings with relevant emoji
-- Use 'numbered_list' for steps, 'table' for data comparisons
-- Use 'quote' blocks for memorable statements or inspirational lines
-- Use 'highlight' to draw attention to surprising facts or key phrases
-
-**Headers & Structure:**
-- Use header levels (1=main, 2=sub, 3=minor) with creative, click-worthy titles
-- Make headers intriguing: use questions, numbers, or power words
-- Example: Instead of "Benefits" use "5 Surprising Benefits That Will Change Your Mind"
-
-Call the function 'layout_article' to return the result.
-    `;
+    prompt = interpolatePrompt(prompts.generationPrompt, { topic: input });
   }
 
   try {
     // Initialize messages array
     const messages: any[] = [
-      { role: "system", content: "You are a talented content creator who writes engaging WeChat articles with colorful layouts and diverse, captivating language styles. You excel at using varied sentence structures, storytelling techniques, rhetorical questions, metaphors, and emotional hooks to create compelling content that resonates with readers." },
+      { role: "system", content: systemPrompt },
       { role: "user", content: prompt }
     ];
 
     let subTurn = 1;
-    const maxSubTurns = maxThinkingRounds; // Use configurable thinking rounds
+    const maxSubTurns = 10; // Fixed limit for tool calling iterations
     
     while (subTurn <= maxSubTurns) {
       logger.info(`DeepSeek API call - Sub-turn ${subTurn}/${maxSubTurns}`);

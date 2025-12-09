@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
 import Editor from './components/Editor';
 import LogSettings from './components/LogSettings';
+import PromptEditor from './components/PromptEditor';
 import { AIProvider } from './types';
-import { setThinkingMode, setMaxThinkingRounds } from './services/deepSeekService';
-import { setDualAIThinkingMode, setDualAIMaxThinkingRounds } from './services/dualAIService';
+import { setThinkingMode, setMultiRoundLayoutMode } from './services/deepSeekService';
+import { setDualAIThinkingMode, setDualAIMultiRoundLayoutMode } from './services/dualAIService';
 
 // --- Shared Types ---
 interface UserProfile {
@@ -200,7 +201,7 @@ const SettingsPage: React.FC = () => {
   const [deepSeekKey, setDeepSeekKey] = useState('');
   const [showDeepSeekKey, setShowDeepSeekKey] = useState(false);
   const [deepSeekThinkingMode, setDeepSeekThinkingMode] = useState(false);
-  const [deepSeekThinkingRounds, setDeepSeekThinkingRounds] = useState(10);
+  const [multiRoundLayoutMode, setMultiRoundLayoutMode] = useState(false);
   
   const [dashScopeKey, setDashScopeKey] = useState('');
   const [showDashScopeKey, setShowDashScopeKey] = useState(false);
@@ -229,14 +230,11 @@ const SettingsPage: React.FC = () => {
       setDualAIThinkingMode(enabled);
     }
     
-    const savedThinkingRounds = localStorage.getItem('deepseek_thinking_rounds');
-    if (savedThinkingRounds) {
-      const rounds = parseInt(savedThinkingRounds, 10);
-      if (!isNaN(rounds) && rounds > 0) {
-        setDeepSeekThinkingRounds(rounds);
-        setMaxThinkingRounds(rounds);
-        setDualAIMaxThinkingRounds(rounds);
-      }
+    const savedMultiRoundLayoutMode = localStorage.getItem('multi_round_layout_mode');
+    if (savedMultiRoundLayoutMode) {
+      const enabled = savedMultiRoundLayoutMode === 'true';
+      setMultiRoundLayoutMode(enabled);
+      setDualAIMultiRoundLayoutMode(enabled);
     }
     
     const savedDashKey = localStorage.getItem('dashscope_key');
@@ -257,13 +255,15 @@ const SettingsPage: React.FC = () => {
     localStorage.setItem('deepseek_key', deepSeekKey);
     localStorage.setItem('dashscope_key', dashScopeKey);
     
-    // Save DeepSeek thinking mode and rounds (apply to both deepSeekService and dualAIService)
+    // Save DeepSeek thinking mode (apply to both deepSeekService and dualAIService)
     localStorage.setItem('deepseek_thinking_mode', String(deepSeekThinkingMode));
-    localStorage.setItem('deepseek_thinking_rounds', String(deepSeekThinkingRounds));
     setThinkingMode(deepSeekThinkingMode);
-    setMaxThinkingRounds(deepSeekThinkingRounds);
     setDualAIThinkingMode(deepSeekThinkingMode);
-    setDualAIMaxThinkingRounds(deepSeekThinkingRounds);
+    
+    // Save multi-round layout mode (apply to both deepSeekService and dualAIService)
+    localStorage.setItem('multi_round_layout_mode', String(multiRoundLayoutMode));
+    setMultiRoundLayoutMode(multiRoundLayoutMode);
+    setDualAIMultiRoundLayoutMode(multiRoundLayoutMode);
     
     alert("Configuration saved!");
   };
@@ -439,37 +439,22 @@ const SettingsPage: React.FC = () => {
                             </button>
                         </div>
                         
-                        {/* Thinking Rounds Selector - only shown when thinking mode is enabled */}
-                        {deepSeekThinkingMode && (
-                            <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div>
-                                        <div className="font-medium text-gray-800 text-sm">思考轮次 (Thinking Rounds)</div>
-                                        <div className="text-xs text-gray-500">设置最大思考轮次数 (1-20)</div>
-                                    </div>
-                                    <span className="text-blue-600 font-bold text-lg">{deepSeekThinkingRounds}</span>
-                                </div>
-                                <input 
-                                    type="range" 
-                                    min="1" 
-                                    max="20" 
-                                    value={deepSeekThinkingRounds}
-                                    onChange={e => setDeepSeekThinkingRounds(parseInt(e.target.value, 10))}
-                                    aria-label="思考轮次 (Thinking Rounds)"
-                                    aria-valuemin={1}
-                                    aria-valuemax={20}
-                                    aria-valuenow={deepSeekThinkingRounds}
-                                    className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                                />
-                                <div className="flex justify-between text-xs text-gray-400 mt-1">
-                                    <span>1</span>
-                                    <span>5</span>
-                                    <span>10</span>
-                                    <span>15</span>
-                                    <span>20</span>
-                                </div>
+                        {/* Multi-Round Layout Mode Toggle */}
+                        <div className="mt-3 flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-100">
+                            <div>
+                                <div className="font-medium text-gray-800 text-sm">多轮排版模式 (Multi-Round Layout)</div>
+                                <div className="text-xs text-gray-500">分轮次生成：背景→文案→图片→总结 (高token消耗)</div>
                             </div>
-                        )}
+                            <button 
+                                onClick={() => setMultiRoundLayoutMode(!multiRoundLayoutMode)}
+                                role="switch"
+                                aria-checked={multiRoundLayoutMode}
+                                aria-label="多轮排版模式 (Multi-Round Layout Mode)"
+                                className={`w-12 h-6 rounded-full relative transition-colors focus:outline-none ${multiRoundLayoutMode ? 'bg-purple-500' : 'bg-gray-300'}`}
+                            >
+                                <div className={`w-4 h-4 bg-white rounded-full absolute top-1 shadow-sm transition-all ${multiRoundLayoutMode ? 'right-1' : 'left-1'}`}></div>
+                            </button>
+                        </div>
                     </div>
                 )}
                 
@@ -563,6 +548,11 @@ const SettingsPage: React.FC = () => {
                     <div className="w-4 h-4 bg-white rounded-full absolute top-1 right-1 shadow-sm"></div>
                 </button>
              </div>
+          </div>
+
+          {/* Prompt Configuration */}
+          <div className="border-t border-gray-100">
+             <PromptEditor />
           </div>
 
           {/* Log Settings */}

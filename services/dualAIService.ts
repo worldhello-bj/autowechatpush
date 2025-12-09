@@ -301,6 +301,9 @@ const DEEPSEEK_BASE_URL = "https://api.deepseek.com/chat/completions";
 let dualAIThinkingModeEnabled: boolean = false;
 let dualAIMaxThinkingRounds: number = 10;
 
+// Multi-round layout mode for dualAI
+let dualAIMultiRoundLayoutMode: boolean = false;
+
 /**
  * Enable or disable thinking mode for Dual AI DeepSeek operations
  * When enabled, DeepSeek uses enhanced reasoning capabilities with multi-turn tool calling support.
@@ -331,6 +334,20 @@ export const setDualAIMaxThinkingRounds = (rounds: number): void => {
   dualAIMaxThinkingRounds = Math.max(1, Math.min(20, rounds)); // Clamp between 1 and 20
   logger.info(`Dual AI max thinking rounds set to: ${dualAIMaxThinkingRounds}`);
 };
+
+/**
+ * Set multi-round layout mode for Dual AI
+ * @param enabled - true to enable multi-round layout (4 separate generation phases)
+ */
+export const setDualAIMultiRoundLayoutMode = (enabled: boolean): void => {
+  dualAIMultiRoundLayoutMode = enabled;
+  logger.info(`Dual AI multi-round layout mode set to: ${enabled}`);
+};
+
+/**
+ * Check if multi-round layout mode is enabled for Dual AI
+ */
+export const isDualAIMultiRoundLayoutModeEnabled = (): boolean => dualAIMultiRoundLayoutMode;
 
 // For backward compatibility
 export type DeepSeekDualModel = 'deepseek-chat' | 'deepseek-reasoner';
@@ -772,6 +789,227 @@ Requirements:
   };
 };
 
+// --- Multi-Round Layout Dual AI Pipeline ---
+
+/**
+ * Generate article with Dual AI using multi-round layout approach
+ * Splits generation into 4 phases: background, content, images, summary
+ */
+export const generateWithDualAIMultiRound = async (
+  topic: string,
+  config: {
+    contentProvider: 'deepseek' | 'qwen';
+    designProvider: 'deepseek' | 'qwen';
+    contentApiKey: string;
+    designApiKey: string;
+  },
+  memory: AIMemory,
+  imageContext?: string
+): Promise<{
+  result: GenerationResult;
+  memoryUpdate: Partial<AIMemory>;
+  designNotes?: string;
+}> => {
+  logger.group('=== Multi-Round Dual AI Generation Starting ===', true);
+  logger.info(`Topic: ${topic}`);
+  logger.info(`Content Provider: ${config.contentProvider}, Design Provider: ${config.designProvider}`);
+  logger.info(`Using thinking mode: ${config.contentProvider === 'deepseek' ? dualAIThinkingModeEnabled : false}`);
+  
+  const allBlocks: ArticleBlock[] = [];
+  let finalTitle = '';
+  let finalDigest = '';
+  const allKeywords: string[] = [];
+  const colorSchemes: string[] = [];
+  
+  // Round 1: Background & Context
+  logger.group('📘 Round 1: Background & Context', true);
+  logger.time('Round 1');
+  try {
+    const round1Content = await generateContentWithAI(
+      `${topic}\n\nGenerate ONLY the background and context section. Include opening hook, background information, and why this topic matters. Keep it concise (2-4 paragraphs).`,
+      memory,
+      config.contentProvider,
+      config.contentApiKey,
+      imageContext
+    );
+    
+    logger.info(`✓ Content generated: ${round1Content.sections.length} sections`);
+    
+    const round1Design = await beautifyWithAI(
+      round1Content,
+      memory,
+      config.designProvider,
+      config.designApiKey
+    );
+    
+    logger.info(`✓ Design applied: ${round1Design.blocks.length} blocks`);
+    logger.info(`✓ Colors used: ${round1Design.colorScheme.join(', ')}`);
+    
+    allBlocks.push(...round1Design.blocks);
+    finalTitle = round1Content.title;
+    finalDigest = round1Content.digest;
+    allKeywords.push(...round1Content.keywords);
+    colorSchemes.push(...round1Design.colorScheme);
+  } catch (error) {
+    logger.error('Round 1 failed:', error);
+    throw new Error(`Round 1 (Background) failed: ${error}`);
+  } finally {
+    logger.timeEnd('Round 1');
+    logger.groupEnd();
+  }
+  
+  // Round 2: Main Content & Copy
+  logger.group('📝 Round 2: Main Content & Copy', true);
+  logger.time('Round 2');
+  try {
+    const round2Content = await generateContentWithAI(
+      `${topic}\n\nContinue the article. Generate the MAIN CONTENT with detailed explanations, key points, and supporting evidence. Do NOT repeat the background. Focus on the core message.`,
+      memory,
+      config.contentProvider,
+      config.contentApiKey,
+      imageContext
+    );
+    
+    logger.info(`✓ Content generated: ${round2Content.sections.length} sections`);
+    
+    const round2Design = await beautifyWithAI(
+      round2Content,
+      memory,
+      config.designProvider,
+      config.designApiKey
+    );
+    
+    logger.info(`✓ Design applied: ${round2Design.blocks.length} blocks`);
+    logger.info(`✓ Colors used: ${round2Design.colorScheme.join(', ')}`);
+    
+    allBlocks.push(...round2Design.blocks);
+    allKeywords.push(...round2Content.keywords);
+    colorSchemes.push(...round2Design.colorScheme);
+  } catch (error) {
+    logger.error('Round 2 failed:', error);
+    throw new Error(`Round 2 (Main Content) failed: ${error}`);
+  } finally {
+    logger.timeEnd('Round 2');
+    logger.groupEnd();
+  }
+  
+  // Round 3: Images & Visual Widgets
+  logger.group('🎨 Round 3: Images & Visual Widgets', true);
+  logger.time('Round 3');
+  try {
+    const round3Content = await generateContentWithAI(
+      `${topic}\n\nAdd visual elements to enhance the article. Generate image descriptions, infographics ideas, statistics displays, or visual widgets. Focus on enhancing understanding through visuals.`,
+      memory,
+      config.contentProvider,
+      config.contentApiKey,
+      imageContext
+    );
+    
+    logger.info(`✓ Content generated: ${round3Content.sections.length} visual elements`);
+    
+    const round3Design = await beautifyWithAI(
+      round3Content,
+      memory,
+      config.designProvider,
+      config.designApiKey
+    );
+    
+    logger.info(`✓ Design applied: ${round3Design.blocks.length} blocks`);
+    logger.info(`✓ Colors used: ${round3Design.colorScheme.join(', ')}`);
+    
+    allBlocks.push(...round3Design.blocks);
+    allKeywords.push(...round3Content.keywords);
+    colorSchemes.push(...round3Design.colorScheme);
+  } catch (error) {
+    logger.warn('⚠️  Round 3 failed - visual elements will be skipped:', error);
+    logger.info('📄 Continuing with text-only article...');
+    // Round 3 failure is not critical, continue without visual elements
+  } finally {
+    logger.timeEnd('Round 3');
+    logger.groupEnd();
+  }
+  
+  // Round 4: Summary & Conclusion
+  logger.group('📊 Round 4: Summary & Conclusion', true);
+  logger.time('Round 4');
+  try {
+    const round4Content = await generateContentWithAI(
+      `${topic}\n\nProvide a summary and conclusion. Include key takeaways, final thoughts, and call-to-action. Also refine the article title and digest for maximum impact.`,
+      memory,
+      config.contentProvider,
+      config.contentApiKey,
+      imageContext
+    );
+    
+    logger.info(`✓ Content generated: ${round4Content.sections.length} sections`);
+    
+    const round4Design = await beautifyWithAI(
+      round4Content,
+      memory,
+      config.designProvider,
+      config.designApiKey
+    );
+    
+    logger.info(`✓ Design applied: ${round4Design.blocks.length} blocks`);
+    logger.info(`✓ Colors used: ${round4Design.colorScheme.join(', ')}`);
+    
+    allBlocks.push(...round4Design.blocks);
+    // Use round 4's refined title and digest
+    finalTitle = round4Content.title || finalTitle;
+    finalDigest = round4Content.digest || finalDigest;
+    allKeywords.push(...round4Content.keywords);
+    colorSchemes.push(...round4Design.colorScheme);
+  } catch (error) {
+    logger.warn('⚠️  Round 4 failed - using preliminary title and digest:', error);
+    logger.info('📝 Article will use working title and digest from earlier rounds');
+    // Round 4 failure is not critical, continue with preliminary title/digest
+  } finally {
+    logger.timeEnd('Round 4');
+    logger.groupEnd();
+  }
+  
+  // Final Summary
+  logger.group('✅ Multi-Round Generation Complete', true);
+  logger.info(`Final Title: ${finalTitle}`);
+  logger.info(`Final Digest: ${finalDigest}`);
+  logger.info(`Total Blocks: ${allBlocks.length}`);
+  logger.info(`Total Keywords: ${allKeywords.length}`);
+  logger.info(`Color Palette Used: ${[...new Set(colorSchemes)].join(', ')}`);
+  logger.groupEnd();
+  
+  // Update memory
+  const memoryUpdate: Partial<AIMemory> = {
+    contentHistory: [
+      ...memory.contentHistory,
+      {
+        timestamp: Date.now(),
+        topic,
+        style: 'multi-round',
+        keywords: [...new Set(allKeywords)]
+      }
+    ],
+    designHistory: [
+      ...memory.designHistory,
+      {
+        timestamp: Date.now(),
+        colorScheme: [...new Set(colorSchemes)],
+        preferredBlocks: allBlocks.map(b => b.type).filter((t): t is BlockType => Object.values(BlockType).includes(t as BlockType))
+      }
+    ]
+  };
+  
+  return {
+    result: {
+      title: finalTitle,
+      digest: finalDigest,
+      blocks: allBlocks,
+      sources: []
+    },
+    memoryUpdate,
+    designNotes: `Generated using multi-round layout mode with ${allBlocks.length} total blocks across 4 phases.`
+  };
+};
+
 // --- Main Dual AI Pipeline ---
 
 export const generateWithDualAI = async (
@@ -789,6 +1027,17 @@ export const generateWithDualAI = async (
   memoryUpdate: Partial<AIMemory>;
   designNotes?: string;
 }> => {
+  // Check if multi-round layout mode is enabled
+  if (dualAIMultiRoundLayoutMode) {
+    logger.info('🔄 Using Multi-Round Layout Mode for Dual AI');
+    return generateWithDualAIMultiRound(topic, config, memory, imageContext);
+  }
+  
+  // Standard dual AI generation
+  logger.group('=== Dual AI Generation (Standard Mode) ===', true);
+  logger.info(`Topic: ${topic}`);
+  logger.info(`Content Provider: ${config.contentProvider}, Design Provider: ${config.designProvider}`);
+  
   // Step 1: Content AI generates the article content
   logger.info('Step 1: Generating content with', config.contentProvider);
   logger.time('Content Generation');
@@ -833,6 +1082,15 @@ export const generateWithDualAI = async (
       }
     ]
   };
+
+  // Final Summary
+  logger.group('✅ Dual AI Generation Complete', true);
+  logger.info(`Title: ${contentResult.title}`);
+  logger.info(`Digest: ${contentResult.digest}`);
+  logger.info(`Total Blocks: ${designResult.blocks.length}`);
+  logger.info(`Keywords: ${contentResult.keywords.join(', ')}`);
+  logger.info(`Color Scheme: ${designResult.colorScheme.join(', ')}`);
+  logger.groupEnd();
 
   return {
     result: {
