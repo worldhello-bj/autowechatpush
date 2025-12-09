@@ -662,7 +662,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       setArticleDigest(result.digest);
       setSources(result.sources);
       
-      const generatedHtml = convertBlocksToHtml(result.blocks);
+      const generatedHtml = result.html ?? convertBlocksToHtml(result.blocks);
       setHtmlContent(generatedHtml);
 
     } catch (e: any) {

@@ -4,6 +4,13 @@ import { loggers } from './logger';
 
 const logger = loggers.gemini;
 
+export interface SeamlessBlock {
+  type: 'image' | 'text';
+  content: string;
+  backgroundColor?: string;
+  padding?: string;
+}
+
 // Helper to get AI instance dynamically
 const getAI = (apiKey?: string) => {
   const key = apiKey || process.env.API_KEY;
@@ -13,7 +20,79 @@ const getAI = (apiKey?: string) => {
   return new GoogleGenAI({ apiKey: key });
 };
 
+export const generateSeamlessWechatHtml = (blocks: SeamlessBlock[], globalWidth: string = "100%"): string => {
+  const safeBlocks = Array.isArray(blocks) ? blocks : [];
+  let htmlOutput = `<section style="max-width: ${globalWidth}; margin: 0 auto; box-sizing: border-box;">`;
+
+  safeBlocks.forEach((block) => {
+    const bType = block.type;
+    const content = block.content || '';
+    const bgColor = block.backgroundColor || 'transparent';
+
+    if (bType === 'image') {
+      htmlOutput += `
+            <section style="line-height: 0; font-size: 0; background-color: ${bgColor};">
+                <img src="${content}" style="vertical-align: top; width: 100%; display: block;" />
+            </section>
+            `;
+    } else if (bType === 'text') {
+      const padding = block.padding || '20px';
+      htmlOutput += `
+            <section style="margin-top: -1px; background-color: ${bgColor}; padding: ${padding}; line-height: 1.75; font-size: 16px; color: #3e3e3e;">
+                ${content}
+            </section>
+            `;
+    }
+  });
+
+  htmlOutput += '</section>';
+  return htmlOutput;
+};
+
 // --- Tool Definitions ---
+
+const seamlessWechatFunction: FunctionDeclaration = {
+  name: "generate_seamless_wechat_html",
+  description: "生成微信公众号专用的无缝拼接HTML代码。当用户需要将多张图片或“图片+文字”紧密排列，中间没有缝隙时调用此函数。",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      blocks: {
+        type: Type.ARRAY,
+        description: "内容块的列表，按顺序排列",
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            type: {
+              type: Type.STRING,
+              enum: ["image", "text"],
+              description: "该区块是图片还是文字"
+            },
+            content: {
+              type: Type.STRING,
+              description: "如果是图片，填URL；如果是文字，填文本内容"
+            },
+            backgroundColor: {
+              type: Type.STRING,
+              description: "该区块的背景色（HEX或RGB），例如 #89B630"
+            },
+            padding: {
+              type: Type.STRING,
+              description: "仅文字区块需要，例如 '20px'"
+            }
+          },
+          required: ["type", "content"]
+        }
+      },
+      globalWidth: {
+        type: Type.STRING,
+        description: "容器宽度，通常为 '100%'",
+        default: "100%"
+      }
+    },
+    required: ["blocks"]
+  }
+};
 
 const layoutArticleFunction: FunctionDeclaration = {
   name: 'layout_article',
@@ -92,6 +171,8 @@ export interface GenerationResult {
   digest: string;
   blocks: ArticleBlock[];
   sources: GroundingSource[];
+  html?: string;
+  rawBlocks?: SeamlessBlock[];
 }
 
 export const generateArticleStructure = async (
@@ -109,6 +190,7 @@ export const generateArticleStructure = async (
     prompt = `
       You are a professional WeChat Official Account editor. 
       Your task is to take the provided raw text and format it into a structured WeChat article layout using the 'layout_article' tool.
+      If the user asks for seamless layout / stitched long image (无缝排版、图片拼接、长图效果), switch to the 'generate_seamless_wechat_html' tool and build ordered image/text blocks.
       
       Guidelines:
       - **Content Fidelity**: Preserve the original meaning.
@@ -131,6 +213,7 @@ export const generateArticleStructure = async (
     prompt = `
       You are a professional WeChat Official Account editor known for creating visually engaging "Xiumi-style" articles.
       Your task is to write a high-quality article about: "${input}".
+      If the request mentions seamless layout / stitched images / 无缝排版 / 图片无缝衔接 / 长图，请调用 'generate_seamless_wechat_html' 工具，按顺序提供 image/text blocks（包含背景色与文字 padding），避免直接输出 HTML。
       
       ${imageContext ? `Context from uploaded image: ${imageContext}` : ''}
       
@@ -149,7 +232,7 @@ export const generateArticleStructure = async (
     `;
   }
 
-  const tools: any[] = [{ functionDeclarations: [layoutArticleFunction] }];
+  const tools: any[] = [{ functionDeclarations: [layoutArticleFunction, seamlessWechatFunction] }];
   if (useSearch && !isFormattingMode) {
     tools.push({ googleSearch: {} });
   }
@@ -163,7 +246,7 @@ export const generateArticleStructure = async (
       contents: prompt,
       config: {
         tools: tools,
-        systemInstruction: "You are a creative WeChat editor. You love using bright colors (blue, red, gold, purple) in your layouts to make them pop.",
+        systemInstruction: "You are a creative WeChat editor. You love using bright colors (blue, red, gold, purple) in your layouts to make them pop. For any request about seamless/stitched WeChat layouts (无缝排版、图片拼接、长图), you MUST call the generate_seamless_wechat_html tool instead of writing raw HTML yourself.",
         temperature: 0.7,
       }
     });
@@ -189,8 +272,30 @@ export const generateArticleStructure = async (
     const callPart = parts.find(p => p.functionCall);
 
     if (callPart && callPart.functionCall) {
+      const funcName = (callPart.functionCall as any).name;
       const args = callPart.functionCall.args as any;
-      
+
+      if (funcName === 'generate_seamless_wechat_html') {
+        const rawBlocks: SeamlessBlock[] = Array.isArray(args.blocks) ? args.blocks : [];
+        const html = generateSeamlessWechatHtml(rawBlocks, args.globalWidth || "100%");
+
+        logger.group('Seamless Layout Generated', true);
+        logger.info('Blocks count:', rawBlocks.length);
+        logger.debug('Blocks detail:', rawBlocks);
+        logger.groupEnd();
+
+        logger.timeEnd('generateArticleStructure');
+        logger.info('Seamless layout generated successfully');
+        return {
+          title: args.title || "Seamless Layout",
+          digest: args.digest || "Seamless stitched layout generated via tool.",
+          blocks: [],
+          sources,
+          html,
+          rawBlocks
+        };
+      }
+
       // Log AI generated content details
       logger.group('Generated Article', true);
       logger.info('Title:', args.title);
