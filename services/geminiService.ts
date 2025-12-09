@@ -11,6 +11,36 @@ export interface SeamlessBlock {
   padding?: string;
 }
 
+const escapeHtmlSafe = (value: string): string =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const sanitizeColor = (value?: string): string => {
+  if (!value) return 'transparent';
+  const trimmed = value.trim();
+  if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(trimmed)) return trimmed;
+  if (/^rgb(a)?\(/i.test(trimmed)) return trimmed;
+  return 'transparent';
+};
+
+const sanitizePadding = (value?: string): string => {
+  if (!value) return '20px';
+  const trimmed = value.trim();
+  if (/^[0-9]+(px|rem|em|%)?$/.test(trimmed)) return trimmed;
+  return '20px';
+};
+
+const sanitizeUrl = (value: string): string | null => {
+  const trimmed = value.trim();
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (/^data:image\//i.test(trimmed)) return trimmed;
+  return null;
+};
+
 // Helper to get AI instance dynamically
 const getAI = (apiKey?: string) => {
   const key = apiKey || process.env.API_KEY;
@@ -22,24 +52,32 @@ const getAI = (apiKey?: string) => {
 
 export const generateSeamlessWechatHtml = (blocks: SeamlessBlock[], globalWidth: string = "100%"): string => {
   const safeBlocks = Array.isArray(blocks) ? blocks : [];
-  let htmlOutput = `<section style="max-width: ${globalWidth}; margin: 0 auto; box-sizing: border-box;">`;
+  const width = typeof globalWidth === 'string' ? globalWidth.trim() : '100%';
+  const safeWidth = /^([0-9]+%|[0-9]+px)$/i.test(width) ? width : '100%';
+  let htmlOutput = `<section style="max-width: ${safeWidth}; margin: 0 auto; box-sizing: border-box;">`;
 
   safeBlocks.forEach((block) => {
     const bType = block.type;
     const content = block.content || '';
-    const bgColor = block.backgroundColor || 'transparent';
+    const bgColor = sanitizeColor(block.backgroundColor);
 
     if (bType === 'image') {
+      const safeSrc = sanitizeUrl(content);
+      if (!safeSrc) {
+        logger.warn('Skipped unsafe image URL in seamless layout');
+        return;
+      }
       htmlOutput += `
             <section style="line-height: 0; font-size: 0; background-color: ${bgColor};">
-                <img src="${content}" style="vertical-align: top; width: 100%; display: block;" />
+                <img src="${safeSrc}" style="vertical-align: top; width: 100%; display: block;" />
             </section>
             `;
     } else if (bType === 'text') {
-      const padding = block.padding || '20px';
+      const padding = sanitizePadding(block.padding);
+      const safeContent = escapeHtmlSafe(content);
       htmlOutput += `
             <section style="margin-top: -1px; background-color: ${bgColor}; padding: ${padding}; line-height: 1.75; font-size: 16px; color: #3e3e3e;">
-                ${content}
+                ${safeContent}
             </section>
             `;
     }
