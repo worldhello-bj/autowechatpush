@@ -507,6 +507,78 @@ const specialTemplates: DesignTemplate[] = [
         </section>
       </section>
     `
+  },
+  {
+    id: 'seamless-long-hero',
+    name: 'Seamless Hero + Text + Footer',
+    nameZh: '无缝长图（头图-文字-尾图）',
+    category: 'special',
+    preview: 'Top image + colored text block + bottom image, stitched seamlessly',
+    previewZh: '头图 + 文字块 + 尾图，无缝衔接长图',
+    html: `
+      <section style="max-width: 100%; margin: 0 auto; box-sizing: border-box;">
+        <section style="line-height: 0; font-size: 0; background-color: transparent;">
+          <img src="https://placehold.co/900x360/png" style="vertical-align: top; width: 100%; display: block;" />
+        </section>
+        <section style="margin-top: -1px; background-color: #89B630; padding: 22px; line-height: 1.75; font-size: 16px; color: #ffffff;">
+          <section style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">欢迎来到办公技能培训</section>
+          <section>这里填写正文，可介绍活动亮点、时间地点或引导读者继续阅读。背景色可按需替换（如 #89B630）。</section>
+        </section>
+        <section style="margin-top: -1px; line-height: 0; font-size: 0; background-color: transparent;">
+          <img src="https://placehold.co/900x320/png" style="vertical-align: top; width: 100%; display: block;" />
+        </section>
+      </section>
+    `
+  },
+  {
+    id: 'seamless-gallery-triplet',
+    name: 'Seamless Triple Image',
+    nameZh: '无缝三图长条',
+    category: 'special',
+    preview: 'Three stacked images with zero gaps',
+    previewZh: '三张图片垂直无缝衔接',
+    html: `
+      <section style="max-width: 100%; margin: 0 auto; box-sizing: border-box;">
+        <section style="line-height: 0; font-size: 0; background-color: transparent;">
+          <img src="https://placehold.co/900x320/png" style="vertical-align: top; width: 100%; display: block;" />
+        </section>
+        <section style="margin-top: -1px; line-height: 0; font-size: 0; background-color: transparent;">
+          <img src="https://placehold.co/900x320/png?text=第二段" style="vertical-align: top; width: 100%; display: block;" />
+        </section>
+        <section style="margin-top: -1px; line-height: 0; font-size: 0; background-color: transparent;">
+          <img src="https://placehold.co/900x320/png?text=第三段" style="vertical-align: top; width: 100%; display: block;" />
+        </section>
+      </section>
+    `
+  },
+  {
+    id: 'seamless-text-image-stack',
+    name: 'Seamless Text + Image Stack',
+    nameZh: '无缝文字/图片交错',
+    category: 'special',
+    preview: 'Alternating text and images stitched together',
+    previewZh: '文字与图片交错无缝衔接',
+    html: `
+      <section style="max-width: 100%; margin: 0 auto; box-sizing: border-box;">
+        <section style="line-height: 0; font-size: 0; background-color: transparent;">
+          <img src="https://placehold.co/900x260/png?text=开头图" style="vertical-align: top; width: 100%; display: block;" />
+        </section>
+        <section style="margin-top: -1px; background-color: #0B7A75; padding: 20px; line-height: 1.75; font-size: 16px; color: #ffffff;">
+          <section style="font-weight: bold; margin-bottom: 8px;">段落一：主题亮点</section>
+          <section>用简洁文字描述核心价值或关键信息，强调色块能保证与上下图片无缝衔接。</section>
+        </section>
+        <section style="margin-top: -1px; line-height: 0; font-size: 0; background-color: transparent;">
+          <img src="https://placehold.co/900x260/png?text=中部图" style="vertical-align: top; width: 100%; display: block;" />
+        </section>
+        <section style="margin-top: -1px; background-color: #0A5C85; padding: 20px; line-height: 1.75; font-size: 16px; color: #ffffff;">
+          <section style="font-weight: bold; margin-bottom: 8px;">段落二：补充说明</section>
+          <section>继续叙述细节、案例或引导动作，可根据需求调整背景色与内边距。</section>
+        </section>
+        <section style="margin-top: -1px; line-height: 0; font-size: 0; background-color: transparent;">
+          <img src="https://placehold.co/900x260/png?text=收尾图" style="vertical-align: top; width: 100%; display: block;" />
+        </section>
+      </section>
+    `
   }
 ];
 
