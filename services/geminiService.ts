@@ -51,7 +51,7 @@ const sanitizePadding = (value?: string): string => {
 const sanitizeUrl = (value: string): string | null => {
   const trimmed = value.trim();
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  const dataUrlPattern = /^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+\s*$/;
+  const dataUrlPattern = /^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/;
   if (dataUrlPattern.test(trimmed)) return trimmed;
   return null;
 };
@@ -79,6 +79,7 @@ export const generateSeamlessWechatHtml = (blocks: SeamlessBlock[], globalWidth:
     const bType = block.type;
     const content = block.content || '';
     const bgColor = sanitizeColor(block.backgroundColor);
+    const safeBgColor = escapeHtmlSafe(bgColor);
 
     if (bType === 'image') {
       const safeSrc = sanitizeUrl(content);
@@ -89,14 +90,15 @@ export const generateSeamlessWechatHtml = (blocks: SeamlessBlock[], globalWidth:
       const altText = escapeHtmlSafe(block.alt || 'Seamless stitched block');
       const safeSrcEscaped = escapeHtmlSafe(safeSrc);
       htmlOutput += `
-<section style="line-height: 0; font-size: 0; background-color: ${bgColor};">
+<section style="line-height: 0; font-size: 0; background-color: ${safeBgColor};">
   <img src="${safeSrcEscaped}" alt="${altText}" style="vertical-align: top; width: 100%; display: block;" />
 </section>`;
     } else if (bType === 'text') {
       const padding = sanitizePadding(block.padding);
+      const safePadding = escapeHtmlSafe(padding);
       const safeContent = escapeHtmlSafe(content);
       htmlOutput += `
-<section style="margin-top: ${SEAMLESS_TEXT_MARGIN}; background-color: ${bgColor}; padding: ${padding}; ${SEAMLESS_TEXT_STYLE}">
+<section style="margin-top: ${SEAMLESS_TEXT_MARGIN}; background-color: ${safeBgColor}; padding: ${safePadding}; ${SEAMLESS_TEXT_STYLE}">
   ${safeContent}
 </section>`;
     }
