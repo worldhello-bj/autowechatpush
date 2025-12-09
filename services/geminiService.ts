@@ -43,15 +43,15 @@ const sanitizePadding = (value?: string): string => {
   if (!value) return '20px';
   const trimmed = value.trim();
   if (trimmed === '0') return '0';
-  if (/^[0-9]+$/.test(trimmed)) return `${trimmed}px`;
-  if (/^[0-9]+(px|rem|em|%)$/.test(trimmed)) return trimmed;
+  if (/^[0-9]+(\.[0-9]+)?$/.test(trimmed)) return `${trimmed}px`;
+  if (/^[0-9]+(\.[0-9]+)?(px|rem|em|%)$/.test(trimmed)) return trimmed;
   return '20px';
 };
 
 const sanitizeUrl = (value: string): string | null => {
   const trimmed = value.trim();
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  const dataUrlPattern = /^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/;
+  const dataUrlPattern = /^data:image\/(?:png|jpeg|jpg|gif|webp|svg\+xml);base64,[A-Za-z0-9+/=]+$/i;
   if (dataUrlPattern.test(trimmed)) return trimmed;
   return null;
 };
@@ -133,7 +133,7 @@ const seamlessWechatFunction: FunctionDeclaration = {
             },
             backgroundColor: {
               type: Type.STRING,
-              description: "该区块的背景色（HEX或RGB），例如 #89B630"
+              description: "该区块的背景色（HEX、RGB或RGBA），例如 #89B630 或 rgba(255,0,0,0.5)"
             },
             padding: {
               type: Type.STRING,
