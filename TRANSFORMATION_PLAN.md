@@ -29,13 +29,13 @@
 
 ## 安全与合规
 - 后端存储并代理所有第三方密钥；前端仅拿到临时 token。
-- 限流 + IP 白名单（可选）；对上传内容做 MIME/大小校验与 DOMPurify（SVG/HTML）。
+- 限流 + IP 白名单（可选）；对上传内容做 MIME/大小校验，并用 DOMPurify 等库处理 SVG/HTML。
 - 审计日志：记录关键操作（登录、发布、素材上传、AI调用失败）。
 
 ## 部署与运维
 - 构建：前端 `npm run build` 生成静态资源；后端独立服务。
 - 部署形态：Nginx/CloudFront 作为静态站点与反向代理；Node 服务以 PM2/Docker/K8s 运行。
-- 可观测：接入 APM/日志（winston/ELK），健康检查 `/healthz`，指标 `/metrics`（Prometheus）。
+- 可观测：接入 APM/日志（winston/ELK），健康检查 `/health`（可兼容 `/healthz`），指标 `/metrics`（Prometheus）。
 - 灰度：通过环境变量切换模型/网关，支持 Canary/蓝绿发布。
 
 ## 里程碑
