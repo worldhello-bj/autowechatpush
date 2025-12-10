@@ -18,13 +18,13 @@
 - 鉴权：JWT（HS256）+ 可选请求级 HMAC-SHA256 签名；支持角色/配额控制（admin/standard）。
 - 网关：统一 API 前缀 `/api/v1`，实现 CORS、限流（rate limit）、请求日志、错误统一返回。
 - 异步：长耗时操作（AI生成/素材上传）可进入队列（如 BullMQ/Redis），前端轮询或使用 SSE/WebSocket。
-- 配置：开发使用 `.env`/`.env.local`/`.env.production`（确保不入库，`.gitignore` 屏蔽）；`.env.example` 示例包含 API_BASE、AI_KEY、WECHAT_APPID/SECRET、PROXY_URL 等，按环境拆分示例 `.env.example.development/.production`，生产密钥放入安全密管（Vault/AWS Secrets Manager/K8s Secrets）。
+- 配置：开发使用 `.env`/`.env.local`/`.env.production`（确保不入库，`.gitignore` 屏蔽）；`.env.example` 提供通用字段（API_BASE、AI_KEY、WECHAT_APPID/SECRET、PROXY_URL），再按环境补充 `.env.example.development/.production` 作为增量示例，生产密钥放入安全密管（Vault/AWS Secrets Manager/K8s Secrets）。
 
 ## API 设计草案
 - `/api/v1/auth/login|refresh|logout`
 - `/api/v1/ai/generate`
-  - 编排：双AI时文案/设计并行发起；超时（如 30s）或非 2xx 视为失败，按优先级返回其中一个，失败则同模型重试 1 次
-  - 兜底：topic+model 作为缓存 key；命中缓存或单模型重试作为降级路径，若两模型均失败则返回可重试错误并落日志
+  - 编排：双AI时文案/设计并行发起；超时（如 30s）或非 2xx 视为失败，按预设优先级（默认文案>设计）返回其中一个，失败则同模型重试 1 次
+  - 兜底：topic+model 作为缓存 key；命中缓存或单模型重试作为降级路径，若两模型（含重试）均失败则返回统一错误码并记录告警日志
 - `/api/v1/materials` CRUD（图片/视频/GIF/SVG）
 - `/api/v1/wechat/draft|publish|media-upload`
 - `/api/v1/logs/client`（前端错误上报）
@@ -35,7 +35,7 @@
 - 上传安全：
   - 限制大小（如 10MB）
   - 仅允许安全 MIME：image/jpeg/png/webp、video/mp4/webm、image/gif、image/svg+xml
-  - 上传链路签名校验（HMAC-SHA256）+ ClamAV/云杀毒扫描；可执行/压缩/未知 MIME 或扫描不确定时，转入无网络、CPU/内存限额、只读挂载的沙箱容器处理并输出审计日志
+  - 上传链路签名校验（HMAC-SHA256）+ ClamAV/云杀毒扫描；可执行/压缩/未知 MIME 或扫描不确定时，转入无网络、限 CPU(1 核)/内存(512MB)、只读挂载的 Docker 沙箱处理，输出 JSON 审计日志
   - 前端用 DOMPurify 等库过滤 SVG/HTML
 - 审计日志：记录关键操作（登录、发布、素材上传、AI调用失败）。
 
