@@ -205,8 +205,7 @@ export const getUserById = (userId: string): Omit<User, 'passwordHash'> | null =
   const user = users.get(userId);
   if (!user) return null;
   
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { passwordHash, ...userWithoutPassword } = user;
+  const { passwordHash: _passwordHash, ...userWithoutPassword } = user;
   return userWithoutPassword;
 };
 

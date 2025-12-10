@@ -228,7 +228,8 @@ export const loggers = {
   editor: createLogger('Editor'),
   material: createLogger('Material'),
   design: createLogger('Design'),
-  app: createLogger('App')
+  app: createLogger('App'),
+  api: createLogger('API')
 };
 
 // Default export for convenience

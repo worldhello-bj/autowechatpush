@@ -23,12 +23,12 @@ const formatMessage = (level: LogLevel, module: string, message: string, data?: 
 export const createLogger = (module: string) => ({
   debug: (message: string, data?: unknown) => {
     if (shouldLog('DEBUG')) {
-      console.log(formatMessage('DEBUG', module, message, data));
+      console.debug(formatMessage('DEBUG', module, message, data));
     }
   },
   info: (message: string, data?: unknown) => {
     if (shouldLog('INFO')) {
-      console.log(formatMessage('INFO', module, message, data));
+      console.info(formatMessage('INFO', module, message, data));
     }
   },
   warn: (message: string, data?: unknown) => {

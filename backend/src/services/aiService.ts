@@ -254,8 +254,9 @@ export const generateArticle = async (
     }
     case AIProvider.GOOGLE:
     default:
-      // For Google, we would use their SDK - simplified for demo
-      throw new Error('Google AI provider requires frontend SDK integration for now');
+      // Google AI provider uses the frontend SDK (@google/genai) for direct client-side calls.
+      // Backend proxy for Google is not implemented yet - use DeepSeek or Qwen instead.
+      throw new Error('Google AI provider is not available via backend API. Please use DeepSeek or Qwen provider, or use the frontend SDK directly.');
   }
 };
 

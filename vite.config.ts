@@ -12,6 +12,10 @@ export default defineConfig({
         target: 'https://api.weixin.qq.com',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/wechat/, '/cgi-bin')
+      },
+      '/api/v1': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
       }
     }
   }
