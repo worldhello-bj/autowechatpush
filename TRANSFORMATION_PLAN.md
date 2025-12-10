@@ -35,7 +35,7 @@
 ## 部署与运维
 - 构建：前端 `npm run build` 生成静态资源；后端独立服务。
 - 部署形态：Nginx/CloudFront 作为静态站点与反向代理；Node 服务以 PM2/Docker/K8s 运行。
-- 可观测：接入 APM/日志（winston/ELK），健康检查 `/health`（可兼容 `/healthz`），指标 `/metrics`（Prometheus）。
+- 可观测：接入 APM/日志（winston/ELK），健康检查 `/healthz`（可兼容 `/health`），指标 `/metrics`（Prometheus）。
 - 灰度：通过环境变量切换模型/网关，支持 Canary/蓝绿发布。
 
 ## 里程碑
@@ -44,4 +44,4 @@
 3. AI/微信/素材模块 API 封装与单元测试。
 4. 前端 API 客户端适配与密钥下移，完成主要页面接入。
 5. 观测性与安全加固（审计、上传校验、降级策略）。
-6. 部署脚本与文档（Docker/K8s，商用域名与 HTTPS）。 
+6. 部署脚本与文档（Docker/K8s，商用域名与 HTTPS）。
