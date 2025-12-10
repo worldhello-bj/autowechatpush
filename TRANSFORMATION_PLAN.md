@@ -35,7 +35,7 @@
 ## 部署与运维
 - 构建：前端 `npm run build` 生成静态资源；后端独立服务。
 - 部署形态：Nginx/CloudFront 作为静态站点与反向代理；Node 服务以 PM2/Docker/K8s 运行。
-- 可观测：接入 APM/日志（winston/ELK），健康检查统一 `/healthz`（如需 `/health` 由网关映射），指标 `/metrics`（Prometheus）。
+- 可观测：接入 APM/日志（winston/ELK），健康检查统一 `/health`，指标 `/metrics`（Prometheus）。
 - 灰度：通过环境变量切换模型/网关，支持 Canary/蓝绿发布。
 
 ## 里程碑
