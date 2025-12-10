@@ -23,7 +23,11 @@
 ## API 设计草案
 - `/api/v1/auth/login|refresh|logout`
 - `/api/v1/ai/generate`
-  - 编排：双AI时文案/设计并行发起；每个模型超时（如 30s）或非 2xx 判失败并立即对该模型重试 1 次，按预设优先级（默认文案>设计）选择可用结果
+  - 编排：
+    - 双AI并行发起
+    - 失败判定：每模型超时（如 30s）或非 2xx
+    - 重试：失败模型立即重试 1 次
+    - 选择：按预设优先级（默认文案>设计）选择可用结果
   - 兜底：topic+model 作为缓存 key；命中缓存或单模型重试作为降级路径，若两模型（含各自重试）均失败则返回统一错误码并记录告警日志
 - `/api/v1/materials` CRUD（图片/视频/GIF/SVG）
 - `/api/v1/wechat/draft|publish|media-upload`
@@ -35,7 +39,9 @@
 - 上传安全：
   - 限制大小（如 10MB）
   - 仅允许安全 MIME：image/jpeg/png/webp、video/mp4/webm、image/gif、image/svg+xml
-  - 上传链路签名校验（HMAC-SHA256）+ ClamAV/云杀毒扫描；可执行/压缩/未知 MIME 或扫描不确定时，转入无网络、限 CPU(1 核)/内存(512MB)、只读挂载的 Docker 沙箱处理，扫描报告写入临时存储并输出 JSON 审计日志（处理后立即清理）
+  - 上传链路签名校验（HMAC-SHA256）+ ClamAV/云杀毒扫描
+  - 触发沙箱：可执行/压缩/未知 MIME 或扫描不确定时，转入无网络、限 CPU(1 核)/内存(512MB)、只读挂载的 Docker 沙箱处理
+  - 审计：扫描报告写入临时存储并输出 JSON 审计日志（处理后立即清理）
   - 前端用 DOMPurify 等库过滤 SVG/HTML
 - 审计日志：记录关键操作（登录、发布、素材上传、AI调用失败）。
 
