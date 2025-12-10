@@ -15,7 +15,7 @@
 
 ### 后端（服务端）
 - 技术栈：继续使用 Express；按模块拆分路由与业务（AI、微信、素材、用户/鉴权、任务队列）。
-- 鉴权：JWT + 可选 HMAC 签名；支持角色/配额控制（admin/standard）。
+- 鉴权：JWT（HS256）+ 可选请求级 HMAC-SHA256 签名；支持角色/配额控制（admin/standard）。
 - 网关：统一 API 前缀 `/api/v1`，实现 CORS、限流（rate limit）、请求日志、错误统一返回。
 - 异步：长耗时操作（AI生成/素材上传）可进入队列（如 BullMQ/Redis），前端轮询或使用 SSE/WebSocket。
 - 配置：开发使用 `.env`（确保不入库）；生产密钥放入安全密管（Vault/AWS Secrets Manager/K8s Secrets），并提供多环境模板。
@@ -23,7 +23,7 @@
 ## API 设计草案
 - `/api/v1/auth/login|refresh|logout`
 - `/api/v1/ai/generate`
-  - 编排：双AI时文案/设计并行发起；超时按优先级返回其一，失败则单模型重试
+  - 编排：双AI时文案/设计并行发起；超时按优先级返回其中一个，失败则单模型重试
   - 兜底：topic+model 作为缓存 key；命中缓存或单模型重试作为降级路径
 - `/api/v1/materials` CRUD（图片/视频/GIF/SVG）
 - `/api/v1/wechat/draft|publish|media-upload`
@@ -35,7 +35,7 @@
 - 上传安全：
   - 限制大小（如 10MB）
   - 仅允许安全 MIME：image/jpeg/png/webp、video/mp4/webm、image/gif、image/svg+xml
-  - 上传链路签名校验 + ClamAV/云杀毒扫描；必要时沙箱处理
+  - 上传链路签名校验（HMAC-SHA256）+ ClamAV/云杀毒扫描；扫描不确定或高风险类型时启用沙箱处理
   - 前端用 DOMPurify 等库过滤 SVG/HTML
 - 审计日志：记录关键操作（登录、发布、素材上传、AI调用失败）。
 
