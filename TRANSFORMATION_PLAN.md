@@ -22,7 +22,7 @@
 
 ## API 设计草案
 - `/api/v1/auth/login|refresh|logout`
-- `/api/v1/ai/generate`（多模型；双AI并行时：文案/设计并行或串行编排，失败回退到单模型或缓存结果）
+- `/api/v1/ai/generate`（多模型；双AI并行时：文案/设计并行发起，超时按优先级返回其一，失败则单模型重试；使用 topic+model 作为缓存 key 降级兜底）
 - `/api/v1/materials` CRUD（图片/视频/GIF/SVG）
 - `/api/v1/wechat/draft|publish|media-upload`
 - `/api/v1/logs/client`（前端错误上报）
@@ -30,7 +30,7 @@
 ## 安全与合规
 - 后端存储并代理所有第三方密钥；前端仅拿到临时 token。
 - 限流 + IP 白名单（可选）。
-- 上传安全：MIME/大小/签名校验 + 杀毒扫描与沙箱处理；前端用 DOMPurify 等库过滤 SVG/HTML。
+- 上传安全：限制大小（如 10MB），仅允许安全 MIME（image/jpeg/png/webp、video/mp4/webm、image/gif、image/svg+xml）；上传链路做签名校验、ClamAV/云杀毒扫描，必要时沙箱处理；前端用 DOMPurify 等库过滤 SVG/HTML。
 - 审计日志：记录关键操作（登录、发布、素材上传、AI调用失败）。
 
 ## 部署与运维
