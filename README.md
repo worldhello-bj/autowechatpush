@@ -377,6 +377,33 @@ enum BlockType {
 | **User** | GET | `/api/v1/user/quota/check` | 预检查配额是否充足 |
 | **User** | GET | `/api/v1/user/quota/history` | 获取使用记录 |
 | **User** | GET | `/api/v1/user/quota/stats` | 获取使用统计 |
+| **Admin** | GET | `/api/v1/admin/stats` | 管理后台统计数据 |
+| **Admin** | GET | `/api/v1/admin/users` | 列出所有用户 |
+| **Admin** | POST | `/api/v1/admin/users` | 创建新用户 |
+| **Admin** | GET | `/api/v1/admin/users/:id` | 获取用户详情 |
+| **Admin** | PATCH | `/api/v1/admin/users/:id/role` | 修改用户角色 |
+| **Admin** | PATCH | `/api/v1/admin/users/:id/quota` | 修改用户配额 |
+| **Admin** | PATCH | `/api/v1/admin/users/:id/password` | 重置用户密码 |
+| **Admin** | DELETE | `/api/v1/admin/users/:id` | 删除用户 |
+
+### 管理员账户系统
+
+系统在启动时自动创建管理员账户，可通过环境变量配置：
+
+```env
+# 管理员配置 (.env 文件)
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=admin123
+ADMIN_NAME=Administrator
+```
+
+管理员登录后可以：
+- 查看所有用户列表和统计数据
+- 创建新用户（可指定角色和配额）
+- 修改用户角色（user/admin）
+- 修改用户配额
+- 重置用户密码
+- 删除用户（不能删除最后一个管理员）
 
 ### AI Memory 接口
 
