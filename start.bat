@@ -2,6 +2,9 @@
 chcp 65001 >nul
 title WeChat AI Publisher
 
+:: Configuration
+set BACKEND_START_DELAY=3
+
 echo ========================================
 echo    WeChat AI Publisher 启动器
 echo ========================================
@@ -105,10 +108,11 @@ echo.
 
 :: Start the backend server in a new window
 :: Using /k to keep the window open for debugging
-start "WeChat AI Publisher - Backend" cmd /k "cd backend && npm run dev"
+start "WeChat AI Publisher - Backend" cmd /k "cd /d "%~dp0backend" && npm run dev"
 
 :: Wait a few seconds for backend to start
-timeout /t 3 /nobreak >nul
+echo [信息] 等待后端服务器启动 (%BACKEND_START_DELAY% 秒)...
+timeout /t %BACKEND_START_DELAY% /nobreak >nul
 
 :: Start the frontend development server
 call npm run dev
