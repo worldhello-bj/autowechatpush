@@ -3,6 +3,7 @@ chcp 65001 >nul
 title WeChat AI Publisher
 
 :: Configuration
+:: Delay in seconds to wait for backend to start before launching frontend
 set BACKEND_START_DELAY=3
 
 echo ========================================
@@ -45,16 +46,18 @@ if not exist "node_modules" (
     echo.
 )
 
+:: Check if backend directory exists first
+if not exist "backend" (
+    echo [错误] backend 目录不存在
+    pause
+    exit /b 1
+)
+
 :: Check if backend node_modules exists, if not run npm install
 if not exist "backend\node_modules" (
     echo [信息] 正在安装后端依赖...
     echo 这可能需要几分钟时间，请耐心等待...
     echo.
-    if not exist "backend" (
-        echo [错误] backend 目录不存在
-        pause
-        exit /b 1
-    )
     pushd "%~dp0backend"
     call npm install
     if %ERRORLEVEL% NEQ 0 (
