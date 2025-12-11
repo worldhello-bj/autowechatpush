@@ -121,19 +121,31 @@
 
 ## 🛠 技术架构
 
+本项目采用**前后端分离架构**，支持独立部署和扩展：
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                      Frontend (React)                        │
+│                       端口: 5173                             │
 ├─────────────────────────────────────────────────────────────┤
 │  Components          │  Services            │  Types         │
-│  ├── Editor          │  ├── geminiService   │  ├── BlockType │
-│  ├── HtmlEditor      │  ├── qwenService     │  ├── Article   │
-│  ├── MaterialLibrary │  ├── deepSeekService │  └── ...       │
-│  ├── AIToolsPanel    │  ├── dualAIService   │                │
-│  └── ArticlePreview  │  ├── designTemplates │                │
-│                      │  ├── materialLibraryContent           │
-│                      │  ├── presetMediaMaterials (NEW)       │
-│                      │  └── wechatService   │                │
+│  ├── Editor          │  ├── apiClient ────────┐              │
+│  ├── HtmlEditor      │  ├── geminiService   │ │ BlockType    │
+│  ├── MaterialLibrary │  ├── qwenService     │ │ Article      │
+│  ├── AIToolsPanel    │  ├── deepSeekService │ │ ...          │
+│  └── ArticlePreview  │  └── dualAIService   │ │              │
+│                      │                      │ │              │
+├──────────────────────┴──────────────────────┴─┼──────────────┤
+│                        API 请求               │              │
+│                     /api/v1/*                 ▼              │
+├─────────────────────────────────────────────────────────────┤
+│                      Backend (Express)                       │
+│                       端口: 3001                             │
+├─────────────────────────────────────────────────────────────┤
+│  Controllers         │  Services            │  Middleware    │
+│  ├── authController  │  ├── authService     │  ├── auth      │
+│  ├── aiController    │  ├── aiService       │  ├── validation│
+│  └── healthController│  └── (AI Providers)  │  └── rateLimit │
 ├─────────────────────────────────────────────────────────────┤
 │                     AI Providers                             │
 │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌────────────────┐  │
@@ -147,12 +159,19 @@
 
 ### 技术栈
 
-- **前端框架**: React 18 + TypeScript 5.5
+**前端:**
+- **框架**: React 18 + TypeScript 5.5
 - **构建工具**: Vite 5.4
 - **UI样式**: Tailwind CSS + Material Icons
-- **AI SDK**: @google/genai
+- **AI SDK**: @google/genai (直连模式)
 - **安全**: DOMPurify (SVG/HTML 安全过滤)
-- **后端代理**: Express.js + http-proxy-middleware
+
+**后端:**
+- **框架**: Express.js + TypeScript
+- **认证**: JWT (Access Token + Refresh Token)
+- **验证**: Zod Schema
+- **安全**: Helmet, CORS, Rate Limiting
+- **流式响应**: SSE (Server-Sent Events)
 
 ---
 
@@ -161,20 +180,34 @@
 ### 安装依赖
 
 ```bash
+# 前端依赖
 npm install
+
+# 后端依赖
+cd backend && npm install
 ```
 
 ### 开发模式
 
 ```bash
+# 启动后端 (端口 3001)
+cd backend && npm run dev
+
+# 启动前端 (端口 5173) - 新终端
 npm run dev
 ```
 
 ### 生产构建
 
 ```bash
+# 构建前端
 npm run build
-npm start
+
+# 构建后端
+cd backend && npm run build
+
+# 启动后端服务
+cd backend && npm start
 ```
 
 ### Windows 快捷启动
@@ -193,14 +226,30 @@ start-prod.bat
 
 ```
 autowechatpush/
+├── backend/              # 后端服务 (Express + TypeScript)
+│   ├── src/
+│   │   ├── config/       # 环境配置
+│   │   ├── controllers/  # 请求处理器
+│   │   ├── middleware/   # 中间件 (auth, validation, error)
+│   │   ├── routes/       # 路由定义
+│   │   ├── services/     # 业务逻辑 (authService, aiService)
+│   │   ├── types/        # TypeScript 类型
+│   │   ├── utils/        # 工具函数
+│   │   └── index.ts      # 入口文件
+│   ├── .env.example      # 环境变量模板
+│   ├── package.json      # 后端依赖
+│   └── tsconfig.json     # TS 配置
+│
 ├── components/           # React 组件
 │   ├── Editor.tsx        # 主编辑器
 │   ├── HtmlEditor.tsx    # HTML 编辑器 (支持光标位置保存)
 │   ├── MaterialLibrary.tsx # 素材库 (支持视频/GIF/SVG)
 │   ├── AIToolsPanel.tsx  # AI 工具面板
-│   ├── LogSettings.tsx   # 日志设置面板 🆕
+│   ├── LogSettings.tsx   # 日志设置面板
 │   └── ArticlePreview.tsx # 文章预览
-├── services/             # 服务层
+│
+├── services/             # 前端服务层
+│   ├── apiClient.ts      # 后端 API 客户端 🆕
 │   ├── geminiService.ts  # Google Gemini
 │   ├── qwenService.ts    # 阿里云 Qwen
 │   ├── deepSeekService.ts # DeepSeek
@@ -208,12 +257,13 @@ autowechatpush/
 │   ├── designTemplates.ts # 设计模板库 (45+)
 │   ├── materialLibraryContent.ts # 文案素材库 (40+)
 │   ├── presetMediaMaterials.ts # SVG组件库 (35+)
-│   ├── logger.ts         # 统一日志系统 🆕
+│   ├── logger.ts         # 统一日志系统
 │   └── wechatService.ts  # 微信API
+│
 ├── types.ts              # TypeScript 类型定义
 ├── App.tsx               # 应用入口
-├── server.js             # Express 代理服务器
-└── vite.config.ts        # Vite 配置
+├── vite.config.ts        # Vite 配置 (含 API 代理)
+└── package.json          # 前端依赖
 ```
 
 ---
@@ -403,6 +453,178 @@ setLogLevel(LogLevel.WARN); // 只显示 WARN 和 ERROR
 | `dual_ai_memory` | 双AI记忆 |
 | `wechat_material_library` | 用户素材 |
 | `app_log_level` | 日志级别 |
+
+---
+
+## ☁️ 微信云托管部署
+
+本项目支持部署到微信云托管 (WeCloud)，实现一站式云端运行。
+
+### 部署架构
+
+```
+微信云托管
+├── 前端服务 (静态网站托管)
+│   └── dist/              # Vite 构建产物
+│
+└── 后端服务 (容器服务)
+    └── backend/           # Express API 服务
+```
+
+### 准备工作
+
+1. 登录 [微信云托管控制台](https://cloud.weixin.qq.com/)
+2. 创建环境并开通服务
+3. 获取环境 ID
+
+### 步骤 1: 后端服务部署
+
+**1.1 创建 Dockerfile (已包含在 `backend/` 目录)**
+
+```dockerfile
+# backend/Dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY dist/ ./dist/
+
+ENV NODE_ENV=production
+ENV PORT=80
+
+EXPOSE 80
+
+CMD ["node", "dist/index.js"]
+```
+
+**1.2 创建 `container.config.json`**
+
+```json
+{
+  "containerPort": 80,
+  "dockerfilePath": "Dockerfile",
+  "buildDir": "backend"
+}
+```
+
+**1.3 配置环境变量**
+
+在云托管控制台设置以下环境变量：
+
+| 变量名 | 值 | 说明 |
+|--------|-----|------|
+| `NODE_ENV` | `production` | 生产环境 |
+| `JWT_SECRET` | `your-secret-32chars` | JWT 密钥 (≥32字符) |
+| `CORS_ORIGINS` | `https://your-domain.com` | 允许的前端域名 |
+| `DEEPSEEK_API_KEY` | `sk-xxx` | DeepSeek API 密钥 |
+| `DASHSCOPE_API_KEY` | `sk-xxx` | 通义千问 API 密钥 |
+
+**1.4 部署后端**
+
+```bash
+# 构建后端
+cd backend
+npm run build
+
+# 使用微信云托管 CLI 部署
+wxcloud deploy --env your-env-id
+```
+
+### 步骤 2: 前端静态网站部署
+
+**2.1 配置生产环境 API 地址**
+
+创建 `.env.production`:
+
+```env
+VITE_API_BASE=https://your-backend-service.ap-shanghai.run.wxcloudrun.com/api/v1
+```
+
+**2.2 修改 `services/apiClient.ts`**
+
+确保 API 基础地址可配置：
+
+```typescript
+const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1';
+```
+
+**2.3 构建并部署**
+
+```bash
+# 构建前端
+npm run build
+
+# 上传 dist/ 目录到云托管静态网站托管
+```
+
+### 步骤 3: 配置域名和路由
+
+在云托管控制台配置：
+
+1. **自定义域名**: 绑定您的域名
+2. **SSL 证书**: 开启 HTTPS
+3. **路由规则**:
+   - `/api/v1/*` → 后端容器服务
+   - `/*` → 前端静态文件
+
+### 微信云托管配置示例
+
+**云托管服务配置 (`wxcloud.config.json`)**:
+
+```json
+{
+  "envId": "your-env-id",
+  "services": [
+    {
+      "name": "wechat-ai-backend",
+      "path": "backend",
+      "config": {
+        "cpu": 0.5,
+        "mem": 1,
+        "minNum": 0,
+        "maxNum": 5
+      }
+    }
+  ],
+  "staticDeploy": {
+    "source": "dist",
+    "target": "/"
+  }
+}
+```
+
+### 验证部署
+
+```bash
+# 检查后端健康状态
+curl https://your-backend.wxcloudrun.com/api/v1/health
+
+# 预期响应
+{
+  "success": true,
+  "data": {
+    "status": "healthy",
+    "version": "1.0.0"
+  }
+}
+```
+
+### 常见问题
+
+**Q: 如何配置微信 API 代理?**
+
+在云托管中，可以使用云托管的 HTTP 请求能力直接调用微信 API，无需额外代理配置。
+
+**Q: 如何处理 CORS?**
+
+后端已配置 CORS 中间件，只需在环境变量 `CORS_ORIGINS` 中添加前端域名即可。
+
+**Q: 冷启动时间过长?**
+
+建议设置 `minNum: 1` 保持至少一个实例常驻，或使用云托管的预热功能。
 
 ---
 

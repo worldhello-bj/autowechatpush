@@ -8,7 +8,11 @@
 import { loggers } from './logger';
 
 const logger = loggers.api;
-const API_BASE = '/api/v1';
+
+// API base URL - configurable via environment variable for production
+// In development: uses Vite proxy (/api/v1 -> localhost:3001)
+// In production: set VITE_API_BASE to your backend URL
+const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1';
 
 // Token storage keys
 const ACCESS_TOKEN_KEY = 'access_token';
