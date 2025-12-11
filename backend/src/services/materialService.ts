@@ -29,13 +29,32 @@ export const validateMimeType = (mimeType: string, materialType: MaterialType): 
  * This prevents file extension spoofing attacks
  */
 export const validateMagicNumber = (buffer: Buffer, declaredMimeType: string): boolean => {
+  // MP4 validation - check for 'ftyp' box structure with valid brand
+  if (declaredMimeType === 'video/mp4') {
+    if (buffer.length < 12) return false;
+    // Check for 'ftyp' at offset 4
+    const ftyp = buffer.toString('ascii', 4, 8);
+    if (ftyp !== 'ftyp') return false;
+    // Check for valid MP4 brand identifiers at offset 8
+    const brand = buffer.toString('ascii', 8, 12);
+    const validBrands = ['isom', 'mp41', 'mp42', 'avc1', 'M4V ', 'M4A ', 'mp71', 'dash'];
+    return validBrands.some(b => brand.startsWith(b.slice(0, brand.length)));
+  }
+
+  // SVG validation - check for proper XML structure with SVG namespace
+  if (declaredMimeType === 'image/svg+xml') {
+    const content = buffer.toString('utf8', 0, Math.min(buffer.length, 2000));
+    // Check for XML declaration or SVG root element
+    const hasSvgTag = /<svg\s[^>]*>/i.test(content);
+    const hasValidNamespace = content.includes('xmlns="http://www.w3.org/2000/svg"') ||
+                              content.includes("xmlns='http://www.w3.org/2000/svg'");
+    // At minimum, must have svg tag. Namespace check is recommended but not all SVGs have it explicitly
+    return hasSvgTag && (hasValidNamespace || content.includes('xmlns:svg='));
+  }
+
   const signatures = FILE_MAGIC_NUMBERS[declaredMimeType];
-  if (!signatures) {
-    // SVG doesn't have a magic number, validate differently
-    if (declaredMimeType === 'image/svg+xml') {
-      const content = buffer.toString('utf8', 0, Math.min(buffer.length, 1000));
-      return content.includes('<svg') && content.includes('xmlns');
-    }
+  if (!signatures || signatures.length === 0) {
+    // MP4 and SVG are already handled above
     return false;
   }
 
@@ -51,12 +70,6 @@ export const validateMagicNumber = (buffer: Buffer, declaredMimeType: string): b
       }
       if (matches) return true;
     }
-  }
-
-  // Special case for MP4 - check for 'ftyp' at offset 4
-  if (declaredMimeType === 'video/mp4' && buffer.length >= 8) {
-    const ftyp = buffer.toString('ascii', 4, 8);
-    if (ftyp === 'ftyp') return true;
   }
 
   return false;
@@ -83,23 +96,63 @@ export const getMaterialTypeFromMime = (mimeType: string): MaterialType | null =
 
 /**
  * Sanitize SVG content to remove potentially harmful elements
- * This provides basic XSS protection for SVG files
+ * Uses iterative multi-pass approach to handle nested/obfuscated content
+ * 
+ * SECURITY WARNING: This regex-based sanitization has known limitations and
+ * may not catch all XSS attack vectors. CodeQL correctly identifies these 
+ * limitations with 'incomplete-multi-character-sanitization' alerts.
+ * 
+ * For production deployment with untrusted user content:
+ * 1. Install DOMPurify: npm install dompurify jsdom @types/dompurify
+ * 2. Replace this function with DOMPurify.sanitize(content) using jsdom
+ * 
+ * This implementation provides defense-in-depth for semi-trusted content
+ * and is combined with file type validation at upload time.
  */
 export const sanitizeSvg = (content: string): string => {
-  // Remove script tags and event handlers
   let sanitized = content;
+  let previousLength: number;
+  const maxIterations = 10; // Prevent infinite loops
+  let iterations = 0;
   
-  // Remove <script> tags
-  sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-  
-  // Remove on* event handlers
-  sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
-  
-  // Remove javascript: URLs
-  sanitized = sanitized.replace(/javascript:/gi, '');
-  
-  // Remove data: URLs with scripts
-  sanitized = sanitized.replace(/data:text\/html/gi, '');
+  // Iteratively sanitize until no more changes occur
+  // This handles nested malicious content like <<script>script>
+  do {
+    previousLength = sanitized.length;
+    iterations++;
+    
+    // Remove all script tags (including malformed ones with whitespace)
+    sanitized = sanitized.replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/gi, '');
+    sanitized = sanitized.replace(/<\s*script[^>]*>/gi, '');
+    sanitized = sanitized.replace(/<\s*\/\s*script\s*>/gi, '');
+    
+    // Remove all on* event handlers (covering various formatting)
+    sanitized = sanitized.replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, ' ');
+    sanitized = sanitized.replace(/\s+on\w+\s*=\s*[^\s>"']+/gi, ' ');
+    
+    // Remove javascript: and vbscript: protocols
+    sanitized = sanitized.replace(/javascript\s*:/gi, 'blocked:');
+    sanitized = sanitized.replace(/vbscript\s*:/gi, 'blocked:');
+    
+    // Remove data: URLs that could contain scripts
+    sanitized = sanitized.replace(/data\s*:\s*text\/html/gi, 'blocked:text/html');
+    sanitized = sanitized.replace(/data\s*:\s*application\/javascript/gi, 'blocked:application/javascript');
+    
+    // Remove foreignObject elements (can contain HTML)
+    sanitized = sanitized.replace(/<\s*foreignObject[\s\S]*?<\s*\/\s*foreignObject\s*>/gi, '');
+    sanitized = sanitized.replace(/<\s*foreignObject[^>]*\/?>/gi, '');
+    
+    // Remove use elements with external references
+    sanitized = sanitized.replace(/<\s*use[^>]*xlink:href\s*=\s*["'][^"'#][^"']*["'][^>]*\/?>/gi, '');
+    
+    // Remove iframe, embed, object elements
+    sanitized = sanitized.replace(/<\s*(iframe|embed|object)[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
+    sanitized = sanitized.replace(/<\s*(iframe|embed|object)[^>]*\/?>/gi, '');
+    
+    // Remove animate/set with event handlers
+    sanitized = sanitized.replace(/<\s*(set|animate)[^>]*on\w+[^>]*\/?>/gi, '');
+    
+  } while (sanitized.length !== previousLength && iterations < maxIterations);
   
   return sanitized;
 };

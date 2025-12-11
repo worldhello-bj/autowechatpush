@@ -30,7 +30,9 @@ export const FILE_MAGIC_NUMBERS: Record<string, Buffer[]> = {
   'image/png': [Buffer.from([0x89, 0x50, 0x4E, 0x47])],
   'image/webp': [Buffer.from([0x52, 0x49, 0x46, 0x46])], // RIFF
   'image/gif': [Buffer.from([0x47, 0x49, 0x46, 0x38])],  // GIF8
-  'video/mp4': [Buffer.from([0x00, 0x00, 0x00]), Buffer.from([0x66, 0x74, 0x79, 0x70])], // ftyp
+  // MP4 files start with box size (4 bytes) + 'ftyp' (at offset 4-8)
+  // We validate 'ftyp' presence in the service
+  'video/mp4': [],
   'video/webm': [Buffer.from([0x1A, 0x45, 0xDF, 0xA3])],
 };
 

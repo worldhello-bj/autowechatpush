@@ -35,8 +35,27 @@ export const uploadMaterial = async (req: Request, res: Response) => {
       );
     }
 
-    // Decode base64 data
-    const buffer = Buffer.from(data, 'base64');
+    // Decode base64 data with error handling
+    let buffer: Buffer;
+    try {
+      buffer = Buffer.from(data, 'base64');
+      // Validate that we got valid data (empty buffer from invalid base64)
+      if (buffer.length === 0 && data.length > 0) {
+        throw new Error('Invalid base64 data');
+      }
+    } catch (decodeError) {
+      logger.warn('Base64 decoding failed', { 
+        error: decodeError instanceof Error ? decodeError.message : 'Unknown error',
+        dataLength: data?.length,
+        requestId: req.requestId 
+      });
+      return sendError(
+        res, 
+        400, 
+        'INVALID_DATA', 
+        'Invalid base64 encoded data. Please ensure the data is properly encoded.'
+      );
+    }
 
     logger.info('Processing material upload', { 
       userId: req.user.userId, 

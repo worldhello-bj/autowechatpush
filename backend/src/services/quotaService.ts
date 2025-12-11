@@ -204,9 +204,14 @@ export const consumeQuota = (
 
   usageRecords.push(record);
 
-  // Trim old records if needed
-  if (usageRecords.length > MAX_USAGE_RECORDS) {
-    usageRecords.splice(0, usageRecords.length - MAX_USAGE_RECORDS);
+  // Trim old records in batches for better performance
+  // Only trim when significantly over limit to avoid frequent operations
+  const trimThreshold = MAX_USAGE_RECORDS + 1000;
+  if (usageRecords.length > trimThreshold) {
+    // Remove oldest 20% of records when over threshold
+    const removeCount = Math.floor(MAX_USAGE_RECORDS * 0.2);
+    usageRecords.splice(0, removeCount);
+    logger.debug('Trimmed old usage records', { removed: removeCount, remaining: usageRecords.length });
   }
 
   logger.info('Quota consumed', { 

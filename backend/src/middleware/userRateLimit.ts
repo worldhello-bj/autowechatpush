@@ -52,23 +52,28 @@ const getRateLimitKey = (req: Request, type: string): string => {
 };
 
 /**
- * Check and update rate limit
+ * Check and update rate limit atomically
+ * Note: For true thread-safety in production with clustering, use Redis INCR
  */
 const checkRateLimit = (key: string, config: RateLimitConfig): { allowed: boolean; remaining: number; resetTime: number } => {
   const now = Date.now();
+  
+  // Get or create entry atomically
   let entry = userRateLimits.get(key);
   
-  // Reset if window has passed
+  // Reset if window has passed or doesn't exist
   if (!entry || now > entry.resetTime) {
     entry = {
-      count: 0,
+      count: 1,  // First request in window
       resetTime: now + config.windowMs,
     };
+    userRateLimits.set(key, entry);
+  } else {
+    // Increment count - in single-threaded Node.js event loop, this is atomic
+    // For clustered environments, use Redis with INCR command
+    entry.count += 1;
+    // No need to set again since we're modifying the same object reference
   }
-  
-  // Increment count
-  entry.count += 1;
-  userRateLimits.set(key, entry);
   
   const remaining = Math.max(0, config.maxRequests - entry.count);
   const allowed = entry.count <= config.maxRequests;

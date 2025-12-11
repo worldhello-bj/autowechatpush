@@ -393,15 +393,18 @@ export interface ListMaterialsResponse {
   hasMore: boolean;
 }
 
+// Material type enum for type safety
+export type MaterialTypeValue = 'image' | 'video' | 'gif' | 'svg';
+
 export const materialApi = {
-  upload: async (data: string, filename: string, mimeType: string, type?: string): Promise<ApiResponse<UploadResponse>> => {
+  upload: async (data: string, filename: string, mimeType: string, type?: MaterialTypeValue): Promise<ApiResponse<UploadResponse>> => {
     return request<UploadResponse>('/materials', {
       method: 'POST',
       body: JSON.stringify({ data, filename, mimeType, type }),
     });
   },
   
-  list: async (type?: string, page: number = 1, limit: number = 20): Promise<ApiResponse<ListMaterialsResponse>> => {
+  list: async (type?: MaterialTypeValue, page: number = 1, limit: number = 20): Promise<ApiResponse<ListMaterialsResponse>> => {
     const params = new URLSearchParams();
     if (type) params.set('type', type);
     params.set('page', page.toString());
