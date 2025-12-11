@@ -47,7 +47,17 @@ if not exist "backend\node_modules" (
     echo [信息] 正在安装后端依赖...
     echo 这可能需要几分钟时间，请耐心等待...
     echo.
+    if not exist "backend" (
+        echo [错误] backend 目录不存在
+        pause
+        exit /b 1
+    )
     cd backend
+    if %ERRORLEVEL% NEQ 0 (
+        echo [错误] 无法进入 backend 目录
+        pause
+        exit /b 1
+    )
     call npm install
     if %ERRORLEVEL% NEQ 0 (
         echo [错误] 后端依赖安装失败
@@ -94,7 +104,8 @@ echo ----------------------------------------
 echo.
 
 :: Start the backend server in a new window
-start "WeChat AI Publisher - Backend" cmd /c "cd backend && npm run dev"
+:: Using /k to keep the window open for debugging
+start "WeChat AI Publisher - Backend" cmd /k "cd backend && npm run dev"
 
 :: Wait a few seconds for backend to start
 timeout /t 3 /nobreak >nul
