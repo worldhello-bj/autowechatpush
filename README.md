@@ -195,13 +195,27 @@ cd backend && npm run dev
 
 # 启动前端 (端口 5173) - 新终端
 npm run dev
+
+# 启动管理后台 (端口 5174) - 新终端
+npm run dev:admin
 ```
+
+### 访问地址
+
+| 服务 | URL | 说明 |
+|------|-----|------|
+| 前端应用 | http://localhost:5173 | 用户登录/注册/内容创作 |
+| **管理后台** | http://localhost:5174 | 管理员登录/用户管理 |
+| 后端 API | http://localhost:3001 | REST API 服务 |
 
 ### 生产构建
 
 ```bash
 # 构建前端
 npm run build
+
+# 构建管理后台
+npm run build:admin
 
 # 构建后端
 cd backend && npm run build
