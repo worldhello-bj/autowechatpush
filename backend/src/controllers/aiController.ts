@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { sendSuccess, sendError, createLogger } from '../utils/index.js';
 import { generateArticle, generateArticleParallel } from '../services/index.js';
-import { checkUserQuota, updateUserQuota } from '../services/index.js';
+import { checkQuota, consumeQuota, getUserQuotaStatus } from '../services/index.js';
 import { AIChatRequest, SSEEvent } from '../types/index.js';
 
 const logger = createLogger('ai');
@@ -20,9 +20,9 @@ export const generate = async (req: Request, res: Response) => {
     
     // Check user quota if authenticated
     if (req.user) {
-      const hasQuota = checkUserQuota(req.user.userId, 1);
-      if (!hasQuota) {
-        return sendError(res, 402, 'QUOTA_EXCEEDED', 'Insufficient quota. Please upgrade your plan.');
+      const quotaCheck = checkQuota(req.user.userId, 1);
+      if (!quotaCheck.allowed) {
+        return sendError(res, 402, 'QUOTA_EXCEEDED', quotaCheck.reason || 'Insufficient quota. Please upgrade your plan.');
       }
     }
     
@@ -31,9 +31,13 @@ export const generate = async (req: Request, res: Response) => {
     
     const result = await generateArticle(request, userApiKey);
     
-    // Deduct quota if authenticated
+    // Consume quota if authenticated
     if (req.user) {
-      updateUserQuota(req.user.userId, -1);
+      consumeQuota(req.user.userId, 1, 'ai_generation', {
+        provider: request.provider,
+        blocksCount: result.blocks.length,
+        title: result.title,
+      }, req.requestId);
     }
     
     logger.info('AI generation completed', { 
@@ -69,9 +73,9 @@ export const chatStream = async (req: Request, res: Response) => {
   
   // Check user quota if authenticated
   if (req.user) {
-    const hasQuota = checkUserQuota(req.user.userId, 1);
-    if (!hasQuota) {
-      return sendError(res, 402, 'QUOTA_EXCEEDED', 'Insufficient quota. Please upgrade your plan.');
+    const quotaCheck = checkQuota(req.user.userId, 1);
+    if (!quotaCheck.allowed) {
+      return sendError(res, 402, 'QUOTA_EXCEEDED', quotaCheck.reason || 'Insufficient quota. Please upgrade your plan.');
     }
   }
   
@@ -134,9 +138,13 @@ export const chatStream = async (req: Request, res: Response) => {
       timestamp: Date.now(),
     });
     
-    // Deduct quota if authenticated
+    // Consume quota if authenticated
     if (req.user) {
-      updateUserQuota(req.user.userId, -1);
+      consumeQuota(req.user.userId, 1, 'ai_stream', {
+        provider: request.provider,
+        blocksCount: result.blocks.length,
+        title: result.title,
+      }, req.requestId);
     }
     
     logger.info('SSE stream completed', { 
@@ -169,13 +177,22 @@ export const getQuota = async (req: Request, res: Response) => {
     return sendError(res, 401, 'AUTH_REQUIRED', 'Authentication required');
   }
   
-  const hasQuota = checkUserQuota(req.user.userId, 0);
+  const status = getUserQuotaStatus(req.user.userId);
   
-  // For now, return a simple quota status
-  // In production, this would query the database
+  if (!status) {
+    return sendError(res, 404, 'NOT_FOUND', 'Quota status not found');
+  }
+  
+  // Return detailed quota status
   sendSuccess(res, {
     userId: req.user.userId,
-    hasQuota,
-    message: hasQuota ? 'Quota available' : 'Quota exceeded',
+    hasQuota: status.remainingQuota > 0,
+    remainingQuota: status.remainingQuota,
+    dailyUsed: status.dailyUsed,
+    dailyLimit: status.dailyLimit,
+    monthlyUsed: status.monthlyUsed,
+    monthlyLimit: status.monthlyLimit,
+    plan: status.plan,
+    message: status.remainingQuota > 0 ? 'Quota available' : 'Quota exceeded',
   });
 };

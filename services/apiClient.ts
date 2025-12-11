@@ -238,7 +238,17 @@ export const aiApi = {
     });
   },
   
-  getQuota: async (): Promise<ApiResponse<{ userId: string; hasQuota: boolean; message: string }>> => {
+  getQuota: async (): Promise<ApiResponse<{
+    userId: string;
+    hasQuota: boolean;
+    remainingQuota: number;
+    dailyUsed: number;
+    dailyLimit: number;
+    monthlyUsed: number;
+    monthlyLimit: number;
+    plan: string;
+    message: string;
+  }>> => {
     return request('/ai/quota');
   },
 };
@@ -355,10 +365,122 @@ export const healthApi = {
   },
 };
 
+// Material API
+export interface MaterialMetadata {
+  id: string;
+  type: 'image' | 'video' | 'gif' | 'svg';
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  createdAt: string;
+}
+
+export interface UploadResponse {
+  id: string;
+  url: string;
+  type: 'image' | 'video' | 'gif' | 'svg';
+  filename: string;
+  size: number;
+}
+
+export interface ListMaterialsResponse {
+  materials: MaterialMetadata[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+export const materialApi = {
+  upload: async (data: string, filename: string, mimeType: string, type?: string): Promise<ApiResponse<UploadResponse>> => {
+    return request<UploadResponse>('/materials', {
+      method: 'POST',
+      body: JSON.stringify({ data, filename, mimeType, type }),
+    });
+  },
+  
+  list: async (type?: string, page: number = 1, limit: number = 20): Promise<ApiResponse<ListMaterialsResponse>> => {
+    const params = new URLSearchParams();
+    if (type) params.set('type', type);
+    params.set('page', page.toString());
+    params.set('limit', limit.toString());
+    
+    return request<ListMaterialsResponse>(`/materials?${params.toString()}`);
+  },
+  
+  get: async (id: string): Promise<ApiResponse<MaterialMetadata>> => {
+    return request<MaterialMetadata>(`/materials/${id}`);
+  },
+  
+  delete: async (id: string): Promise<ApiResponse<{ deleted: boolean }>> => {
+    return request<{ deleted: boolean }>(`/materials/${id}`, {
+      method: 'DELETE',
+    });
+  },
+  
+  getPresignedUrl: async (filename: string, mimeType: string, size: number): Promise<ApiResponse<{ uploadUrl: string; materialId: string }>> => {
+    return request<{ uploadUrl: string; materialId: string }>('/materials/presign', {
+      method: 'POST',
+      body: JSON.stringify({ filename, mimeType, size }),
+    });
+  },
+};
+
+// Quota/User API
+export interface QuotaStatus {
+  userId: string;
+  plan: 'free' | 'basic' | 'pro' | 'enterprise';
+  totalQuota: number;
+  usedQuota: number;
+  remainingQuota: number;
+  dailyUsed: number;
+  dailyLimit: number;
+  monthlyUsed: number;
+  monthlyLimit: number;
+  resetDate: string;
+  expiryDate?: string;
+}
+
+export interface UsageRecord {
+  id: string;
+  type: 'ai_generation' | 'material_upload' | 'ai_stream';
+  cost: number;
+  timestamp: string;
+  details?: Record<string, unknown>;
+}
+
+export interface UsageStats {
+  period: 'day' | 'week' | 'month';
+  total: number;
+  byType: Record<string, number>;
+}
+
+export const quotaApi = {
+  getStatus: async (): Promise<ApiResponse<QuotaStatus>> => {
+    return request<QuotaStatus>('/user/quota');
+  },
+  
+  check: async (credits: number = 1): Promise<ApiResponse<{ allowed: boolean; remainingQuota: number; reason?: string }>> => {
+    return request<{ allowed: boolean; remainingQuota: number; reason?: string }>(`/user/quota/check?credits=${credits}`);
+  },
+  
+  getHistory: async (limit: number = 50): Promise<ApiResponse<{ history: UsageRecord[] }>> => {
+    return request<{ history: UsageRecord[] }>(`/user/quota/history?limit=${limit}`);
+  },
+  
+  getStats: async (period: 'day' | 'week' | 'month' = 'month'): Promise<ApiResponse<UsageStats>> => {
+    return request<UsageStats>(`/user/quota/stats?period=${period}`);
+  },
+};
+
 export default {
   auth: authApi,
   ai: aiApi,
   health: healthApi,
+  material: materialApi,
+  quota: quotaApi,
   streamGeneration,
   isAuthenticated,
   clearTokens,

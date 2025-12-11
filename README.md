@@ -356,6 +356,28 @@ enum BlockType {
 }
 ```
 
+### 后端 API 端点 (REST API)
+
+| 模块 | 方法 | 路径 | 说明 |
+| :--- | :--- | :--- | :--- |
+| **Health** | GET | `/api/v1/health` | 健康检查 (Docker Healthcheck) |
+| **Auth** | POST | `/api/v1/auth/register` | 用户注册 |
+| **Auth** | POST | `/api/v1/auth/token` | 登录获取 Token |
+| **Auth** | POST | `/api/v1/auth/refresh` | 刷新 Token |
+| **Auth** | GET | `/api/v1/auth/me` | 获取当前用户信息 |
+| **AI** | POST | `/api/v1/ai/generate` | 生成文章 (非流式) |
+| **AI** | POST | `/api/v1/ai/chat/stream` | 发起对话 (SSE 流式响应) |
+| **AI** | GET | `/api/v1/ai/quota` | 获取 AI 配额状态 |
+| **Media** | POST | `/api/v1/materials` | 上传素材 (Base64) |
+| **Media** | GET | `/api/v1/materials` | 列出用户素材 |
+| **Media** | GET | `/api/v1/materials/:id` | 获取素材详情 |
+| **Media** | DELETE | `/api/v1/materials/:id` | 删除素材 |
+| **Media** | POST | `/api/v1/materials/presign` | 获取预签名上传 URL |
+| **User** | GET | `/api/v1/user/quota` | 获取当前积分/套餐状态 |
+| **User** | GET | `/api/v1/user/quota/check` | 预检查配额是否充足 |
+| **User** | GET | `/api/v1/user/quota/history` | 获取使用记录 |
+| **User** | GET | `/api/v1/user/quota/stats` | 获取使用统计 |
+
 ### AI Memory 接口
 
 ```typescript

@@ -88,6 +88,10 @@ app.listen(PORT, () => {
   logger.info('  POST /api/v1/ai/generate   - Generate article');
   logger.info('  POST /api/v1/ai/chat/stream - SSE streaming');
   logger.info('  GET  /api/v1/ai/quota      - Get quota');
+  logger.info('  POST /api/v1/materials     - Upload material');
+  logger.info('  GET  /api/v1/materials     - List materials');
+  logger.info('  GET  /api/v1/user/quota    - Get user quota status');
+  logger.info('  GET  /api/v1/user/quota/history - Usage history');
 });
 
 export default app;
