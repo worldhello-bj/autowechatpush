@@ -56,11 +56,6 @@ if not exist "backend\node_modules" (
         exit /b 1
     )
     pushd "%~dp0backend"
-    if %ERRORLEVEL% NEQ 0 (
-        echo [错误] 无法进入 backend 目录
-        pause
-        exit /b 1
-    )
     call npm install
     if %ERRORLEVEL% NEQ 0 (
         echo [错误] 后端依赖安装失败
@@ -108,8 +103,8 @@ echo.
 
 :: Start the backend server in a new window
 :: Using /k to keep the window open for debugging
-set BACKEND_DIR=%~dp0backend
-start "WeChat AI Publisher - Backend" cmd /k "cd /d %BACKEND_DIR% && npm run dev"
+set "BACKEND_DIR=%~dp0backend"
+start "WeChat AI Publisher - Backend" cmd /k "cd /d "%BACKEND_DIR%" && npm run dev"
 
 :: Wait a few seconds for backend to start
 echo [信息] 等待后端服务器启动 (%BACKEND_START_DELAY% 秒)...
