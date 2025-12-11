@@ -26,25 +26,60 @@ if %ERRORLEVEL% NEQ 0 (
 
 echo [信息] 检测到 Node.js 和 npm
 
-:: Check if node_modules exists, if not run npm install
+:: Check if frontend node_modules exists, if not run npm install
 if not exist "node_modules" (
-    echo [信息] 首次运行，正在安装依赖...
+    echo [信息] 首次运行，正在安装前端依赖...
     echo 这可能需要几分钟时间，请耐心等待...
     echo.
     call npm install
     if %ERRORLEVEL% NEQ 0 (
-        echo [错误] 依赖安装失败
+        echo [错误] 前端依赖安装失败
         pause
         exit /b 1
     )
     echo.
-    echo [成功] 依赖安装完成
+    echo [成功] 前端依赖安装完成
     echo.
 )
 
-echo [信息] 正在启动开发服务器...
+:: Check if backend node_modules exists, if not run npm install
+if not exist "backend\node_modules" (
+    echo [信息] 正在安装后端依赖...
+    echo 这可能需要几分钟时间，请耐心等待...
+    echo.
+    cd backend
+    call npm install
+    if %ERRORLEVEL% NEQ 0 (
+        echo [错误] 后端依赖安装失败
+        cd ..
+        pause
+        exit /b 1
+    )
+    cd ..
+    echo.
+    echo [成功] 后端依赖安装完成
+    echo.
+)
+
+:: Check if backend .env file exists
+if not exist "backend\.env" (
+    echo [警告] 后端 .env 配置文件不存在
+    echo [信息] 正在从 .env.example 创建 .env 文件...
+    if exist "backend\.env.example" (
+        copy "backend\.env.example" "backend\.env" >nul
+        echo [成功] 已创建 backend\.env 文件，请配置相关环境变量
+    ) else (
+        echo [警告] 未找到 .env.example 文件，后端可能无法正常启动
+    )
+    echo.
+)
+
+echo [信息] 正在启动前后端开发服务器...
 echo.
 echo ----------------------------------------
+echo 后端服务器 (API): http://localhost:3001
+echo 前端服务器 (Web): http://localhost:5173
+echo.
 echo 应用启动后，请在浏览器中访问:
 echo http://localhost:5173
 echo.
@@ -58,7 +93,13 @@ echo 按 Ctrl+C 可停止服务器
 echo ----------------------------------------
 echo.
 
-:: Start the development server
+:: Start the backend server in a new window
+start "WeChat AI Publisher - Backend" cmd /c "cd backend && npm run dev"
+
+:: Wait a few seconds for backend to start
+timeout /t 3 /nobreak >nul
+
+:: Start the frontend development server
 call npm run dev
 
 pause
