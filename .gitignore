@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Environment files
+.env
+.env.local
+.env.*.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -35,3 +40,7 @@ release/
 # Temporary files
 *.tmp
 *.temp
+
+# Backend specific
+backend/dist
+backend/node_modules
