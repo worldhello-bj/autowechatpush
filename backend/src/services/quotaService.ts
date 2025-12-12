@@ -30,6 +30,8 @@ const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, '..', '..', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'quota.json');
 let persistTimer: NodeJS.Timeout | null = null;
+let persistInFlight: Promise<void> | null = null;
+const USAGE_TYPES: UsageRecord['type'][] = ['ai_generation', 'material_upload', 'ai_stream'];
 
 const userQuotas: Map<string, UserQuotaData> = new Map();
 const usageRecords: UsageRecord[] = [];
@@ -47,32 +49,54 @@ interface PersistedData {
   usageRecords: UsageRecordSerialized[];
 }
 
-const persistData = () => {
-  if (persistTimer) return;
+const flushPersist = async () => {
+  if (persistInFlight) {
+    // Try again shortly after current flush completes
+    if (!persistTimer) {
+      persistTimer = setTimeout(() => {
+        persistTimer = null;
+        void flushPersist();
+      }, 50);
+    }
+    return;
+  }
 
-  persistTimer = setTimeout(async () => {
-    persistTimer = null;
+  const payload: PersistedData = {
+    userQuotas: Array.from(userQuotas.values()).map(q => ({
+      ...q,
+      lastDailyReset: q.lastDailyReset.toISOString(),
+      lastMonthlyReset: q.lastMonthlyReset.toISOString(),
+      expiryDate: q.expiryDate ? q.expiryDate.toISOString() : undefined,
+    })),
+    usageRecords: usageRecords.map(r => ({
+      ...r,
+      timestamp: r.timestamp.toISOString(),
+    })),
+  };
+
+  const tempFile = `${DATA_FILE}.${process.pid}.${Date.now()}.tmp`;
+
+  persistInFlight = (async () => {
     try {
-      const payload: PersistedData = {
-        userQuotas: Array.from(userQuotas.values()).map(q => ({
-          ...q,
-          lastDailyReset: q.lastDailyReset.toISOString(),
-          lastMonthlyReset: q.lastMonthlyReset.toISOString(),
-          expiryDate: q.expiryDate ? q.expiryDate.toISOString() : undefined,
-        })),
-        usageRecords: usageRecords.map(r => ({
-          ...r,
-          timestamp: r.timestamp.toISOString(),
-        })),
-      };
-
-      const tempFile = `${DATA_FILE}.tmp`;
       await fs.promises.mkdir(DATA_DIR, { recursive: true });
       await fs.promises.writeFile(tempFile, JSON.stringify(payload, null, 2), 'utf-8');
       await fs.promises.rename(tempFile, DATA_FILE);
     } catch (error) {
       logger.error('Failed to persist quota data to disk', { error });
+    } finally {
+      persistInFlight = null;
     }
+  })();
+
+  await persistInFlight;
+};
+
+const persistData = () => {
+  if (persistTimer) return;
+
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    void flushPersist();
   }, 100);
 };
 
@@ -129,7 +153,7 @@ const loadData = async () => {
       .filter(
         r => r &&
           typeof r.userId === 'string' &&
-          ['ai_generation', 'material_upload', 'ai_stream'].includes(r.type) &&
+          USAGE_TYPES.includes(r.type as UsageRecord['type']) &&
           typeof r.cost === 'number' &&
           isValidDateString(r.timestamp)
       )
