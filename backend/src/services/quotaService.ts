@@ -66,8 +66,10 @@ const persistData = () => {
         })),
       };
 
+      const tempFile = `${DATA_FILE}.tmp`;
       await fs.promises.mkdir(DATA_DIR, { recursive: true });
-      await fs.promises.writeFile(DATA_FILE, JSON.stringify(payload, null, 2), 'utf-8');
+      await fs.promises.writeFile(tempFile, JSON.stringify(payload, null, 2), 'utf-8');
+      await fs.promises.rename(tempFile, DATA_FILE);
     } catch (error) {
       logger.error('Failed to persist quota data to disk', { error });
     }
@@ -90,6 +92,10 @@ const loadData = async () => {
 
     const raw = await fs.promises.readFile(DATA_FILE, 'utf-8');
     const parsed = JSON.parse(raw) as Partial<PersistedData>;
+    if (typeof parsed !== 'object' || parsed === null) {
+      logger.warn('Quota data file malformed (non-object), skipping load');
+      return;
+    }
     if (!Array.isArray(parsed.userQuotas) || !Array.isArray(parsed.usageRecords)) {
       logger.warn('Quota data file malformed, skipping load');
       return;
@@ -106,7 +112,7 @@ const loadData = async () => {
         typeof q.dailyUsed !== 'number' ||
         typeof q.monthlyUsed !== 'number'
       ) {
-        logger.warn('Skipping invalid quota entry in data file', { entry: q });
+        logger.warn('Skipping invalid quota entry in data file');
         return;
       }
 
@@ -119,20 +125,21 @@ const loadData = async () => {
       });
     });
 
-    usageRecords.push(
-      ...parsed.usageRecords
-        .filter(
-          r => r &&
-            typeof r.userId === 'string' &&
-            ['ai_generation', 'material_upload', 'ai_stream'].includes(r.type) &&
-            typeof r.cost === 'number' &&
-            isValidDateString(r.timestamp)
-        )
-        .map(r => ({
-          ...r,
-          timestamp: new Date(r.timestamp),
-        }))
-    );
+    const validUsage = parsed.usageRecords
+      .filter(
+        r => r &&
+          typeof r.userId === 'string' &&
+          ['ai_generation', 'material_upload', 'ai_stream'].includes(r.type) &&
+          typeof r.cost === 'number' &&
+          isValidDateString(r.timestamp)
+      )
+      .map(r => ({
+        ...r,
+        timestamp: new Date(r.timestamp),
+      }));
+
+    const limitedUsage = validUsage.slice(-MAX_USAGE_RECORDS);
+    usageRecords.push(...limitedUsage);
 
     logger.info('Quota data loaded from disk', { users: userQuotas.size, records: usageRecords.length });
   } catch (error) {
