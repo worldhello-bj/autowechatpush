@@ -44,21 +44,25 @@ interface PersistedData {
 }
 
 const persistData = () => {
-  const payload: PersistedData = {
-    userQuotas: Array.from(userQuotas.values()).map(q => ({
-      ...q,
-      lastDailyReset: q.lastDailyReset.toISOString(),
-      lastMonthlyReset: q.lastMonthlyReset.toISOString(),
-      expiryDate: q.expiryDate ? q.expiryDate.toISOString() : undefined,
-    })),
-    usageRecords: usageRecords.map(r => ({
-      ...r,
-      timestamp: r.timestamp.toISOString(),
-    })),
-  };
+  try {
+    const payload: PersistedData = {
+      userQuotas: Array.from(userQuotas.values()).map(q => ({
+        ...q,
+        lastDailyReset: q.lastDailyReset.toISOString(),
+        lastMonthlyReset: q.lastMonthlyReset.toISOString(),
+        expiryDate: q.expiryDate ? q.expiryDate.toISOString() : undefined,
+      })),
+      usageRecords: usageRecords.map(r => ({
+        ...r,
+        timestamp: r.timestamp.toISOString(),
+      })),
+    };
 
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(DATA_FILE, JSON.stringify(payload, null, 2), 'utf-8');
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(DATA_FILE, JSON.stringify(payload, null, 2), 'utf-8');
+  } catch (error) {
+    logger.error('Failed to persist quota data to disk', { error });
+  }
 };
 
 const loadData = () => {
@@ -68,7 +72,11 @@ const loadData = () => {
     }
 
     const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-    const parsed = JSON.parse(raw) as PersistedData;
+    const parsed = JSON.parse(raw) as Partial<PersistedData>;
+    if (!Array.isArray(parsed.userQuotas) || !Array.isArray(parsed.usageRecords)) {
+      logger.warn('Quota data file malformed, skipping load');
+      return;
+    }
 
     parsed.userQuotas.forEach(q => {
       userQuotas.set(q.userId, {
@@ -376,8 +384,8 @@ export const setUserTotalQuota = (userId: string, totalQuota: number): UserQuota
   quotaData.totalQuota = Math.max(0, totalQuota);
 
   // getUserQuotaStatus auto-initializes entries, so status should be available here
-  const status = getUserQuotaStatus(userId);
   persistData();
+  const status = getUserQuotaStatus(userId);
   return status!;
 };
 
