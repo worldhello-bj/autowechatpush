@@ -27,7 +27,7 @@ interface UserQuotaData {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATA_DIR = path.resolve(__dirname, '..', 'data');
+const DATA_DIR = path.resolve(__dirname, '..', '..', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'quota.json');
 let persistTimer: NodeJS.Timeout | null = null;
 
@@ -100,7 +100,11 @@ const loadData = async () => {
         !q ||
         typeof q.userId !== 'string' ||
         !isValidDateString(q.lastDailyReset) ||
-        !isValidDateString(q.lastMonthlyReset)
+        !isValidDateString(q.lastMonthlyReset) ||
+        !Object.values(QuotaPlan).includes(q.plan as QuotaPlan) ||
+        typeof q.totalQuota !== 'number' ||
+        typeof q.dailyUsed !== 'number' ||
+        typeof q.monthlyUsed !== 'number'
       ) {
         logger.warn('Skipping invalid quota entry in data file', { entry: q });
         return;
@@ -117,7 +121,13 @@ const loadData = async () => {
 
     usageRecords.push(
       ...parsed.usageRecords
-        .filter(r => r && isValidDateString(r.timestamp))
+        .filter(
+          r => r &&
+            typeof r.userId === 'string' &&
+            ['ai_generation', 'material_upload', 'ai_stream'].includes(r.type) &&
+            typeof r.cost === 'number' &&
+            isValidDateString(r.timestamp)
+        )
         .map(r => ({
           ...r,
           timestamp: new Date(r.timestamp),
@@ -131,7 +141,9 @@ const loadData = async () => {
 };
 
 // Load persisted data on startup (async to avoid blocking but awaited to avoid race)
-await loadData();
+export const initQuotaStore = async (): Promise<void> => {
+  await loadData();
+};
 
 // Maximum usage records to keep in memory
 const MAX_USAGE_RECORDS = 10000;
