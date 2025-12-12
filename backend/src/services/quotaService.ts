@@ -292,7 +292,13 @@ export const setUserTotalQuota = (userId: string, totalQuota: number): UserQuota
   quotaData.dailyUsed = Math.min(quotaData.dailyUsed, quotaData.totalQuota);
   quotaData.monthlyUsed = Math.min(quotaData.monthlyUsed, quotaData.totalQuota);
 
-  return getUserQuotaStatus(userId)!;
+  const status = getUserQuotaStatus(userId);
+  if (!status) {
+    logger.error('Failed to load quota status after update', { userId });
+    throw new Error('Quota status unavailable');
+  }
+
+  return status;
 };
 
 /**
