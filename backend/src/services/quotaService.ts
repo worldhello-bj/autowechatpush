@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { randomUUID } from 'crypto';
 import { 
   QuotaPlan,
   PLAN_LIMITS,
@@ -32,6 +33,8 @@ const DATA_FILE = path.join(DATA_DIR, 'quota.json');
 let persistTimer: NodeJS.Timeout | null = null;
 let persistInFlight: Promise<void> | null = null;
 const USAGE_TYPES: UsageRecord['type'][] = ['ai_generation', 'material_upload', 'ai_stream'];
+// Maximum usage records to keep in memory
+const MAX_USAGE_RECORDS = 10000;
 
 const userQuotas: Map<string, UserQuotaData> = new Map();
 const usageRecords: UsageRecord[] = [];
@@ -74,19 +77,23 @@ const flushPersist = async () => {
     })),
   };
 
-  const tempFile = `${DATA_FILE}.${process.pid}.${Date.now()}.tmp`;
+  const tempFile = `${DATA_FILE}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;
 
-  persistInFlight = (async () => {
+  const currentPersist = (async () => {
     try {
       await fs.promises.mkdir(DATA_DIR, { recursive: true });
       await fs.promises.writeFile(tempFile, JSON.stringify(payload, null, 2), 'utf-8');
       await fs.promises.rename(tempFile, DATA_FILE);
     } catch (error) {
       logger.error('Failed to persist quota data to disk', { error });
-    } finally {
-      persistInFlight = null;
     }
   })();
+
+  persistInFlight = currentPersist.finally(() => {
+    if (persistInFlight === currentPersist) {
+      persistInFlight = null;
+    }
+  });
 
   await persistInFlight;
 };
@@ -175,9 +182,6 @@ const loadData = async () => {
 export const initQuotaStore = async (): Promise<void> => {
   await loadData();
 };
-
-// Maximum usage records to keep in memory
-const MAX_USAGE_RECORDS = 10000;
 
 /**
  * Initialize quota for a new user
