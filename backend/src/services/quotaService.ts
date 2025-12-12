@@ -26,6 +26,7 @@ interface UserQuotaData {
 
 const DATA_DIR = path.resolve(process.cwd(), 'backend', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'quota.json');
+let persistTimer: NodeJS.Timeout | null = null;
 
 const userQuotas: Map<string, UserQuotaData> = new Map();
 const usageRecords: UsageRecord[] = [];
@@ -44,34 +45,45 @@ interface PersistedData {
 }
 
 const persistData = () => {
-  try {
-    const payload: PersistedData = {
-      userQuotas: Array.from(userQuotas.values()).map(q => ({
-        ...q,
-        lastDailyReset: q.lastDailyReset.toISOString(),
-        lastMonthlyReset: q.lastMonthlyReset.toISOString(),
-        expiryDate: q.expiryDate ? q.expiryDate.toISOString() : undefined,
-      })),
-      usageRecords: usageRecords.map(r => ({
-        ...r,
-        timestamp: r.timestamp.toISOString(),
-      })),
-    };
+  if (persistTimer) return;
 
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(payload, null, 2), 'utf-8');
-  } catch (error) {
-    logger.error('Failed to persist quota data to disk', { error });
-  }
+  persistTimer = setTimeout(async () => {
+    persistTimer = null;
+    try {
+      const payload: PersistedData = {
+        userQuotas: Array.from(userQuotas.values()).map(q => ({
+          ...q,
+          lastDailyReset: q.lastDailyReset.toISOString(),
+          lastMonthlyReset: q.lastMonthlyReset.toISOString(),
+          expiryDate: q.expiryDate ? q.expiryDate.toISOString() : undefined,
+        })),
+        usageRecords: usageRecords.map(r => ({
+          ...r,
+          timestamp: r.timestamp.toISOString(),
+        })),
+      };
+
+      await fs.promises.mkdir(DATA_DIR, { recursive: true });
+      await fs.promises.writeFile(DATA_FILE, JSON.stringify(payload, null, 2), 'utf-8');
+    } catch (error) {
+      logger.error('Failed to persist quota data to disk', { error });
+    }
+  }, 100);
 };
 
-const loadData = () => {
+const isValidDateString = (value: unknown): value is string => {
+  if (typeof value !== 'string') return false;
+  const d = new Date(value);
+  return !isNaN(d.getTime());
+};
+
+const loadData = async () => {
   try {
-    if (!fs.existsSync(DATA_FILE)) {
+    if (!(await fs.promises.stat(DATA_FILE).then(() => true).catch(() => false))) {
       return;
     }
 
-    const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+    const raw = await fs.promises.readFile(DATA_FILE, 'utf-8');
     const parsed = JSON.parse(raw) as Partial<PersistedData>;
     if (!Array.isArray(parsed.userQuotas) || !Array.isArray(parsed.usageRecords)) {
       logger.warn('Quota data file malformed, skipping load');
@@ -79,19 +91,32 @@ const loadData = () => {
     }
 
     parsed.userQuotas.forEach(q => {
+      if (
+        !q ||
+        typeof q.userId !== 'string' ||
+        !isValidDateString(q.lastDailyReset) ||
+        !isValidDateString(q.lastMonthlyReset)
+      ) {
+        logger.warn('Skipping invalid quota entry in data file', { entry: q });
+        return;
+      }
+
+      const expiry = q.expiryDate && isValidDateString(q.expiryDate) ? new Date(q.expiryDate) : undefined;
       userQuotas.set(q.userId, {
         ...q,
         lastDailyReset: new Date(q.lastDailyReset),
         lastMonthlyReset: new Date(q.lastMonthlyReset),
-        expiryDate: q.expiryDate ? new Date(q.expiryDate) : undefined,
+        expiryDate: expiry,
       });
     });
 
     usageRecords.push(
-      ...parsed.usageRecords.map(r => ({
-        ...r,
-        timestamp: new Date(r.timestamp),
-      }))
+      ...parsed.usageRecords
+        .filter(r => r && isValidDateString(r.timestamp))
+        .map(r => ({
+          ...r,
+          timestamp: new Date(r.timestamp),
+        }))
     );
 
     logger.info('Quota data loaded from disk', { users: userQuotas.size, records: usageRecords.length });
@@ -100,7 +125,7 @@ const loadData = () => {
   }
 };
 
-// Load persisted data on startup
+// Load persisted data on startup (async to avoid blocking)
 loadData();
 
 // Maximum usage records to keep in memory
