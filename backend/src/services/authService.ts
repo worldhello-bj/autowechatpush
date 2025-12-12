@@ -17,7 +17,7 @@ import {
   createLogger 
 } from '../utils/index.js';
 import { config } from '../config/index.js';
-import { initializeUserQuota } from './quotaService.js';
+import { initializeUserQuota, setUserTotalQuota } from './quotaService.js';
 
 const logger = createLogger('auth-service');
 
@@ -229,6 +229,9 @@ export const updateUserQuota = (userId: string, change: number): number => {
   user.quota = Math.max(0, user.quota + change);
   user.updatedAt = new Date();
   users.set(userId, user);
+
+  // Keep quota service in sync for enforcement
+  setUserTotalQuota(userId, user.quota);
   
   logger.info('User quota updated', { userId, newQuota: user.quota, change });
   
@@ -277,6 +280,7 @@ export const seedAdminUser = async (): Promise<void> => {
   
   // Initialize quota service for admin with ENTERPRISE plan
   initializeUserQuota(userId, QuotaPlan.ENTERPRISE);
+  setUserTotalQuota(userId, adminUser.quota);
   
   logger.info('Admin user seeded successfully', { email: adminEmail, userId });
 };
@@ -434,6 +438,7 @@ export const createUserByAdmin = async (data: {
   // Initialize quota service: admins get ENTERPRISE, regular users get FREE plan
   const quotaPlan = data.role === 'admin' ? QuotaPlan.ENTERPRISE : QuotaPlan.FREE;
   initializeUserQuota(userId, quotaPlan);
+  setUserTotalQuota(userId, user.quota);
   
   logger.info('User created by admin', { userId, email, role: data.role });
   

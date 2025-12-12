@@ -280,6 +280,22 @@ export const upgradePlan = (
 };
 
 /**
+ * Set user's total quota (used when admin updates quota)
+ */
+export const setUserTotalQuota = (userId: string, totalQuota: number): UserQuotaStatus => {
+  if (!userQuotas.has(userId)) {
+    initializeUserQuota(userId);
+  }
+
+  const quotaData = userQuotas.get(userId)!;
+  quotaData.totalQuota = Math.max(0, totalQuota);
+  quotaData.dailyUsed = Math.min(quotaData.dailyUsed, quotaData.totalQuota);
+  quotaData.monthlyUsed = Math.min(quotaData.monthlyUsed, quotaData.totalQuota);
+
+  return getUserQuotaStatus(userId)!;
+};
+
+/**
  * Get usage history for a user
  */
 export const getUserUsageHistory = (
