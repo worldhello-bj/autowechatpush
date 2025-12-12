@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { 
   QuotaPlan,
   PLAN_LIMITS,
@@ -24,7 +25,9 @@ interface UserQuotaData {
   expiryDate?: Date;
 }
 
-const DATA_DIR = path.resolve(process.cwd(), 'backend', 'data');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_DIR = path.resolve(__dirname, '..', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'quota.json');
 let persistTimer: NodeJS.Timeout | null = null;
 
@@ -79,7 +82,9 @@ const isValidDateString = (value: unknown): value is string => {
 
 const loadData = async () => {
   try {
-    if (!(await fs.promises.stat(DATA_FILE).then(() => true).catch(() => false))) {
+    try {
+      await fs.promises.access(DATA_FILE, fs.constants.F_OK);
+    } catch {
       return;
     }
 
@@ -125,8 +130,8 @@ const loadData = async () => {
   }
 };
 
-// Load persisted data on startup (async to avoid blocking)
-loadData();
+// Load persisted data on startup (async to avoid blocking but awaited to avoid race)
+await loadData();
 
 // Maximum usage records to keep in memory
 const MAX_USAGE_RECORDS = 10000;
