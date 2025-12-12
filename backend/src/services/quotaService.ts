@@ -289,18 +289,14 @@ export const setUserTotalQuota = (userId: string, totalQuota: number): UserQuota
 
   const quotaData = userQuotas.get(userId);
   if (!quotaData) {
-    throw new Error(`Failed to initialize quota data for user ${userId}`);
+    throw new Error(`Quota data missing for user ${userId} after initialization`);
   }
   // totalQuota represents the monthly quota limit used by quota checks
   quotaData.totalQuota = Math.max(0, totalQuota);
 
+  // getUserQuotaStatus auto-initializes entries, so status should be available here
   const status = getUserQuotaStatus(userId);
-  if (!status) {
-    logger.error('Failed to load quota status after total quota update', { userId });
-    throw new Error(`Failed to retrieve quota status after updating total quota for user ${userId}`);
-  }
-
-  return status;
+  return status!;
 };
 
 /**
