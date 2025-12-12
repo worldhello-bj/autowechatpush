@@ -1,4 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
 import { 
   QuotaPlan,
   PLAN_LIMITS,
@@ -22,8 +24,76 @@ interface UserQuotaData {
   expiryDate?: Date;
 }
 
+const DATA_DIR = path.resolve(process.cwd(), 'backend', 'data');
+const DATA_FILE = path.join(DATA_DIR, 'quota.json');
+
 const userQuotas: Map<string, UserQuotaData> = new Map();
 const usageRecords: UsageRecord[] = [];
+
+type UserQuotaDataSerialized = Omit<UserQuotaData, 'lastDailyReset' | 'lastMonthlyReset' | 'expiryDate'> & {
+  lastDailyReset: string;
+  lastMonthlyReset: string;
+  expiryDate?: string;
+};
+
+type UsageRecordSerialized = Omit<UsageRecord, 'timestamp'> & { timestamp: string };
+
+interface PersistedData {
+  userQuotas: UserQuotaDataSerialized[];
+  usageRecords: UsageRecordSerialized[];
+}
+
+const persistData = () => {
+  const payload: PersistedData = {
+    userQuotas: Array.from(userQuotas.values()).map(q => ({
+      ...q,
+      lastDailyReset: q.lastDailyReset.toISOString(),
+      lastMonthlyReset: q.lastMonthlyReset.toISOString(),
+      expiryDate: q.expiryDate ? q.expiryDate.toISOString() : undefined,
+    })),
+    usageRecords: usageRecords.map(r => ({
+      ...r,
+      timestamp: r.timestamp.toISOString(),
+    })),
+  };
+
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(DATA_FILE, JSON.stringify(payload, null, 2), 'utf-8');
+};
+
+const loadData = () => {
+  try {
+    if (!fs.existsSync(DATA_FILE)) {
+      return;
+    }
+
+    const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+    const parsed = JSON.parse(raw) as PersistedData;
+
+    parsed.userQuotas.forEach(q => {
+      userQuotas.set(q.userId, {
+        ...q,
+        lastDailyReset: new Date(q.lastDailyReset),
+        lastMonthlyReset: new Date(q.lastMonthlyReset),
+        expiryDate: q.expiryDate ? new Date(q.expiryDate) : undefined,
+      });
+    });
+
+    usageRecords.push(
+      ...parsed.usageRecords.map(r => ({
+        ...r,
+        timestamp: new Date(r.timestamp),
+      }))
+    );
+
+    logger.info('Quota data loaded from disk', { users: userQuotas.size, records: usageRecords.length });
+  } catch (error) {
+    logger.error('Failed to load quota data from disk', { error });
+  }
+};
+
+// Load persisted data on startup
+loadData();
 
 // Maximum usage records to keep in memory
 const MAX_USAGE_RECORDS = 10000;
@@ -45,6 +115,7 @@ export const initializeUserQuota = (userId: string, plan: QuotaPlan = QuotaPlan.
     lastMonthlyReset: now,
   });
 
+  persistData();
   logger.info('User quota initialized', { userId, plan });
 };
 
@@ -74,11 +145,13 @@ const checkAndResetQuotas = (quotaData: UserQuotaData): void => {
   const now = new Date();
   const todayStart = getStartOfDay(now);
   const monthStart = getStartOfMonth(now);
+  let updated = false;
 
   // Reset daily quota if it's a new day
   if (quotaData.lastDailyReset < todayStart) {
     quotaData.dailyUsed = 0;
     quotaData.lastDailyReset = now;
+    updated = true;
     logger.debug('Daily quota reset', { userId: quotaData.userId });
   }
 
@@ -86,7 +159,12 @@ const checkAndResetQuotas = (quotaData: UserQuotaData): void => {
   if (quotaData.lastMonthlyReset < monthStart) {
     quotaData.monthlyUsed = 0;
     quotaData.lastMonthlyReset = now;
+    updated = true;
     logger.debug('Monthly quota reset', { userId: quotaData.userId });
+  }
+
+  if (updated) {
+    persistData();
   }
 };
 
@@ -214,6 +292,7 @@ export const consumeQuota = (
     logger.debug('Trimmed old usage records', { removed: removeCount, remaining: usageRecords.length });
   }
 
+  persistData();
   logger.info('Quota consumed', { 
     userId, 
     credits, 
@@ -240,6 +319,7 @@ export const addQuotaCredits = (
 
   quotaData.totalQuota += credits;
 
+  persistData();
   logger.info('Quota credits added', { 
     userId, 
     credits, 
@@ -270,6 +350,7 @@ export const upgradePlan = (
   quotaData.totalQuota = newLimits.monthlyLimit;
   quotaData.expiryDate = expiryDate;
 
+  persistData();
   logger.info('Plan upgraded', { 
     userId, 
     newPlan, 
@@ -296,6 +377,7 @@ export const setUserTotalQuota = (userId: string, totalQuota: number): UserQuota
 
   // getUserQuotaStatus auto-initializes entries, so status should be available here
   const status = getUserQuotaStatus(userId);
+  persistData();
   return status!;
 };
 
