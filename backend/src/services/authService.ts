@@ -4,7 +4,8 @@ import {
   UserSession, 
   LoginRequest, 
   RegisterRequest, 
-  AuthResponse 
+  AuthResponse,
+  QuotaPlan,
 } from '../types/index.js';
 import { 
   hashPassword, 
@@ -16,6 +17,7 @@ import {
   createLogger 
 } from '../utils/index.js';
 import { config } from '../config/index.js';
+import { initializeUserQuota } from './quotaService.js';
 
 const logger = createLogger('auth-service');
 
@@ -58,6 +60,9 @@ export const registerUser = async (data: RegisterRequest): Promise<AuthResponse>
   // Store user
   users.set(userId, user);
   emailIndex.set(user.email, userId);
+  
+  // Initialize quota service for this user (FREE plan by default)
+  initializeUserQuota(userId, QuotaPlan.FREE);
   
   // Generate tokens
   const tokenPayload = { userId, email: user.email, role: user.role };
@@ -270,6 +275,9 @@ export const seedAdminUser = async (): Promise<void> => {
   users.set(userId, adminUser);
   emailIndex.set(adminEmail, userId);
   
+  // Initialize quota service for admin with ENTERPRISE plan
+  initializeUserQuota(userId, QuotaPlan.ENTERPRISE);
+  
   logger.info('Admin user seeded successfully', { email: adminEmail, userId });
 };
 
@@ -422,6 +430,10 @@ export const createUserByAdmin = async (data: {
   
   users.set(userId, user);
   emailIndex.set(email, userId);
+  
+  // Initialize quota service: admins get ENTERPRISE, regular users get FREE plan
+  const quotaPlan = data.role === 'admin' ? QuotaPlan.ENTERPRISE : QuotaPlan.FREE;
+  initializeUserQuota(userId, quotaPlan);
   
   logger.info('User created by admin', { userId, email, role: data.role });
   
