@@ -294,7 +294,7 @@ export const setUserTotalQuota = (userId: string, totalQuota: number): UserQuota
   quotaData.monthlyUsed = Math.min(quotaData.monthlyUsed, quotaData.totalQuota);
 
   const status = getUserQuotaStatus(userId);
-  if (status) {
+  if (status !== null) {
     return status;
   }
 
