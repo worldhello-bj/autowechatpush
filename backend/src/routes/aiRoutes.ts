@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { generate, chatStream, getQuota } from '../controllers/index.js';
-import { validate, optionalAuth, authGuard } from '../middleware/index.js';
+import { validate, optionalAuth, authGuard, aiRateLimit } from '../middleware/index.js';
 import { aiChatRequestSchema } from '../types/index.js';
 
 const router = Router();
@@ -10,14 +10,14 @@ const router = Router();
  * @desc Generate article (non-streaming)
  * @access Public (with optional auth for quota tracking)
  */
-router.post('/generate', optionalAuth, validate(aiChatRequestSchema), generate);
+router.post('/generate', optionalAuth, aiRateLimit, validate(aiChatRequestSchema), generate);
 
 /**
  * @route POST /api/v1/ai/chat/stream
  * @desc Generate article with SSE streaming
  * @access Public (with optional auth for quota tracking)
  */
-router.post('/chat/stream', optionalAuth, validate(aiChatRequestSchema), chatStream);
+router.post('/chat/stream', optionalAuth, aiRateLimit, validate(aiChatRequestSchema), chatStream);
 
 /**
  * @route GET /api/v1/ai/quota

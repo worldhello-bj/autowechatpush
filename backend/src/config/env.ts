@@ -25,6 +25,11 @@ const envSchema = z.object({
   
   // WeChat API proxy target
   WECHAT_API_BASE: z.string().default('https://api.weixin.qq.com'),
+  
+  // Admin configuration (for seeding initial admin user)
+  ADMIN_EMAIL: z.string().email().default('admin@example.com'),
+  ADMIN_PASSWORD: z.string().min(6).default('admin123'),
+  ADMIN_NAME: z.string().default('Administrator'),
 });
 
 // Parse and validate environment variables

@@ -195,13 +195,27 @@ cd backend && npm run dev
 
 # 启动前端 (端口 5173) - 新终端
 npm run dev
+
+# 启动管理后台 (端口 5174) - 新终端
+npm run dev:admin
 ```
+
+### 访问地址
+
+| 服务 | URL | 说明 |
+|------|-----|------|
+| 前端应用 | http://localhost:5173 | 用户登录/注册/内容创作 |
+| **管理后台** | http://localhost:5174 | 管理员登录/用户管理 |
+| 后端 API | http://localhost:3001 | REST API 服务 |
 
 ### 生产构建
 
 ```bash
 # 构建前端
 npm run build
+
+# 构建管理后台
+npm run build:admin
 
 # 构建后端
 cd backend && npm run build
@@ -355,6 +369,55 @@ enum BlockType {
   CONTACT, STATS, TESTIMONIAL, STEPS, SVG
 }
 ```
+
+### 后端 API 端点 (REST API)
+
+| 模块 | 方法 | 路径 | 说明 |
+| :--- | :--- | :--- | :--- |
+| **Health** | GET | `/api/v1/health` | 健康检查 (Docker Healthcheck) |
+| **Auth** | POST | `/api/v1/auth/register` | 用户注册 |
+| **Auth** | POST | `/api/v1/auth/token` | 登录获取 Token |
+| **Auth** | POST | `/api/v1/auth/refresh` | 刷新 Token |
+| **Auth** | GET | `/api/v1/auth/me` | 获取当前用户信息 |
+| **AI** | POST | `/api/v1/ai/generate` | 生成文章 (非流式) |
+| **AI** | POST | `/api/v1/ai/chat/stream` | 发起对话 (SSE 流式响应) |
+| **AI** | GET | `/api/v1/ai/quota` | 获取 AI 配额状态 |
+| **Media** | POST | `/api/v1/materials` | 上传素材 (Base64) |
+| **Media** | GET | `/api/v1/materials` | 列出用户素材 |
+| **Media** | GET | `/api/v1/materials/:id` | 获取素材详情 |
+| **Media** | DELETE | `/api/v1/materials/:id` | 删除素材 |
+| **Media** | POST | `/api/v1/materials/presign` | 获取预签名上传 URL |
+| **User** | GET | `/api/v1/user/quota` | 获取当前积分/套餐状态 |
+| **User** | GET | `/api/v1/user/quota/check` | 预检查配额是否充足 |
+| **User** | GET | `/api/v1/user/quota/history` | 获取使用记录 |
+| **User** | GET | `/api/v1/user/quota/stats` | 获取使用统计 |
+| **Admin** | GET | `/api/v1/admin/stats` | 管理后台统计数据 |
+| **Admin** | GET | `/api/v1/admin/users` | 列出所有用户 |
+| **Admin** | POST | `/api/v1/admin/users` | 创建新用户 |
+| **Admin** | GET | `/api/v1/admin/users/:id` | 获取用户详情 |
+| **Admin** | PATCH | `/api/v1/admin/users/:id/role` | 修改用户角色 |
+| **Admin** | PATCH | `/api/v1/admin/users/:id/quota` | 修改用户配额 |
+| **Admin** | PATCH | `/api/v1/admin/users/:id/password` | 重置用户密码 |
+| **Admin** | DELETE | `/api/v1/admin/users/:id` | 删除用户 |
+
+### 管理员账户系统
+
+系统在启动时自动创建管理员账户，可通过环境变量配置：
+
+```env
+# 管理员配置 (.env 文件)
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=admin123
+ADMIN_NAME=Administrator
+```
+
+管理员登录后可以：
+- 查看所有用户列表和统计数据
+- 创建新用户（可指定角色和配额）
+- 修改用户角色（user/admin）
+- 修改用户配额
+- 重置用户密码
+- 删除用户（不能删除最后一个管理员）
 
 ### AI Memory 接口
 

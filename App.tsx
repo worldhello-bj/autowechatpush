@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
+import { HashRouter, Routes, Route, Link, NavLink, Navigate } from 'react-router-dom';
 import Editor from './components/Editor';
 import LogSettings from './components/LogSettings';
 import PromptEditor from './components/PromptEditor';
+import AuthPage from './components/AuthPage';
+import { AuthProvider, useAuth } from './components/AuthContext';
 import { AIProvider } from './types';
 import { setThinkingMode, setMultiRoundLayoutMode } from './services/deepSeekService';
 import { setDualAIThinkingMode, setDualAIMultiRoundLayoutMode } from './services/dualAIService';
@@ -568,10 +570,106 @@ const SettingsPage: React.FC = () => {
   );
 };
 
-// --- Main App Component ---
+// --- Protected Route Component ---
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isLoggedIn, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">加载中...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!isLoggedIn) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+};
 
-const App: React.FC = () => {
+// --- User Menu Component ---
+const UserMenu: React.FC = () => {
+  const { user, logout } = useAuth();
+  const [showMenu, setShowMenu] = useState(false);
+  
+  const handleLogout = async () => {
+    await logout();
+    setShowMenu(false);
+  };
+  
+  if (!user) return null;
+  
+  return (
+    <div className="relative">
+      <button 
+        onClick={() => setShowMenu(!showMenu)}
+        className="flex items-center gap-2 h-9 px-3 rounded-full bg-gray-100 hover:bg-gray-200 transition"
+      >
+        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white text-sm font-bold">
+          {user.name.charAt(0).toUpperCase()}
+        </div>
+        <span className="text-sm font-medium text-gray-700 hidden sm:block">{user.name}</span>
+        <span className="material-icons text-gray-400 text-sm">expand_more</span>
+      </button>
+      
+      {showMenu && (
+        <>
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => setShowMenu(false)}
+          />
+          <div className="absolute right-0 top-12 w-56 bg-white rounded-xl shadow-xl border border-gray-200 z-50 py-2">
+            <div className="px-4 py-3 border-b border-gray-100">
+              <div className="font-medium text-gray-800">{user.name}</div>
+              <div className="text-sm text-gray-500 truncate">{user.email}</div>
+              {user.role === 'admin' && (
+                <span className="inline-block mt-1 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
+                  管理员
+                </span>
+              )}
+            </div>
+            
+            <div className="py-1">
+              <Link 
+                to="/settings"
+                onClick={() => setShowMenu(false)}
+                className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
+              >
+                <span className="material-icons text-lg text-gray-400">settings</span>
+                设置
+              </Link>
+              
+              <div className="flex items-center gap-3 px-4 py-2 text-gray-700">
+                <span className="material-icons text-lg text-gray-400">token</span>
+                <span>配额: <strong className="text-green-600">{user.quota}</strong></span>
+              </div>
+            </div>
+            
+            <div className="border-t border-gray-100 py-1">
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition w-full text-left"
+              >
+                <span className="material-icons text-lg">logout</span>
+                退出登录
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+// --- Main App Layout Component ---
+const AppLayout: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
+  const { isLoggedIn, isLoading } = useAuth();
 
   // Helper for NavLink classes to style active tab
   const getNavLinkClass = ({ isActive }: { isActive: boolean }) => 
@@ -579,53 +677,103 @@ const App: React.FC = () => {
       ? "text-green-600 font-bold border-b-2 border-green-600 h-full flex items-center px-1 transition-colors"
       : "text-gray-500 hover:text-gray-900 h-full flex items-center px-1 transition-colors border-b-2 border-transparent hover:border-gray-200";
 
-  return (
-    <HashRouter>
-      <div className="h-screen w-screen flex flex-col bg-gray-50 text-gray-900 font-sans">
-        
-        {/* Top Notification Bar for Errors */}
-        {error && (
-          <div className="bg-red-500 text-white px-4 py-2 text-center text-sm font-medium flex justify-between items-center relative z-50 shadow-md">
-            <span>{error}</span>
-            <button onClick={() => setError(null)} className="ml-4 hover:bg-red-600 rounded p-1">
-              <span className="material-icons text-sm">close</span>
-            </button>
-          </div>
-        )}
+  // Show loading spinner during initial auth check
+  if (isLoading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">加载中...</p>
+        </div>
+      </div>
+    );
+  }
 
-        {/* Header */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center px-6 justify-between flex-shrink-0 z-40 relative shadow-sm">
-           <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm">
-                  <span className="material-icons text-xl">article</span>
-              </div>
-              <h1 className="text-xl font-bold tracking-tight text-gray-800">WeChat <span className="text-green-600">AI Publisher</span></h1>
-           </div>
-           
+  return (
+    <div className="h-screen w-screen flex flex-col bg-gray-50 text-gray-900 font-sans">
+      
+      {/* Top Notification Bar for Errors */}
+      {error && (
+        <div className="bg-red-500 text-white px-4 py-2 text-center text-sm font-medium flex justify-between items-center relative z-50 shadow-md">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="ml-4 hover:bg-red-600 rounded p-1">
+            <span className="material-icons text-sm">close</span>
+          </button>
+        </div>
+      )}
+
+      {/* Header */}
+      <header className="h-16 bg-white border-b border-gray-200 flex items-center px-6 justify-between flex-shrink-0 z-40 relative shadow-sm">
+         <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm">
+                <span className="material-icons text-xl">article</span>
+            </div>
+            <h1 className="text-xl font-bold tracking-tight text-gray-800">WeChat <span className="text-green-600">AI Publisher</span></h1>
+         </div>
+         
+         {isLoggedIn && (
            <nav className="hidden md:flex gap-8 text-sm font-medium h-full items-center">
               <NavLink to="/" className={getNavLinkClass}>Editor</NavLink>
               <NavLink to="/drafts" className={getNavLinkClass}>Drafts</NavLink>
               <NavLink to="/analytics" className={getNavLinkClass}>Analytics</NavLink>
               <NavLink to="/settings" className={getNavLinkClass}>Settings</NavLink>
            </nav>
-           
-           <div className="flex items-center gap-4">
-              <Link to="/settings" className="h-9 w-9 rounded-full bg-gray-200 overflow-hidden border border-gray-300 ring-2 ring-transparent hover:ring-green-100 transition cursor-pointer">
-                 <img src="https://picsum.photos/100/100" alt="User" className="w-full h-full object-cover"/>
+         )}
+         
+         <div className="flex items-center gap-4">
+            {isLoggedIn ? (
+              <UserMenu />
+            ) : (
+              <Link 
+                to="/login" 
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium"
+              >
+                <span className="material-icons text-lg">login</span>
+                登录
               </Link>
-           </div>
-        </header>
+            )}
+         </div>
+      </header>
 
-        {/* Main Workspace */}
-        <main className="flex-1 overflow-hidden relative">
-           <Routes>
-             <Route path="/" element={<Editor onError={(msg) => setError(msg)} />} />
-             <Route path="/drafts" element={<DraftsPage />} />
-             <Route path="/analytics" element={<AnalyticsPage />} />
-             <Route path="/settings" element={<SettingsPage />} />
-           </Routes>
-        </main>
-      </div>
+      {/* Main Workspace */}
+      <main className="flex-1 overflow-hidden relative">
+         <Routes>
+           <Route path="/login" element={
+             isLoggedIn ? <Navigate to="/" replace /> : <AuthPage />
+           } />
+           <Route path="/" element={
+             <ProtectedRoute>
+               <Editor onError={(msg) => setError(msg)} />
+             </ProtectedRoute>
+           } />
+           <Route path="/drafts" element={
+             <ProtectedRoute>
+               <DraftsPage />
+             </ProtectedRoute>
+           } />
+           <Route path="/analytics" element={
+             <ProtectedRoute>
+               <AnalyticsPage />
+             </ProtectedRoute>
+           } />
+           <Route path="/settings" element={
+             <ProtectedRoute>
+               <SettingsPage />
+             </ProtectedRoute>
+           } />
+         </Routes>
+      </main>
+    </div>
+  );
+};
+
+// --- Main App Component (with AuthProvider) ---
+const App: React.FC = () => {
+  return (
+    <HashRouter>
+      <AuthProvider>
+        <AppLayout />
+      </AuthProvider>
     </HashRouter>
   );
 };
