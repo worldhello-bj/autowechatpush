@@ -288,17 +288,19 @@ export const setUserTotalQuota = (userId: string, totalQuota: number): UserQuota
   }
 
   const quotaData = userQuotas.get(userId)!;
+  // totalQuota represents the monthly quota limit used by quota checks
   quotaData.totalQuota = Math.max(0, totalQuota);
   quotaData.dailyUsed = Math.min(quotaData.dailyUsed, quotaData.totalQuota);
   quotaData.monthlyUsed = Math.min(quotaData.monthlyUsed, quotaData.totalQuota);
 
   const status = getUserQuotaStatus(userId);
-  if (!status) {
-    logger.error('Failed to load quota status after update', { userId });
-    throw new Error('Quota status unavailable');
+  if (status) {
+    return status;
   }
 
-  return status;
+  // Defensive fallback: getUserQuotaStatus should auto-initialize, so reaching here indicates unexpected state
+  logger.error('Failed to load quota status after update', { userId });
+  throw new Error('Quota status unavailable');
 };
 
 /**
