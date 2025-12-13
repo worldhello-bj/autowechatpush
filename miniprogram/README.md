@@ -79,18 +79,61 @@ POST /auth/wechat-login
 
 ## 微信公众号发布
 
-参照源代码 `services/wechatService.ts` 实现，直接调用微信公众号API。
+支持两种授权方式：
 
-### 配置步骤
+### 方式一：扫码授权（推荐，类似秀米）
 
-1. 在「设置」页面配置微信公众号的 AppID 和 AppSecret
-2. 上传封面图片（微信要求必须有封面）
-3. 生成文章后，点击「发布」按钮
-4. 文章将保存到公众号草稿箱
+无需手动输入AppID/AppSecret，无需配置域名白名单，扫码即可完成授权。
 
-### API调用流程
+**使用步骤：**
 
-发布文章的完整流程（与源代码一致）：
+1. 在「设置」页面点击「扫码授权公众号」
+2. 复制授权链接，在浏览器打开
+3. 使用微信扫描页面上的二维码
+4. 用公众号管理员账号确认授权
+5. 授权成功后即可发布文章
+
+**后端需实现的接口：**
+
+```
+# 获取授权链接
+POST /wechat/auth/url
+Response: { authUrl, authId, qrcodeUrl }
+
+# 检查授权状态（轮询）
+GET /wechat/auth/status/{authId}
+Response: { authorized, accountName, accessToken, expiresAt }
+
+# 使用授权发布文章
+POST /wechat/auth/publish
+{
+  "authId": "xxx",
+  "title": "文章标题",
+  "author": "作者",
+  "content": "<html>内容</html>",
+  "digest": "摘要",
+  "coverImageBase64": "base64图片数据"
+}
+```
+
+**后端需要实现微信第三方平台服务**，参考：
+- [第三方平台授权流程](https://developers.weixin.qq.com/doc/oplatform/Third-party_Platforms/2.0/api/Before_Develop/Authorization_Process_Technical_Description.html)
+
+### 方式二：手动配置AppID/AppSecret
+
+如果不想搭建第三方平台服务，可以使用手动配置方式。
+
+**使用步骤：**
+
+1. 在「设置」页面展开「手动输入AppID/AppSecret」
+2. 填入公众号的 AppID 和 AppSecret
+3. 上传封面图片（微信要求必须有封面）
+4. 生成文章后，点击「发布」按钮
+5. 文章将保存到公众号草稿箱
+
+**注意：** 此方式需要在小程序后台配置域名白名单：`https://api.weixin.qq.com`
+
+**API调用流程：**
 
 ```
 1. 获取Access Token
@@ -98,31 +141,14 @@ POST /auth/wechat-login
 
 2. 上传封面图片（永久素材）
    POST https://api.weixin.qq.com/cgi-bin/material/add_material?access_token={token}&type=image
-   使用 wx.uploadFile 上传图片
 
 3. 保存草稿
    POST https://api.weixin.qq.com/cgi-bin/draft/add?access_token={token}
-   {
-     "articles": [{
-       "title": "文章标题",
-       "author": "作者",
-       "digest": "摘要",
-       "content": "<html>内容</html>",
-       "thumb_media_id": "封面图片media_id",
-       "need_open_comment": 0,
-       "only_fans_can_comment": 0
-     }]
-   }
 ```
-
-### 域名白名单配置
-
-在微信公众平台小程序设置中，需要将以下域名添加到request合法域名：
-
-- `https://api.weixin.qq.com`
 
 ### 参考文档
 
+- [第三方平台授权](https://developers.weixin.qq.com/doc/oplatform/Third-party_Platforms/2.0/api/Before_Develop/Authorization_Process_Technical_Description.html)
 - [获取Access Token](https://developers.weixin.qq.com/doc/offiaccount/Basic_Information/Get_access_token.html)
 - [上传永久素材](https://developers.weixin.qq.com/doc/offiaccount/Asset_Management/Adding_Permanent_Assets.html)
 - [新建草稿](https://developers.weixin.qq.com/doc/offiaccount/Draft_Box/Add_draft.html)

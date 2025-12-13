@@ -186,34 +186,82 @@
       <text class="section-title">微信公众号</text>
     </view>
     
-    <view class="key-input-group">
-      <text class="key-label">AppID</text>
-      <input 
-        class="input-field" 
-        placeholder="wx..."
-        value="{{wechatAppId}}"
-        bindinput="onWechatAppIdInput"
-      />
-    </view>
-    
-    <view class="key-input-group">
-      <text class="key-label">AppSecret</text>
-      <view class="key-input-wrapper">
-        <input 
-          class="key-input" 
-          type="{{showAppSecret ? 'text' : 'password'}}"
-          placeholder="请输入AppSecret"
-          value="{{wechatAppSecret}}"
-          bindinput="onWechatAppSecretInput"
-        />
-        <view class="key-toggle" bindtap="toggleAppSecret">
-          <text>{{showAppSecret ? '🙈' : '👁'}}</text>
+    <!-- 已授权状态 -->
+    <view wx:if="{{wechatAuthorized}}" class="auth-status authorized">
+      <view class="auth-info">
+        <text class="auth-icon">✅</text>
+        <view class="auth-details">
+          <text class="auth-name">{{wechatAccountName || '已授权公众号'}}</text>
+          <text class="auth-hint">授权有效，可直接发布文章</text>
         </view>
       </view>
-      <text class="key-hint">从微信公众平台获取</text>
+      <button class="revoke-btn" bindtap="revokeWechatAuth">取消授权</button>
     </view>
     
-    <button class="save-btn" bindtap="saveWechatConfig">保存配置</button>
+    <!-- 未授权状态 - 秀米风格扫码授权 -->
+    <view wx:else class="auth-status not-authorized">
+      <view class="auth-intro">
+        <text class="intro-title">一键授权公众号</text>
+        <text class="intro-desc">无需手动输入AppID/AppSecret，扫码即可完成授权</text>
+      </view>
+      
+      <button class="scan-auth-btn" bindtap="startWechatAuth">
+        <text class="scan-icon">📲</text>
+        <text>扫码授权公众号</text>
+      </button>
+      
+      <view class="auth-steps">
+        <view class="step-item">
+          <text class="step-num">1</text>
+          <text class="step-text">点击上方按钮</text>
+        </view>
+        <view class="step-item">
+          <text class="step-num">2</text>
+          <text class="step-text">打开微信扫描二维码</text>
+        </view>
+        <view class="step-item">
+          <text class="step-num">3</text>
+          <text class="step-text">使用公众号管理员账号确认授权</text>
+        </view>
+      </view>
+      
+      <!-- 备用手动配置（折叠） -->
+      <view class="manual-config-toggle" bindtap="toggleManualConfig">
+        <text class="toggle-text">{{showManualConfig ? '收起手动配置' : '手动输入AppID/AppSecret'}}</text>
+        <text class="toggle-arrow">{{showManualConfig ? '▲' : '▼'}}</text>
+      </view>
+      
+      <view wx:if="{{showManualConfig}}" class="manual-config">
+        <view class="key-input-group">
+          <text class="key-label">AppID</text>
+          <input 
+            class="input-field" 
+            placeholder="wx..."
+            value="{{wechatAppId}}"
+            bindinput="onWechatAppIdInput"
+          />
+        </view>
+        
+        <view class="key-input-group">
+          <text class="key-label">AppSecret</text>
+          <view class="key-input-wrapper">
+            <input 
+              class="key-input" 
+              type="{{showAppSecret ? 'text' : 'password'}}"
+              placeholder="请输入AppSecret"
+              value="{{wechatAppSecret}}"
+              bindinput="onWechatAppSecretInput"
+            />
+            <view class="key-toggle" bindtap="toggleAppSecret">
+              <text>{{showAppSecret ? '🙈' : '👁'}}</text>
+            </view>
+          </view>
+          <text class="key-hint">从微信公众平台获取</text>
+        </view>
+        
+        <button class="save-btn" bindtap="saveWechatConfig">保存配置</button>
+      </view>
+    </view>
   </view>
 
   <!-- 通用设置 -->

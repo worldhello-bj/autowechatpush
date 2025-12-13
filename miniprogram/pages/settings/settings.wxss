@@ -317,6 +317,166 @@
   border: none;
 }
 
+/* 微信公众号授权样式 */
+.auth-status {
+  padding: 20rpx 0;
+}
+
+.auth-status.authorized {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.auth-info {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  flex: 1;
+}
+
+.auth-icon {
+  font-size: 40rpx;
+}
+
+.auth-details {
+  flex: 1;
+}
+
+.auth-name {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #333;
+}
+
+.auth-hint {
+  display: block;
+  font-size: 22rpx;
+  color: #07c160;
+  margin-top: 4rpx;
+}
+
+.revoke-btn {
+  padding: 12rpx 24rpx;
+  background: #fff;
+  color: #fa5151;
+  font-size: 24rpx;
+  border-radius: 24rpx;
+  border: 2rpx solid #fa5151;
+  line-height: 1.4;
+}
+
+.revoke-btn::after {
+  border: none;
+}
+
+.auth-status.not-authorized {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.auth-intro {
+  text-align: center;
+  padding: 20rpx 0;
+}
+
+.intro-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8rpx;
+}
+
+.intro-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.scan-auth-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  padding: 32rpx;
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: 500;
+  border-radius: 48rpx;
+  border: none;
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
+}
+
+.scan-auth-btn::after {
+  border: none;
+}
+
+.scan-icon {
+  font-size: 36rpx;
+}
+
+.auth-steps {
+  display: flex;
+  justify-content: space-around;
+  padding: 24rpx 0;
+  background: #f8f8f8;
+  border-radius: 12rpx;
+}
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.step-num {
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #07c160;
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: bold;
+  border-radius: 50%;
+}
+
+.step-text {
+  font-size: 22rpx;
+  color: #666;
+  text-align: center;
+}
+
+.manual-config-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 20rpx;
+  color: #999;
+}
+
+.toggle-text {
+  font-size: 24rpx;
+}
+
+.toggle-arrow {
+  font-size: 20rpx;
+}
+
+.manual-config {
+  padding-top: 24rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
 /* 版本信息 */
 .version-info {
   text-align: center;

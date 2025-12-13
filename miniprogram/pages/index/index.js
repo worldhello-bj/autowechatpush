@@ -3,7 +3,7 @@
  * 主编辑器页面 - AI文章生成
  */
 
-const { aiApi, materialApi, wechatApi } = require('../../utils/api');
+const { aiApi, materialApi, wechatApi, wechatAuthApi } = require('../../utils/api');
 const { requireAuth, getStoredUser } = require('../../utils/auth');
 const { 
   showLoading, 
@@ -388,31 +388,10 @@ Page({
   },
 
   // 发布到微信公众号
-  // 参照源代码 services/wechatService.ts 实现
+  // 支持两种方式：扫码授权（推荐）或手动配置AppID/AppSecret
   async publishToWeChat() {
     if (!this.data.articleHtml) {
       showToast('请先生成文章');
-      return;
-    }
-    
-    // 检查微信公众号配置
-    let wechatCreds = null;
-    try {
-      const credsStr = wx.getStorageSync('wechat_creds');
-      if (credsStr) {
-        wechatCreds = JSON.parse(credsStr);
-      }
-    } catch (e) {
-      console.error('[Index] 读取微信配置失败:', e);
-    }
-    
-    if (!wechatCreds || !wechatCreds.appId || !wechatCreds.appSecret) {
-      const goToSettings = await showConfirm('请先在设置页面配置微信公众号AppID和AppSecret');
-      if (goToSettings) {
-        wx.navigateTo({
-          url: '/pages/settings/settings'
-        });
-      }
       return;
     }
     
@@ -422,23 +401,70 @@ Page({
       return;
     }
     
+    // 检查微信公众号授权状态
+    let authInfo = null;
+    let wechatCreds = null;
+    
+    try {
+      const authInfoStr = wx.getStorageSync('wechat_auth_info');
+      if (authInfoStr) {
+        authInfo = JSON.parse(authInfoStr);
+      }
+      
+      const credsStr = wx.getStorageSync('wechat_creds');
+      if (credsStr) {
+        wechatCreds = JSON.parse(credsStr);
+      }
+    } catch (e) {
+      console.error('[Index] 读取微信配置失败:', e);
+    }
+    
+    // 检查是否已授权
+    const isAuthorized = authInfo && authInfo.expiresAt && new Date(authInfo.expiresAt) > new Date();
+    const hasManualConfig = wechatCreds && wechatCreds.appId && wechatCreds.appSecret;
+    
+    if (!isAuthorized && !hasManualConfig) {
+      const goToSettings = await showConfirm('请先在设置页面扫码授权公众号或手动配置AppID/AppSecret');
+      if (goToSettings) {
+        wx.navigateTo({
+          url: '/pages/settings/settings'
+        });
+      }
+      return;
+    }
+    
     const confirmed = await showConfirm('确定要将文章保存到微信公众号草稿箱吗？');
     if (!confirmed) return;
     
     showLoading('发布中...');
     
     try {
-      // 调用微信公众号API发布文章
-      // 完整流程: 获取Token -> 上传封面 -> 保存草稿
-      const result = await wechatApi.publishArticle({
-        appId: wechatCreds.appId,
-        appSecret: wechatCreds.appSecret,
-        title: this.data.articleTitle || '未命名文章',
-        author: 'AI助手',
-        content: this.data.articleHtml,
-        digest: this.data.articleDigest || '',
-        coverImagePath: this.data.uploadedImage
-      });
+      let result;
+      
+      // 优先使用扫码授权方式（通过后端代理）
+      if (isAuthorized && authInfo.authId !== 'manual') {
+        console.log('[Index] 使用扫码授权方式发布');
+        result = await wechatAuthApi.publishWithAuth({
+          authId: authInfo.authId,
+          title: this.data.articleTitle || '未命名文章',
+          author: 'AI助手',
+          content: this.data.articleHtml,
+          digest: this.data.articleDigest || '',
+          coverImagePath: this.data.uploadedImage
+        });
+      } else {
+        // 使用手动配置的AppID/AppSecret直接调用微信API
+        console.log('[Index] 使用手动配置方式发布');
+        result = await wechatApi.publishArticle({
+          appId: wechatCreds.appId,
+          appSecret: wechatCreds.appSecret,
+          title: this.data.articleTitle || '未命名文章',
+          author: 'AI助手',
+          content: this.data.articleHtml,
+          digest: this.data.articleDigest || '',
+          coverImagePath: this.data.uploadedImage
+        });
+      }
       
       if (result.success) {
         showSuccess('发布成功');

@@ -645,6 +645,86 @@ const wxAuthApi = {
   }
 };
 
+// ========== 微信公众号授权API（秀米风格扫码授权）==========
+// 需要后端实现第三方平台授权服务
+
+const wechatAuthApi = {
+  /**
+   * 获取公众号授权链接（秀米风格）
+   * 后端需要作为微信第三方平台，生成授权二维码
+   * @returns {Promise<Object>} - { success, data: { authUrl, authId, qrcodeUrl } }
+   */
+  getAuthUrl: async () => {
+    return request('/wechat/auth/url', {
+      method: 'POST',
+      timeout: 30000
+    });
+  },
+
+  /**
+   * 检查授权状态（轮询）
+   * @param {string} authId - 授权会话ID
+   * @returns {Promise<Object>} - { success, data: { authorized, accountName, accessToken, expiresAt } }
+   */
+  checkAuthStatus: async (authId) => {
+    return request(`/wechat/auth/status/${authId}`, {
+      method: 'GET',
+      timeout: 10000
+    });
+  },
+
+  /**
+   * 取消授权
+   * @param {string} authId - 授权会话ID
+   * @returns {Promise<Object>} - { success }
+   */
+  revokeAuth: async (authId) => {
+    return request(`/wechat/auth/revoke/${authId}`, {
+      method: 'POST'
+    });
+  },
+
+  /**
+   * 使用已授权的账号发布文章
+   * 后端会使用存储的authorizer_access_token进行操作
+   * @param {Object} params - 发布参数
+   * @param {string} params.authId - 授权会话ID
+   * @param {string} params.title - 文章标题
+   * @param {string} params.author - 作者
+   * @param {string} params.content - 文章HTML内容
+   * @param {string} params.digest - 摘要
+   * @param {string} [params.coverImagePath] - 封面图片本地路径
+   * @returns {Promise<Object>} - { success, data: { mediaId } }
+   */
+  publishWithAuth: async (params) => {
+    const { authId, title, author, content, digest, coverImagePath } = params;
+    
+    // 如果有封面图片，先上传
+    let coverImageBase64 = null;
+    if (coverImagePath) {
+      try {
+        const fs = wx.getFileSystemManager();
+        coverImageBase64 = fs.readFileSync(coverImagePath, 'base64');
+      } catch (e) {
+        console.error('[WeChat Auth API] 读取封面图片失败:', e);
+      }
+    }
+    
+    return request('/wechat/auth/publish', {
+      method: 'POST',
+      data: {
+        authId,
+        title,
+        author: author || 'AI助手',
+        content,
+        digest: digest || '',
+        coverImageBase64
+      },
+      timeout: 120000
+    });
+  }
+};
+
 module.exports = {
   // Token管理
   getAccessToken,
@@ -661,6 +741,7 @@ module.exports = {
   healthApi,
   wechatApi,
   wxAuthApi,
+  wechatAuthApi,
   
   // 通用请求
   request
