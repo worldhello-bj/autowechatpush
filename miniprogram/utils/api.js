@@ -343,63 +343,272 @@ const healthApi = {
 };
 
 // ========== 微信公众号API ==========
+// 参照源代码 services/wechatService.ts 实现
+// 文档: https://developers.weixin.qq.com/doc/offiaccount/Basic_Information/Get_access_token.html
+
+// 微信公众号API基础地址
+const WECHAT_API_BASE = 'https://api.weixin.qq.com/cgi-bin';
+
+/**
+ * 微信公众号API请求封装
+ */
+function wechatRequest(url, options = {}) {
+  return new Promise((resolve) => {
+    wx.request({
+      url,
+      method: options.method || 'GET',
+      header: options.header || { 'Content-Type': 'application/json' },
+      data: options.data,
+      timeout: options.timeout || 30000,
+      success: (res) => {
+        console.log('[WeChat API] 响应:', res.data);
+        
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          // 检查微信API错误码
+          if (res.data.errcode && res.data.errcode !== 0) {
+            resolve({
+              success: false,
+              error: {
+                code: `WECHAT_${res.data.errcode}`,
+                message: res.data.errmsg || '微信API错误'
+              }
+            });
+          } else {
+            resolve({
+              success: true,
+              data: res.data
+            });
+          }
+        } else {
+          resolve({
+            success: false,
+            error: {
+              code: `HTTP_${res.statusCode}`,
+              message: '请求失败'
+            }
+          });
+        }
+      },
+      fail: (err) => {
+        console.error('[WeChat API] 请求失败:', err);
+        resolve({
+          success: false,
+          error: {
+            code: 'NETWORK_ERROR',
+            message: err.errMsg || '网络连接失败'
+          }
+        });
+      }
+    });
+  });
+}
 
 const wechatApi = {
   /**
    * 获取微信公众号Access Token
+   * 文档: https://developers.weixin.qq.com/doc/offiaccount/Basic_Information/Get_access_token.html
    * @param {string} appId - 公众号AppID
    * @param {string} appSecret - 公众号AppSecret
+   * @returns {Promise<Object>} - { success, data: { access_token, expires_in } }
    */
   getAccessToken: async (appId, appSecret) => {
-    return request('/wechat/token', {
-      method: 'POST',
-      data: { appId, appSecret }
+    const url = `${WECHAT_API_BASE}/token?grant_type=client_credential&appid=${appId}&secret=${appSecret}`;
+    console.log('[WeChat API] 获取Access Token...');
+    
+    const result = await wechatRequest(url);
+    
+    if (result.success && result.data.access_token) {
+      console.log('[WeChat API] Access Token获取成功');
+      return {
+        success: true,
+        data: {
+          accessToken: result.data.access_token,
+          expiresIn: result.data.expires_in
+        }
+      };
+    }
+    
+    return result;
+  },
+
+  /**
+   * 上传永久素材（图片）到微信公众号
+   * 文档: https://developers.weixin.qq.com/doc/offiaccount/Asset_Management/Adding_Permanent_Assets.html
+   * 注意: 小程序不支持FormData，需要使用wx.uploadFile
+   * @param {string} accessToken - Access Token
+   * @param {string} filePath - 本地图片路径
+   * @returns {Promise<Object>} - { success, data: { mediaId } }
+   */
+  uploadImage: async (accessToken, filePath) => {
+    const url = `${WECHAT_API_BASE}/material/add_material?access_token=${accessToken}&type=image`;
+    console.log('[WeChat API] 上传图片...', filePath);
+    
+    return new Promise((resolve) => {
+      wx.uploadFile({
+        url,
+        filePath,
+        name: 'media',
+        formData: {},
+        timeout: 60000,
+        success: (res) => {
+          try {
+            const data = JSON.parse(res.data);
+            console.log('[WeChat API] 上传响应:', data);
+            
+            if (data.errcode && data.errcode !== 0) {
+              resolve({
+                success: false,
+                error: {
+                  code: `WECHAT_${data.errcode}`,
+                  message: data.errmsg || '上传失败'
+                }
+              });
+            } else if (data.media_id) {
+              console.log('[WeChat API] 图片上传成功, media_id:', data.media_id);
+              resolve({
+                success: true,
+                data: {
+                  mediaId: data.media_id,
+                  url: data.url
+                }
+              });
+            } else {
+              resolve({
+                success: false,
+                error: {
+                  code: 'UPLOAD_ERROR',
+                  message: '上传返回格式错误'
+                }
+              });
+            }
+          } catch (e) {
+            resolve({
+              success: false,
+              error: {
+                code: 'PARSE_ERROR',
+                message: '解析响应失败'
+              }
+            });
+          }
+        },
+        fail: (err) => {
+          console.error('[WeChat API] 上传失败:', err);
+          resolve({
+            success: false,
+            error: {
+              code: 'UPLOAD_FAILED',
+              message: err.errMsg || '上传失败'
+            }
+          });
+        }
+      });
     });
   },
 
   /**
-   * 上传图片到微信公众号
-   * @param {string} accessToken - 公众号Access Token
-   * @param {string} imageBase64 - 图片Base64数据
-   * @param {string} filename - 文件名
+   * 保存草稿到微信公众号草稿箱
+   * 文档: https://developers.weixin.qq.com/doc/offiaccount/Draft_Box/Add_draft.html
+   * @param {string} accessToken - Access Token
+   * @param {Object} payload - 草稿内容 (WechatPayload格式)
+   * @returns {Promise<Object>} - { success, data: { mediaId } }
    */
-  uploadImage: async (accessToken, imageBase64, filename = 'cover.jpg') => {
-    return request('/wechat/upload-image', {
+  saveDraft: async (accessToken, payload) => {
+    const url = `${WECHAT_API_BASE}/draft/add?access_token=${accessToken}`;
+    console.log('[WeChat API] 保存草稿...');
+    
+    const result = await wechatRequest(url, {
       method: 'POST',
-      data: { accessToken, imageBase64, filename },
+      data: payload,
       timeout: 60000
     });
-  },
-
-  /**
-   * 保存草稿到微信公众号
-   * @param {string} accessToken - 公众号Access Token
-   * @param {Object} article - 文章内容
-   */
-  saveDraft: async (accessToken, article) => {
-    return request('/wechat/draft', {
-      method: 'POST',
-      data: { accessToken, article },
-      timeout: 60000
-    });
+    
+    if (result.success && result.data.media_id) {
+      console.log('[WeChat API] 草稿保存成功, media_id:', result.data.media_id);
+      return {
+        success: true,
+        data: {
+          mediaId: result.data.media_id
+        }
+      };
+    }
+    
+    return result;
   },
 
   /**
    * 一键发布文章到公众号草稿箱
+   * 完整流程: 获取Token -> 上传封面 -> 保存草稿
    * @param {Object} params - 发布参数
    * @param {string} params.appId - 公众号AppID
    * @param {string} params.appSecret - 公众号AppSecret
    * @param {string} params.title - 文章标题
+   * @param {string} params.author - 作者名
    * @param {string} params.content - 文章HTML内容
    * @param {string} params.digest - 文章摘要
-   * @param {string} [params.coverImageBase64] - 封面图片Base64（可选）
+   * @param {string} [params.coverImagePath] - 封面图片本地路径（可选）
+   * @param {string} [params.thumbMediaId] - 封面图片media_id（如已上传）
+   * @returns {Promise<Object>} - { success, data: { mediaId } }
    */
   publishArticle: async (params) => {
-    return request('/wechat/publish', {
-      method: 'POST',
-      data: params,
-      timeout: 120000 // 发布可能需要较长时间
-    });
+    const { appId, appSecret, title, author, content, digest, coverImagePath, thumbMediaId } = params;
+    
+    console.log('[WeChat API] 开始发布文章:', title);
+    
+    // 1. 获取Access Token
+    const tokenResult = await wechatApi.getAccessToken(appId, appSecret);
+    if (!tokenResult.success) {
+      return tokenResult;
+    }
+    const accessToken = tokenResult.data.accessToken;
+    
+    // 2. 上传封面图片（如果提供了本地路径）
+    let finalThumbMediaId = thumbMediaId;
+    if (coverImagePath && !thumbMediaId) {
+      const uploadResult = await wechatApi.uploadImage(accessToken, coverImagePath);
+      if (!uploadResult.success) {
+        return {
+          success: false,
+          error: {
+            code: 'COVER_UPLOAD_FAILED',
+            message: '封面图片上传失败: ' + (uploadResult.error?.message || '未知错误')
+          }
+        };
+      }
+      finalThumbMediaId = uploadResult.data.mediaId;
+    }
+    
+    // 如果没有封面图片，返回错误（微信要求必须有封面）
+    if (!finalThumbMediaId) {
+      return {
+        success: false,
+        error: {
+          code: 'NO_COVER_IMAGE',
+          message: '发布文章需要封面图片'
+        }
+      };
+    }
+    
+    // 3. 构建草稿payload（参照源代码types.ts的WechatPayload格式）
+    const payload = {
+      articles: [{
+        title: title,
+        author: author || 'AI助手',
+        digest: digest || '',
+        content: content,
+        thumb_media_id: finalThumbMediaId,
+        need_open_comment: 0,
+        only_fans_can_comment: 0
+      }]
+    };
+    
+    // 4. 保存草稿
+    const draftResult = await wechatApi.saveDraft(accessToken, payload);
+    
+    if (draftResult.success) {
+      console.log('[WeChat API] 文章发布成功!');
+    }
+    
+    return draftResult;
   }
 };
 

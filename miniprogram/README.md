@@ -79,27 +79,53 @@ POST /auth/wechat-login
 
 ## 微信公众号发布
 
+参照源代码 `services/wechatService.ts` 实现，直接调用微信公众号API。
+
 ### 配置步骤
 
 1. 在「设置」页面配置微信公众号的 AppID 和 AppSecret
-2. 生成文章后，点击「发布」按钮
-3. 文章将保存到公众号草稿箱
+2. 上传封面图片（微信要求必须有封面）
+3. 生成文章后，点击「发布」按钮
+4. 文章将保存到公众号草稿箱
 
-### 后端接口要求
+### API调用流程
 
-后端需要实现以下接口支持发布功能：
+发布文章的完整流程（与源代码一致）：
 
 ```
-POST /wechat/publish
-{
-  "appId": "wx...",
-  "appSecret": "xxx",
-  "title": "文章标题",
-  "content": "<html>文章内容</html>",
-  "digest": "文章摘要",
-  "coverImageBase64": "base64图片数据"  // 可选
-}
+1. 获取Access Token
+   GET https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid={appId}&secret={appSecret}
+
+2. 上传封面图片（永久素材）
+   POST https://api.weixin.qq.com/cgi-bin/material/add_material?access_token={token}&type=image
+   使用 wx.uploadFile 上传图片
+
+3. 保存草稿
+   POST https://api.weixin.qq.com/cgi-bin/draft/add?access_token={token}
+   {
+     "articles": [{
+       "title": "文章标题",
+       "author": "作者",
+       "digest": "摘要",
+       "content": "<html>内容</html>",
+       "thumb_media_id": "封面图片media_id",
+       "need_open_comment": 0,
+       "only_fans_can_comment": 0
+     }]
+   }
 ```
+
+### 域名白名单配置
+
+在微信公众平台小程序设置中，需要将以下域名添加到request合法域名：
+
+- `https://api.weixin.qq.com`
+
+### 参考文档
+
+- [获取Access Token](https://developers.weixin.qq.com/doc/offiaccount/Basic_Information/Get_access_token.html)
+- [上传永久素材](https://developers.weixin.qq.com/doc/offiaccount/Asset_Management/Adding_Permanent_Assets.html)
+- [新建草稿](https://developers.weixin.qq.com/doc/offiaccount/Draft_Box/Add_draft.html)
 
 ## 开发指南
 

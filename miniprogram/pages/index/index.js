@@ -388,6 +388,7 @@ Page({
   },
 
   // 发布到微信公众号
+  // 参照源代码 services/wechatService.ts 实现
   async publishToWeChat() {
     if (!this.data.articleHtml) {
       showToast('请先生成文章');
@@ -415,30 +416,28 @@ Page({
       return;
     }
     
+    // 检查封面图片（微信要求必须有封面）
+    if (!this.data.uploadedImage) {
+      showToast('请先上传封面图片');
+      return;
+    }
+    
     const confirmed = await showConfirm('确定要将文章保存到微信公众号草稿箱吗？');
     if (!confirmed) return;
     
     showLoading('发布中...');
     
     try {
-      // 准备封面图片
-      let coverImageBase64 = null;
-      if (this.data.uploadedImage) {
-        try {
-          coverImageBase64 = await readFileAsBase64(this.data.uploadedImage);
-        } catch (e) {
-          console.error('[Index] 读取封面图片失败:', e);
-        }
-      }
-      
-      // 调用后端发布接口
+      // 调用微信公众号API发布文章
+      // 完整流程: 获取Token -> 上传封面 -> 保存草稿
       const result = await wechatApi.publishArticle({
         appId: wechatCreds.appId,
         appSecret: wechatCreds.appSecret,
         title: this.data.articleTitle || '未命名文章',
+        author: 'AI助手',
         content: this.data.articleHtml,
         digest: this.data.articleDigest || '',
-        coverImageBase64
+        coverImagePath: this.data.uploadedImage
       });
       
       if (result.success) {
