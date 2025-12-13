@@ -44,3 +44,4 @@ release/
 # Backend specific
 backend/dist
 backend/node_modules
+backend/data

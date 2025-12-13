@@ -1,4 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { randomUUID } from 'crypto';
 import { 
   QuotaPlan,
   PLAN_LIMITS,
@@ -22,11 +26,162 @@ interface UserQuotaData {
   expiryDate?: Date;
 }
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_DIR = path.resolve(__dirname, '..', '..', 'data');
+const DATA_FILE = path.join(DATA_DIR, 'quota.json');
+let persistTimer: NodeJS.Timeout | null = null;
+let persistInFlight: Promise<void> | null = null;
+const USAGE_TYPES: UsageRecord['type'][] = ['ai_generation', 'material_upload', 'ai_stream'];
+// Maximum usage records to keep in memory
+const MAX_USAGE_RECORDS = 10000;
+
 const userQuotas: Map<string, UserQuotaData> = new Map();
 const usageRecords: UsageRecord[] = [];
 
-// Maximum usage records to keep in memory
-const MAX_USAGE_RECORDS = 10000;
+type UserQuotaDataSerialized = Omit<UserQuotaData, 'lastDailyReset' | 'lastMonthlyReset' | 'expiryDate'> & {
+  lastDailyReset: string;
+  lastMonthlyReset: string;
+  expiryDate?: string;
+};
+
+type UsageRecordSerialized = Omit<UsageRecord, 'timestamp'> & { timestamp: string };
+
+interface PersistedData {
+  userQuotas: UserQuotaDataSerialized[];
+  usageRecords: UsageRecordSerialized[];
+}
+
+const flushPersist = async () => {
+  if (persistInFlight) {
+    // Try again shortly after current flush completes
+    if (!persistTimer) {
+      persistTimer = setTimeout(() => {
+        persistTimer = null;
+        void flushPersist();
+      }, 50);
+    }
+    return;
+  }
+
+  const payload: PersistedData = {
+    userQuotas: Array.from(userQuotas.values()).map(q => ({
+      ...q,
+      lastDailyReset: q.lastDailyReset.toISOString(),
+      lastMonthlyReset: q.lastMonthlyReset.toISOString(),
+      expiryDate: q.expiryDate ? q.expiryDate.toISOString() : undefined,
+    })),
+    usageRecords: usageRecords.map(r => ({
+      ...r,
+      timestamp: r.timestamp.toISOString(),
+    })),
+  };
+
+  const tempFile = `${DATA_FILE}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;
+
+  const currentPersist = (async () => {
+    try {
+      await fs.promises.mkdir(DATA_DIR, { recursive: true });
+      await fs.promises.writeFile(tempFile, JSON.stringify(payload, null, 2), 'utf-8');
+      await fs.promises.rename(tempFile, DATA_FILE);
+    } catch (error) {
+      logger.error('Failed to persist quota data to disk', { error });
+    }
+  })();
+
+  persistInFlight = currentPersist.finally(() => {
+    if (persistInFlight === currentPersist) {
+      persistInFlight = null;
+    }
+  });
+
+  await persistInFlight;
+};
+
+const persistData = () => {
+  if (persistTimer) return;
+
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    void flushPersist();
+  }, 100);
+};
+
+const isValidDateString = (value: unknown): value is string => {
+  if (typeof value !== 'string') return false;
+  const d = new Date(value);
+  return !isNaN(d.getTime());
+};
+
+const loadData = async () => {
+  try {
+    try {
+      await fs.promises.access(DATA_FILE, fs.constants.F_OK);
+    } catch {
+      return;
+    }
+
+    const raw = await fs.promises.readFile(DATA_FILE, 'utf-8');
+    const parsed = JSON.parse(raw) as Partial<PersistedData>;
+    if (typeof parsed !== 'object' || parsed === null) {
+      logger.warn('Quota data file malformed (non-object), skipping load');
+      return;
+    }
+    if (!Array.isArray(parsed.userQuotas) || !Array.isArray(parsed.usageRecords)) {
+      logger.warn('Quota data file malformed, skipping load');
+      return;
+    }
+
+    parsed.userQuotas.forEach(q => {
+      if (
+        !q ||
+        typeof q.userId !== 'string' ||
+        !isValidDateString(q.lastDailyReset) ||
+        !isValidDateString(q.lastMonthlyReset) ||
+        !Object.values(QuotaPlan).includes(q.plan as QuotaPlan) ||
+        typeof q.totalQuota !== 'number' ||
+        typeof q.dailyUsed !== 'number' ||
+        typeof q.monthlyUsed !== 'number'
+      ) {
+        logger.warn('Skipping invalid quota entry in data file');
+        return;
+      }
+
+      const expiry = q.expiryDate && isValidDateString(q.expiryDate) ? new Date(q.expiryDate) : undefined;
+      userQuotas.set(q.userId, {
+        ...q,
+        lastDailyReset: new Date(q.lastDailyReset),
+        lastMonthlyReset: new Date(q.lastMonthlyReset),
+        expiryDate: expiry,
+      });
+    });
+
+    const validUsage = parsed.usageRecords
+      .filter(
+        r => r &&
+          typeof r.userId === 'string' &&
+          USAGE_TYPES.includes(r.type as UsageRecord['type']) &&
+          typeof r.cost === 'number' &&
+          isValidDateString(r.timestamp)
+      )
+      .map(r => ({
+        ...r,
+        timestamp: new Date(r.timestamp),
+      }));
+
+    const limitedUsage = validUsage.slice(-MAX_USAGE_RECORDS);
+    usageRecords.push(...limitedUsage);
+
+    logger.info('Quota data loaded from disk', { users: userQuotas.size, records: usageRecords.length });
+  } catch (error) {
+    logger.error('Failed to load quota data from disk', { error });
+  }
+};
+
+// Load persisted data on startup (async to avoid blocking but awaited to avoid race)
+export const initQuotaStore = async (): Promise<void> => {
+  await loadData();
+};
 
 /**
  * Initialize quota for a new user
@@ -45,6 +200,7 @@ export const initializeUserQuota = (userId: string, plan: QuotaPlan = QuotaPlan.
     lastMonthlyReset: now,
   });
 
+  persistData();
   logger.info('User quota initialized', { userId, plan });
 };
 
@@ -74,11 +230,13 @@ const checkAndResetQuotas = (quotaData: UserQuotaData): void => {
   const now = new Date();
   const todayStart = getStartOfDay(now);
   const monthStart = getStartOfMonth(now);
+  let updated = false;
 
   // Reset daily quota if it's a new day
   if (quotaData.lastDailyReset < todayStart) {
     quotaData.dailyUsed = 0;
     quotaData.lastDailyReset = now;
+    updated = true;
     logger.debug('Daily quota reset', { userId: quotaData.userId });
   }
 
@@ -86,7 +244,12 @@ const checkAndResetQuotas = (quotaData: UserQuotaData): void => {
   if (quotaData.lastMonthlyReset < monthStart) {
     quotaData.monthlyUsed = 0;
     quotaData.lastMonthlyReset = now;
+    updated = true;
     logger.debug('Monthly quota reset', { userId: quotaData.userId });
+  }
+
+  if (updated) {
+    persistData();
   }
 };
 
@@ -214,6 +377,7 @@ export const consumeQuota = (
     logger.debug('Trimmed old usage records', { removed: removeCount, remaining: usageRecords.length });
   }
 
+  persistData();
   logger.info('Quota consumed', { 
     userId, 
     credits, 
@@ -240,6 +404,7 @@ export const addQuotaCredits = (
 
   quotaData.totalQuota += credits;
 
+  persistData();
   logger.info('Quota credits added', { 
     userId, 
     credits, 
@@ -270,6 +435,7 @@ export const upgradePlan = (
   quotaData.totalQuota = newLimits.monthlyLimit;
   quotaData.expiryDate = expiryDate;
 
+  persistData();
   logger.info('Plan upgraded', { 
     userId, 
     newPlan, 
@@ -277,6 +443,27 @@ export const upgradePlan = (
   });
 
   return getUserQuotaStatus(userId);
+};
+
+/**
+ * Set user's total quota (used when admin updates quota)
+ */
+export const setUserTotalQuota = (userId: string, totalQuota: number): UserQuotaStatus => {
+  if (!userQuotas.has(userId)) {
+    initializeUserQuota(userId);
+  }
+
+  const quotaData = userQuotas.get(userId);
+  if (!quotaData) {
+    throw new Error(`Quota data missing for user ${userId} after initialization`);
+  }
+  // totalQuota represents the monthly quota limit used by quota checks
+  quotaData.totalQuota = Math.max(0, totalQuota);
+
+  // getUserQuotaStatus auto-initializes entries, so status should be available here
+  persistData();
+  const status = getUserQuotaStatus(userId);
+  return status!;
 };
 
 /**

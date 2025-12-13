@@ -7,7 +7,7 @@ import { config } from './config/index.js';
 import routes from './routes/index.js';
 import { requestIdMiddleware, logger } from './utils/index.js';
 import { errorHandler, notFoundHandler } from './middleware/index.js';
-import { seedAdminUser } from './services/index.js';
+import { seedAdminUser, initQuotaStore } from './services/index.js';
 
 // Create Express app
 const app = express();
@@ -75,6 +75,8 @@ app.use(errorHandler);
 
 // Initialize server
 const startServer = async () => {
+  await initQuotaStore();
+
   // Seed admin user on startup
   try {
     await seedAdminUser();
