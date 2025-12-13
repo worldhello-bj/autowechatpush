@@ -3,7 +3,7 @@
  * 微信小程序认证工具
  */
 
-const { authApi, clearTokens, isAuthenticated: checkAuth } = require('./api');
+const { authApi, clearTokens, isAuthenticated: checkAuth, wxAuthApi } = require('./api');
 
 // 用户信息存储键名
 const USER_INFO_KEY = 'user_info';
@@ -187,6 +187,87 @@ function getUserProfile() {
   });
 }
 
+/**
+ * 微信快捷登录（完整流程）
+ * 1. 调用wx.login获取code
+ * 2. 发送code到后端进行认证
+ * 3. 保存用户信息和token
+ * @returns {Promise<Object>} - 登录结果
+ */
+async function loginWithWechat() {
+  try {
+    // 1. 获取微信登录code
+    const code = await wxLogin();
+    console.log('[Auth] 获取微信登录code成功');
+    
+    // 2. 发送code到后端进行认证
+    const result = await wxAuthApi.loginWithWechat(code);
+    
+    if (result.success && result.data) {
+      // 3. 保存用户信息
+      saveUser(result.data.user);
+      console.log('[Auth] 微信登录成功:', result.data.user.name);
+      
+      return {
+        success: true,
+        user: result.data.user,
+        isNewUser: result.data.isNewUser || false
+      };
+    }
+    
+    return {
+      success: false,
+      error: result.error?.message || '微信登录失败'
+    };
+  } catch (e) {
+    console.error('[Auth] 微信登录失败:', e);
+    return {
+      success: false,
+      error: e.message || '微信登录失败'
+    };
+  }
+}
+
+/**
+ * 微信登录并获取用户头像昵称
+ * 需要使用button组件触发getUserProfile
+ * @param {Object} userInfo - 从getUserProfile获取的用户信息
+ * @returns {Promise<Object>} - 登录结果
+ */
+async function loginWithWechatAndProfile(userInfo) {
+  try {
+    // 1. 获取微信登录code
+    const code = await wxLogin();
+    console.log('[Auth] 获取微信登录code成功');
+    
+    // 2. 发送code和用户信息到后端
+    const result = await wxAuthApi.loginWithWechat(code, userInfo);
+    
+    if (result.success && result.data) {
+      // 3. 保存用户信息
+      saveUser(result.data.user);
+      console.log('[Auth] 微信登录成功:', result.data.user.name);
+      
+      return {
+        success: true,
+        user: result.data.user,
+        isNewUser: result.data.isNewUser || false
+      };
+    }
+    
+    return {
+      success: false,
+      error: result.error?.message || '微信登录失败'
+    };
+  } catch (e) {
+    console.error('[Auth] 微信登录失败:', e);
+    return {
+      success: false,
+      error: e.message || '微信登录失败'
+    };
+  }
+}
+
 module.exports = {
   saveUser,
   getStoredUser,
@@ -198,5 +279,7 @@ module.exports = {
   refreshUserInfo,
   requireAuth,
   wxLogin,
-  getUserProfile
+  getUserProfile,
+  loginWithWechat,
+  loginWithWechatAndProfile
 };

@@ -3,7 +3,7 @@
  * 主编辑器页面 - AI文章生成
  */
 
-const { aiApi, materialApi } = require('../../utils/api');
+const { aiApi, materialApi, wechatApi } = require('../../utils/api');
 const { requireAuth, getStoredUser } = require('../../utils/auth');
 const { 
   showLoading, 
@@ -387,18 +387,76 @@ Page({
     }
   },
 
-  // 发布到微信
+  // 发布到微信公众号
   async publishToWeChat() {
     if (!this.data.articleHtml) {
       showToast('请先生成文章');
       return;
     }
     
-    const confirmed = await showConfirm('确定要将文章保存到微信草稿箱吗？');
+    // 检查微信公众号配置
+    let wechatCreds = null;
+    try {
+      const credsStr = wx.getStorageSync('wechat_creds');
+      if (credsStr) {
+        wechatCreds = JSON.parse(credsStr);
+      }
+    } catch (e) {
+      console.error('[Index] 读取微信配置失败:', e);
+    }
+    
+    if (!wechatCreds || !wechatCreds.appId || !wechatCreds.appSecret) {
+      const goToSettings = await showConfirm('请先在设置页面配置微信公众号AppID和AppSecret');
+      if (goToSettings) {
+        wx.navigateTo({
+          url: '/pages/settings/settings'
+        });
+      }
+      return;
+    }
+    
+    const confirmed = await showConfirm('确定要将文章保存到微信公众号草稿箱吗？');
     if (!confirmed) return;
     
-    showToast('此功能需要配置微信公众号API');
-    // TODO: 实现微信发布功能
+    showLoading('发布中...');
+    
+    try {
+      // 准备封面图片
+      let coverImageBase64 = null;
+      if (this.data.uploadedImage) {
+        try {
+          coverImageBase64 = await readFileAsBase64(this.data.uploadedImage);
+        } catch (e) {
+          console.error('[Index] 读取封面图片失败:', e);
+        }
+      }
+      
+      // 调用后端发布接口
+      const result = await wechatApi.publishArticle({
+        appId: wechatCreds.appId,
+        appSecret: wechatCreds.appSecret,
+        title: this.data.articleTitle || '未命名文章',
+        content: this.data.articleHtml,
+        digest: this.data.articleDigest || '',
+        coverImageBase64
+      });
+      
+      if (result.success) {
+        showSuccess('发布成功');
+        wx.showModal({
+          title: '发布成功',
+          content: `文章已保存到公众号草稿箱\nMedia ID: ${result.data?.mediaId || ''}`,
+          showCancel: false
+        });
+      } else {
+        showError(result.error?.message || '发布失败');
+      }
+    } catch (e) {
+      console.error('[Index] 发布到微信失败:', e);
+      showError('发布失败，请检查网络和配置');
+    } finally {
+      hideLoading();
+    }
   },
 
   // 打开来源链接

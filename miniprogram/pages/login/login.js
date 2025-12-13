@@ -3,7 +3,7 @@
  * 登录页面
  */
 
-const { login, register, wxLogin } = require('../../utils/auth');
+const { login, register, loginWithWechat, loginWithWechatAndProfile, getUserProfile } = require('../../utils/auth');
 const { 
   showLoading, 
   hideLoading, 
@@ -23,6 +23,7 @@ Page({
     confirmPassword: '',
     showPassword: false,
     loading: false,
+    wechatLoading: false,
     errorMsg: ''
   },
 
@@ -139,14 +140,66 @@ Page({
 
   // 微信快捷登录
   async handleWechatLogin() {
-    showToast('微信登录功能开发中');
+    this.setData({ wechatLoading: true, errorMsg: '' });
     
-    // TODO: 实现微信登录
-    // try {
-    //   const code = await wxLogin();
-    //   // 发送code到后端进行认证
-    // } catch (e) {
-    //   showError('微信登录失败');
-    // }
+    try {
+      // 方式1: 直接使用wx.login进行静默登录
+      const result = await loginWithWechat();
+      
+      if (result.success) {
+        showSuccess('登录成功');
+        
+        // 延迟跳转到首页
+        setTimeout(() => {
+          wx.switchTab({
+            url: '/pages/index/index'
+          });
+        }, 1000);
+      } else {
+        this.setData({ errorMsg: result.error || '微信登录失败' });
+      }
+    } catch (e) {
+      console.error('[Login] 微信登录失败:', e);
+      this.setData({ errorMsg: '微信登录失败，请重试' });
+    } finally {
+      this.setData({ wechatLoading: false });
+    }
+  },
+
+  // 微信登录并获取头像昵称（需要用户授权）
+  async handleWechatLoginWithProfile() {
+    this.setData({ wechatLoading: true, errorMsg: '' });
+    
+    try {
+      // 先获取用户头像昵称
+      const userInfo = await getUserProfile();
+      console.log('[Login] 获取用户信息成功:', userInfo);
+      
+      // 使用用户信息进行登录
+      const result = await loginWithWechatAndProfile(userInfo);
+      
+      if (result.success) {
+        showSuccess(result.isNewUser ? '注册成功' : '登录成功');
+        
+        // 延迟跳转到首页
+        setTimeout(() => {
+          wx.switchTab({
+            url: '/pages/index/index'
+          });
+        }, 1000);
+      } else {
+        this.setData({ errorMsg: result.error || '微信登录失败' });
+      }
+    } catch (e) {
+      console.error('[Login] 微信登录失败:', e);
+      // 用户拒绝授权
+      if (e.errMsg && e.errMsg.includes('cancel')) {
+        this.setData({ errorMsg: '您取消了授权，请重试' });
+      } else {
+        this.setData({ errorMsg: '微信登录失败，请重试' });
+      }
+    } finally {
+      this.setData({ wechatLoading: false });
+    }
   }
 });

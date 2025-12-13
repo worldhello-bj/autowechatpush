@@ -200,13 +200,44 @@
   font-size: 30rpx;
   border-radius: 48rpx;
   border: none;
+  margin-bottom: 20rpx;
 }
 
 .wechat-login-btn::after {
   border: none;
 }
 
+.wechat-login-btn[disabled] {
+  opacity: 0.6;
+}
+
 .wechat-icon {
+  font-size: 36rpx;
+}
+
+.wechat-profile-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  padding: 28rpx;
+  background: #fff;
+  color: #07c160;
+  font-size: 30rpx;
+  border-radius: 48rpx;
+  border: 2rpx solid #07c160;
+}
+
+.wechat-profile-btn::after {
+  border: none;
+}
+
+.wechat-profile-btn[disabled] {
+  opacity: 0.6;
+}
+
+.profile-icon {
   font-size: 36rpx;
 }
 

@@ -104,9 +104,27 @@
       <view class="line"></view>
     </view>
 
-    <button class="wechat-login-btn" bindtap="handleWechatLogin">
-      <text class="wechat-icon">💬</text>
-      <text>微信快捷登录</text>
+    <!-- 微信快捷登录（静默登录，无需授权） -->
+    <button 
+      class="wechat-login-btn" 
+      bindtap="handleWechatLogin"
+      disabled="{{wechatLoading}}"
+    >
+      <view wx:if="{{wechatLoading}}" class="loading-spinner white"></view>
+      <block wx:else>
+        <text class="wechat-icon">💬</text>
+        <text>微信快捷登录</text>
+      </block>
+    </button>
+
+    <!-- 微信登录并获取头像昵称（需要用户授权） -->
+    <button 
+      class="wechat-profile-btn" 
+      bindtap="handleWechatLoginWithProfile"
+      disabled="{{wechatLoading}}"
+    >
+      <text class="profile-icon">👤</text>
+      <text>使用微信头像昵称登录</text>
     </button>
   </view>
 

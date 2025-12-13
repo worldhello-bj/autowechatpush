@@ -342,6 +342,100 @@ const healthApi = {
   }
 };
 
+// ========== 微信公众号API ==========
+
+const wechatApi = {
+  /**
+   * 获取微信公众号Access Token
+   * @param {string} appId - 公众号AppID
+   * @param {string} appSecret - 公众号AppSecret
+   */
+  getAccessToken: async (appId, appSecret) => {
+    return request('/wechat/token', {
+      method: 'POST',
+      data: { appId, appSecret }
+    });
+  },
+
+  /**
+   * 上传图片到微信公众号
+   * @param {string} accessToken - 公众号Access Token
+   * @param {string} imageBase64 - 图片Base64数据
+   * @param {string} filename - 文件名
+   */
+  uploadImage: async (accessToken, imageBase64, filename = 'cover.jpg') => {
+    return request('/wechat/upload-image', {
+      method: 'POST',
+      data: { accessToken, imageBase64, filename },
+      timeout: 60000
+    });
+  },
+
+  /**
+   * 保存草稿到微信公众号
+   * @param {string} accessToken - 公众号Access Token
+   * @param {Object} article - 文章内容
+   */
+  saveDraft: async (accessToken, article) => {
+    return request('/wechat/draft', {
+      method: 'POST',
+      data: { accessToken, article },
+      timeout: 60000
+    });
+  },
+
+  /**
+   * 一键发布文章到公众号草稿箱
+   * @param {Object} params - 发布参数
+   * @param {string} params.appId - 公众号AppID
+   * @param {string} params.appSecret - 公众号AppSecret
+   * @param {string} params.title - 文章标题
+   * @param {string} params.content - 文章HTML内容
+   * @param {string} params.digest - 文章摘要
+   * @param {string} [params.coverImageBase64] - 封面图片Base64（可选）
+   */
+  publishArticle: async (params) => {
+    return request('/wechat/publish', {
+      method: 'POST',
+      data: params,
+      timeout: 120000 // 发布可能需要较长时间
+    });
+  }
+};
+
+// ========== 微信小程序登录API ==========
+
+const wxAuthApi = {
+  /**
+   * 微信小程序登录
+   * @param {string} code - wx.login获取的code
+   * @param {Object} [userInfo] - 用户信息（可选）
+   */
+  loginWithWechat: async (code, userInfo = null) => {
+    const result = await request('/auth/wechat-login', {
+      method: 'POST',
+      data: { code, userInfo }
+    });
+    
+    if (result.success && result.data) {
+      setTokens(result.data.accessToken, result.data.refreshToken);
+    }
+    
+    return result;
+  },
+
+  /**
+   * 绑定微信账号到已有账户
+   * @param {string} code - wx.login获取的code
+   */
+  bindWechat: async (code) => {
+    return request('/auth/bind-wechat', {
+      method: 'POST',
+      data: { code }
+    });
+  }
+};
+
 module.exports = {
   // Token管理
   getAccessToken,
@@ -356,6 +450,8 @@ module.exports = {
   materialApi,
   quotaApi,
   healthApi,
+  wechatApi,
+  wxAuthApi,
   
   // 通用请求
   request
