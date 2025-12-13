@@ -1,0 +1,243 @@
+/* pages/login/login.wxss */
+
+.container {
+  min-height: 100vh;
+  padding: 60rpx 32rpx;
+  background: linear-gradient(180deg, #f8f8f8 0%, #ffffff 100%);
+  box-sizing: border-box;
+}
+
+/* 头部 */
+.login-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 60rpx;
+}
+
+.logo {
+  width: 160rpx;
+  height: 160rpx;
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
+  border-radius: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32rpx;
+  box-shadow: 0 16rpx 48rpx rgba(7, 193, 96, 0.3);
+}
+
+.logo-icon {
+  font-size: 80rpx;
+}
+
+.app-name {
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 12rpx;
+}
+
+.app-desc {
+  font-size: 26rpx;
+  color: #999;
+}
+
+/* 登录表单卡片 */
+.login-form {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* 标签页 */
+.form-tabs {
+  display: flex;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.form-tab {
+  flex: 1;
+  text-align: center;
+  padding: 28rpx;
+  font-size: 30rpx;
+  color: #999;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.form-tab.active {
+  color: #07c160;
+  font-weight: 500;
+}
+
+.form-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60rpx;
+  height: 4rpx;
+  background: #07c160;
+  border-radius: 2rpx;
+}
+
+/* 表单内容 */
+.form-content {
+  padding: 32rpx;
+}
+
+.form-group {
+  margin-bottom: 32rpx;
+}
+
+.form-label {
+  display: block;
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 12rpx;
+}
+
+.form-input {
+  width: 100%;
+  padding: 24rpx;
+  background: #f5f5f5;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+.password-wrapper {
+  display: flex;
+  align-items: center;
+  background: #f5f5f5;
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+
+.password-wrapper .form-input {
+  flex: 1;
+  background: transparent;
+}
+
+.password-toggle {
+  padding: 24rpx;
+  font-size: 32rpx;
+}
+
+/* 提交按钮 */
+.submit-btn {
+  width: 100%;
+  padding: 28rpx;
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: 500;
+  border-radius: 48rpx;
+  border: none;
+  margin-top: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
+}
+
+.submit-btn::after {
+  border: none;
+}
+
+.submit-btn[disabled] {
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+/* 错误提示 */
+.error-msg {
+  margin-top: 24rpx;
+  padding: 20rpx;
+  background: #fff0f0;
+  border-radius: 12rpx;
+  text-align: center;
+}
+
+.error-msg text {
+  font-size: 26rpx;
+  color: #fa5151;
+}
+
+/* 其他登录方式 */
+.other-login {
+  margin-top: 60rpx;
+}
+
+.divider-line {
+  display: flex;
+  align-items: center;
+  margin-bottom: 32rpx;
+}
+
+.line {
+  flex: 1;
+  height: 1rpx;
+  background: #e0e0e0;
+}
+
+.divider-text {
+  padding: 0 24rpx;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.wechat-login-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  padding: 28rpx;
+  background: #07c160;
+  color: #fff;
+  font-size: 30rpx;
+  border-radius: 48rpx;
+  border: none;
+}
+
+.wechat-login-btn::after {
+  border: none;
+}
+
+.wechat-icon {
+  font-size: 36rpx;
+}
+
+/* 底部提示 */
+.footer-tips {
+  margin-top: 60rpx;
+  text-align: center;
+}
+
+.tips-text {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.tips-link {
+  font-size: 24rpx;
+  color: #07c160;
+}
+
+/* 加载动画 */
+.loading-spinner {
+  width: 36rpx;
+  height: 36rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

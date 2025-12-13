@@ -1,0 +1,120 @@
+<!--pages/login/login.wxml-->
+<!-- 登录页面 -->
+
+<view class="container">
+  <view class="login-header">
+    <view class="logo">
+      <text class="logo-icon">📝</text>
+    </view>
+    <text class="app-name">微信AI发布助手</text>
+    <text class="app-desc">智能文章生成与发布工具</text>
+  </view>
+
+  <view class="login-form card">
+    <!-- 登录/注册切换 -->
+    <view class="form-tabs">
+      <view 
+        class="form-tab {{!isRegisterMode ? 'active' : ''}}"
+        bindtap="switchMode"
+        data-mode="login"
+      >登录</view>
+      <view 
+        class="form-tab {{isRegisterMode ? 'active' : ''}}"
+        bindtap="switchMode"
+        data-mode="register"
+      >注册</view>
+    </view>
+
+    <!-- 表单 -->
+    <view class="form-content">
+      <!-- 用户名（仅注册时显示） -->
+      <view wx:if="{{isRegisterMode}}" class="form-group">
+        <text class="form-label">用户名</text>
+        <input 
+          class="form-input" 
+          placeholder="请输入用户名"
+          value="{{name}}"
+          bindinput="onNameInput"
+        />
+      </view>
+
+      <!-- 邮箱 -->
+      <view class="form-group">
+        <text class="form-label">邮箱</text>
+        <input 
+          class="form-input" 
+          type="text"
+          placeholder="请输入邮箱"
+          value="{{email}}"
+          bindinput="onEmailInput"
+        />
+      </view>
+
+      <!-- 密码 -->
+      <view class="form-group">
+        <text class="form-label">密码</text>
+        <view class="password-wrapper">
+          <input 
+            class="form-input" 
+            type="{{showPassword ? 'text' : 'password'}}"
+            placeholder="{{isRegisterMode ? '请设置密码（至少6位）' : '请输入密码'}}"
+            value="{{password}}"
+            bindinput="onPasswordInput"
+          />
+          <view class="password-toggle" bindtap="togglePassword">
+            <text>{{showPassword ? '🙈' : '👁'}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 确认密码（仅注册时显示） -->
+      <view wx:if="{{isRegisterMode}}" class="form-group">
+        <text class="form-label">确认密码</text>
+        <input 
+          class="form-input" 
+          type="password"
+          placeholder="请再次输入密码"
+          value="{{confirmPassword}}"
+          bindinput="onConfirmPasswordInput"
+        />
+      </view>
+
+      <!-- 提交按钮 -->
+      <button 
+        class="submit-btn" 
+        bindtap="handleSubmit"
+        disabled="{{loading}}"
+      >
+        <view wx:if="{{loading}}" class="loading-spinner"></view>
+        <text wx:else>{{isRegisterMode ? '注册' : '登录'}}</text>
+      </button>
+
+      <!-- 错误提示 -->
+      <view wx:if="{{errorMsg}}" class="error-msg">
+        <text>{{errorMsg}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 其他登录方式 -->
+  <view class="other-login">
+    <view class="divider-line">
+      <view class="line"></view>
+      <text class="divider-text">其他方式</text>
+      <view class="line"></view>
+    </view>
+
+    <button class="wechat-login-btn" bindtap="handleWechatLogin">
+      <text class="wechat-icon">💬</text>
+      <text>微信快捷登录</text>
+    </button>
+  </view>
+
+  <!-- 底部提示 -->
+  <view class="footer-tips">
+    <text class="tips-text">登录即表示同意</text>
+    <text class="tips-link">《用户协议》</text>
+    <text class="tips-text">和</text>
+    <text class="tips-link">《隐私政策》</text>
+  </view>
+</view>

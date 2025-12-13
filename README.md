@@ -5,9 +5,12 @@
   <img src="https://img.shields.io/badge/React-18.3-61DAFB.svg" alt="React">
   <img src="https://img.shields.io/badge/TypeScript-5.5-3178C6.svg" alt="TypeScript">
   <img src="https://img.shields.io/badge/AI-Multi--Model-green.svg" alt="AI">
+  <img src="https://img.shields.io/badge/小程序-支持-07c160.svg" alt="MiniProgram">
 </p>
 
 一个功能强大的 AI 驱动 Web 应用程序，旨在简化微信公众号内容的创作和发布流程。支持多AI模型、双AI并行架构、丰富的素材库（含40+预设文案、35+SVG组件）和微信公众号一键发布。配额与使用记录持久化到磁盘 JSON 文档，重启后自动恢复。
+
+**🆕 现已支持微信小程序版本！** 详见 [miniprogram/README.md](./miniprogram/README.md)
 
 ## 📋 目录
 
@@ -20,6 +23,7 @@
 - [配额与存储](#-配额与存储)
 - [使用指南](#-使用指南)
 - [API 参考](#-api-参考)
+- [微信小程序](#-微信小程序)
 
 ---
 
@@ -772,3 +776,46 @@ npm run electron:build:linux
 # Electron 开发模式 (热重载)
 npm run electron:dev
 ```
+
+---
+
+## 📱 微信小程序
+
+本项目现已支持微信小程序版本，可在微信中直接使用！
+
+### 小程序特性
+
+- ✅ AI文章生成（支持三种AI模型）
+- ✅ 双AI并行模式
+- ✅ 文本格式化
+- ✅ 图片上传与分析
+- ✅ 本地草稿保存
+- ✅ 用户认证系统
+- ✅ 完整的设置管理
+
+### 快速开始
+
+1. 使用微信开发者工具打开 `miniprogram` 目录
+2. 在 `project.config.json` 中配置您的小程序 AppID
+3. 在设置页配置后端API地址和AI密钥
+4. 点击编译即可预览
+
+### 目录结构
+
+```
+miniprogram/
+├── app.js              # 小程序入口
+├── app.json            # 全局配置
+├── app.wxss            # 全局样式
+├── pages/              # 页面目录
+│   ├── index/          # 主编辑器
+│   ├── drafts/         # 草稿箱
+│   ├── settings/       # 设置
+│   └── login/          # 登录
+└── utils/              # 工具函数
+    ├── api.js          # API请求
+    ├── auth.js         # 认证
+    └── util.js         # 通用工具
+```
+
+详细文档请参考 [miniprogram/README.md](./miniprogram/README.md)
