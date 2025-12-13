@@ -188,6 +188,29 @@ function getUserProfile() {
 }
 
 /**
+ * 处理微信登录结果的通用函数
+ * @param {Object} result - API返回结果
+ * @returns {Object} - 标准化的登录结果
+ */
+function handleWechatLoginResult(result) {
+  if (result.success && result.data) {
+    saveUser(result.data.user);
+    console.log('[Auth] 微信登录成功:', result.data.user.name);
+    
+    return {
+      success: true,
+      user: result.data.user,
+      isNewUser: result.data.isNewUser || false
+    };
+  }
+  
+  return {
+    success: false,
+    error: result.error?.message || '微信登录失败'
+  };
+}
+
+/**
  * 微信快捷登录（完整流程）
  * 1. 调用wx.login获取code
  * 2. 发送code到后端进行认证
@@ -196,29 +219,11 @@ function getUserProfile() {
  */
 async function loginWithWechat() {
   try {
-    // 1. 获取微信登录code
     const code = await wxLogin();
     console.log('[Auth] 获取微信登录code成功');
     
-    // 2. 发送code到后端进行认证
     const result = await wxAuthApi.loginWithWechat(code);
-    
-    if (result.success && result.data) {
-      // 3. 保存用户信息
-      saveUser(result.data.user);
-      console.log('[Auth] 微信登录成功:', result.data.user.name);
-      
-      return {
-        success: true,
-        user: result.data.user,
-        isNewUser: result.data.isNewUser || false
-      };
-    }
-    
-    return {
-      success: false,
-      error: result.error?.message || '微信登录失败'
-    };
+    return handleWechatLoginResult(result);
   } catch (e) {
     console.error('[Auth] 微信登录失败:', e);
     return {
@@ -236,29 +241,11 @@ async function loginWithWechat() {
  */
 async function loginWithWechatAndProfile(userInfo) {
   try {
-    // 1. 获取微信登录code
     const code = await wxLogin();
     console.log('[Auth] 获取微信登录code成功');
     
-    // 2. 发送code和用户信息到后端
     const result = await wxAuthApi.loginWithWechat(code, userInfo);
-    
-    if (result.success && result.data) {
-      // 3. 保存用户信息
-      saveUser(result.data.user);
-      console.log('[Auth] 微信登录成功:', result.data.user.name);
-      
-      return {
-        success: true,
-        user: result.data.user,
-        isNewUser: result.data.isNewUser || false
-      };
-    }
-    
-    return {
-      success: false,
-      error: result.error?.message || '微信登录失败'
-    };
+    return handleWechatLoginResult(result);
   } catch (e) {
     console.error('[Auth] 微信登录失败:', e);
     return {

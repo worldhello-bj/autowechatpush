@@ -443,9 +443,13 @@ Page({
       
       if (result.success) {
         showSuccess('发布成功');
+        const mediaId = result.data?.mediaId || '';
+        const contentMsg = mediaId 
+          ? '文章已保存到公众号草稿箱，Media ID: ' + mediaId
+          : '文章已保存到公众号草稿箱';
         wx.showModal({
           title: '发布成功',
-          content: `文章已保存到公众号草稿箱\nMedia ID: ${result.data?.mediaId || ''}`,
+          content: contentMsg,
           showCancel: false
         });
       } else {

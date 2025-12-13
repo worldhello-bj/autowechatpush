@@ -192,8 +192,13 @@ Page({
       }
     } catch (e) {
       console.error('[Login] 微信登录失败:', e);
-      // 用户拒绝授权
-      if (e.errMsg && e.errMsg.includes('cancel')) {
+      // 检查是否是用户取消授权 (errMsg格式为 "getUserProfile:fail auth deny" 或包含 "cancel")
+      const errMsg = e.errMsg || e.message || '';
+      const isCancelled = errMsg.indexOf('cancel') !== -1 || 
+                          errMsg.indexOf('deny') !== -1 ||
+                          errMsg.indexOf('refuse') !== -1;
+      
+      if (isCancelled) {
         this.setData({ errorMsg: '您取消了授权，请重试' });
       } else {
         this.setData({ errorMsg: '微信登录失败，请重试' });
