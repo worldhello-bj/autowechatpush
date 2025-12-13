@@ -1,138 +1,124 @@
 <!--pages/login/login.wxml-->
-<!-- 登录页面 -->
+<!-- 登录页面 - 模仿真实web界面 -->
 
 <view class="container">
-  <view class="login-header">
-    <view class="logo">
-      <text class="logo-icon">📝</text>
+  <!-- Logo区域 -->
+  <view class="logo-section">
+    <view class="logo-icon-wrapper">
+      <text class="logo-icon">📄</text>
     </view>
-    <text class="app-name">微信AI发布助手</text>
-    <text class="app-desc">智能文章生成与发布工具</text>
+    <view class="logo-title">
+      <text class="title-wechat">WeChat</text>
+      <text class="title-ai">AI Publisher</text>
+    </view>
+    <text class="logo-subtitle">{{isRegisterMode ? '创建新账户' : '登录您的账户'}}</text>
   </view>
 
-  <view class="login-form card">
-    <!-- 登录/注册切换 -->
-    <view class="form-tabs">
-      <view 
-        class="form-tab {{!isRegisterMode ? 'active' : ''}}"
-        bindtap="switchMode"
-        data-mode="login"
-      >登录</view>
-      <view 
-        class="form-tab {{isRegisterMode ? 'active' : ''}}"
-        bindtap="switchMode"
-        data-mode="register"
-      >注册</view>
-    </view>
-
-    <!-- 表单 -->
-    <view class="form-content">
-      <!-- 用户名（仅注册时显示） -->
-      <view wx:if="{{isRegisterMode}}" class="form-group">
-        <text class="form-label">用户名</text>
+  <!-- 登录表单卡片 -->
+  <view class="auth-card">
+    <!-- 用户名（仅注册时显示） -->
+    <view wx:if="{{isRegisterMode}}" class="form-field">
+      <text class="field-label">用户名</text>
+      <view class="input-wrapper">
+        <text class="input-icon">👤</text>
         <input 
-          class="form-input" 
-          placeholder="请输入用户名"
+          class="field-input" 
+          placeholder="输入您的用户名"
           value="{{name}}"
           bindinput="onNameInput"
+          bindtap="triggerWechatLogin"
         />
       </view>
+    </view>
 
-      <!-- 邮箱 -->
-      <view class="form-group">
-        <text class="form-label">邮箱</text>
+    <!-- 邮箱地址 -->
+    <view class="form-field">
+      <text class="field-label">邮箱地址</text>
+      <view class="input-wrapper">
+        <text class="input-icon">📧</text>
         <input 
-          class="form-input" 
+          class="field-input" 
           type="text"
-          placeholder="请输入邮箱"
+          placeholder="your@email.com"
           value="{{email}}"
           bindinput="onEmailInput"
+          bindtap="triggerWechatLogin"
         />
       </view>
+    </view>
 
-      <!-- 密码 -->
-      <view class="form-group">
-        <text class="form-label">密码</text>
-        <view class="password-wrapper">
-          <input 
-            class="form-input" 
-            type="{{showPassword ? 'text' : 'password'}}"
-            placeholder="{{isRegisterMode ? '请设置密码（至少6位）' : '请输入密码'}}"
-            value="{{password}}"
-            bindinput="onPasswordInput"
-          />
-          <view class="password-toggle" bindtap="togglePassword">
-            <text>{{showPassword ? '🙈' : '👁'}}</text>
-          </view>
+    <!-- 密码 -->
+    <view class="form-field">
+      <text class="field-label">密码</text>
+      <view class="input-wrapper">
+        <text class="input-icon">🔒</text>
+        <input 
+          class="field-input password-input" 
+          type="{{showPassword ? 'text' : 'password'}}"
+          placeholder="至少6个字符"
+          value="{{password}}"
+          bindinput="onPasswordInput"
+          bindtap="triggerWechatLogin"
+        />
+        <view class="password-toggle" catchtap="togglePassword">
+          <text>{{showPassword ? '🙈' : '👁'}}</text>
         </view>
       </view>
+    </view>
 
-      <!-- 确认密码（仅注册时显示） -->
-      <view wx:if="{{isRegisterMode}}" class="form-group">
-        <text class="form-label">确认密码</text>
+    <!-- 确认密码（仅注册时显示） -->
+    <view wx:if="{{isRegisterMode}}" class="form-field">
+      <text class="field-label">确认密码</text>
+      <view class="input-wrapper">
+        <text class="input-icon">🔐</text>
         <input 
-          class="form-input" 
+          class="field-input" 
           type="password"
-          placeholder="请再次输入密码"
+          placeholder="再次输入密码"
           value="{{confirmPassword}}"
           bindinput="onConfirmPasswordInput"
+          bindtap="triggerWechatLogin"
         />
       </view>
-
-      <!-- 提交按钮 -->
-      <button 
-        class="submit-btn" 
-        bindtap="handleSubmit"
-        disabled="{{loading}}"
-      >
-        <view wx:if="{{loading}}" class="loading-spinner"></view>
-        <text wx:else>{{isRegisterMode ? '注册' : '登录'}}</text>
-      </button>
-
-      <!-- 错误提示 -->
-      <view wx:if="{{errorMsg}}" class="error-msg">
-        <text>{{errorMsg}}</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- 其他登录方式 -->
-  <view class="other-login">
-    <view class="divider-line">
-      <view class="line"></view>
-      <text class="divider-text">其他方式</text>
-      <view class="line"></view>
     </view>
 
-    <!-- 微信快捷登录（静默登录，无需授权） -->
+    <!-- 错误提示 -->
+    <view wx:if="{{errorMsg}}" class="error-box">
+      <text class="error-icon">⚠️</text>
+      <text class="error-text">{{errorMsg}}</text>
+    </view>
+
+    <!-- 登录/注册按钮 -->
     <button 
-      class="wechat-login-btn" 
-      bindtap="handleWechatLogin"
-      disabled="{{wechatLoading}}"
+      class="submit-btn" 
+      bindtap="triggerWechatLogin"
+      disabled="{{loading}}"
     >
-      <view wx:if="{{wechatLoading}}" class="loading-spinner white"></view>
+      <view wx:if="{{loading}}" class="loading-spinner"></view>
       <block wx:else>
-        <text class="wechat-icon">💬</text>
-        <text>微信快捷登录</text>
+        <text class="btn-icon">{{isRegisterMode ? '➕' : '🚀'}}</text>
+        <text>{{isRegisterMode ? '注册' : '登录'}}</text>
       </block>
     </button>
 
-    <!-- 微信登录并获取头像昵称（需要用户授权） -->
-    <button 
-      class="wechat-profile-btn" 
-      bindtap="handleWechatLoginWithProfile"
-      disabled="{{wechatLoading}}"
-    >
-      <text class="profile-icon">👤</text>
-      <text>使用微信头像昵称登录</text>
-    </button>
+    <!-- 分隔线 -->
+    <view class="divider">
+      <view class="divider-line"></view>
+      <text class="divider-text">或者</text>
+      <view class="divider-line"></view>
+    </view>
+
+    <!-- 切换登录/注册 -->
+    <view class="switch-mode">
+      <text class="switch-text">{{isRegisterMode ? '已有账户？' : '还没有账户？'}}</text>
+      <text class="switch-link" bindtap="switchMode">
+        {{isRegisterMode ? '立即登录' : '立即注册'}}
+      </text>
+    </view>
   </view>
 
-  <!-- 底部提示 -->
-  <view class="footer-tips">
-    <text class="tips-text">登录即表示同意</text>
-    <text class="tips-link">《用户协议》</text>
-    <text class="tips-text">和</text>
-    <text class="tips-link">《隐私政策》</text>
+  <!-- 版本信息 -->
+  <view class="footer-version">
+    <text>WeChat AI Publisher v1.3.0</text>
   </view>
 </view>
