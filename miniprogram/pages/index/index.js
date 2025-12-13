@@ -266,6 +266,11 @@ Page({
         }
       }
       
+      // 获取思考模式设置（兼容字符串和布尔类型）
+      const thinkingModeValue = wx.getStorageSync('deepseek_thinking_mode');
+      const thinkingMode = aiProvider === 'deepseek' && 
+        (thinkingModeValue === true || thinkingModeValue === 'true');
+      
       // 调用API
       const result = await aiApi.generate({
         message: topic,
@@ -273,7 +278,7 @@ Page({
         useSearch: useSearch && aiProvider !== 'deepseek',
         imageContext,
         isFormattingMode,
-        thinkingMode: aiProvider === 'deepseek'
+        thinkingMode
       }, apiKey);
       
       if (result.success && result.data) {

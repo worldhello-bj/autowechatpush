@@ -213,7 +213,7 @@ function deepClone(obj) {
  * 生成唯一ID
  */
 function generateId() {
-  return 'id_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+  return 'id_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 11);
 }
 
 /**

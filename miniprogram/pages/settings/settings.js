@@ -67,7 +67,10 @@ Page({
       const googleKey = wx.getStorageSync('google_api_key') || '';
       const deepSeekKey = wx.getStorageSync('deepseek_key') || '';
       const dashScopeKey = wx.getStorageSync('dashscope_key') || '';
-      const deepSeekThinkingMode = wx.getStorageSync('deepseek_thinking_mode') === 'true';
+      
+      // 解析布尔值（兼容字符串和布尔类型）
+      const thinkingModeValue = wx.getStorageSync('deepseek_thinking_mode');
+      const deepSeekThinkingMode = thinkingModeValue === true || thinkingModeValue === 'true';
       
       // 后端设置
       const apiBaseUrl = app.globalData.apiBaseUrl || '';

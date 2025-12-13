@@ -14,7 +14,12 @@ const REFRESH_TOKEN_KEY = 'refresh_token';
  */
 function getApiBaseUrl() {
   const app = getApp();
-  return app.globalData.apiBaseUrl || 'http://localhost:3001/api/v1';
+  const url = app.globalData.apiBaseUrl;
+  if (!url) {
+    console.warn('[API] 后端API地址未配置，请在设置页面配置');
+    return '';
+  }
+  return url;
 }
 
 /**

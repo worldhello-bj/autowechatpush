@@ -6,7 +6,7 @@ App({
     userInfo: null,
     isLoggedIn: false,
     aiProvider: 'deepseek',  // 'google', 'deepseek', 'qwen'
-    apiBaseUrl: 'https://your-backend-url.com/api/v1',  // 配置后端API地址
+    apiBaseUrl: '',  // 需要在设置页配置后端API地址
   },
 
   onLaunch() {
