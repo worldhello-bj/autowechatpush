@@ -280,17 +280,49 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
     insertHtmlAtCursor(dividerHtml);
   };
 
-  // Apply text color
+  // Apply text color with validation
   const applyTextColor = (color: string) => {
-    execCmd('foreColor', color);
+    // Validate hex color format to prevent injection
+    if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
+      execCmd('foreColor', color);
+    }
     setShowColorPicker(false);
   };
 
-  // Insert link
+  // HTML escape helper to prevent XSS
+  const escapeHtml = (text: string): string => {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  };
+
+  // Insert link with proper sanitization
   const insertLink = () => {
     if (linkUrl) {
-      const displayText = linkText || linkUrl;
-      const linkHtml = `<a href="${linkUrl}" style="color: #07c160; text-decoration: underline;">${displayText}</a>`;
+      // Validate URL to prevent javascript: and other malicious protocols
+      let sanitizedUrl = linkUrl.trim();
+      let isValidUrl = false;
+      
+      try {
+        const url = new URL(sanitizedUrl, window.location.origin);
+        // Only allow http, https, and mailto protocols
+        if (['http:', 'https:', 'mailto:'].includes(url.protocol)) {
+          sanitizedUrl = url.href;
+          isValidUrl = true;
+        }
+      } catch {
+        // URL parsing failed
+        isValidUrl = false;
+      }
+      
+      // For invalid or relative URLs, default to '#' for safety
+      if (!isValidUrl) {
+        sanitizedUrl = '#';
+      }
+      
+      const displayText = escapeHtml(linkText || linkUrl);
+      // Don't escape the already-validated URL (it would break the href)
+      const linkHtml = `<a href="${sanitizedUrl}" style="color: #07c160; text-decoration: underline;">${displayText}</a>`;
       insertHtmlAtCursor(linkHtml);
       setLinkUrl('');
       setLinkText('');
@@ -298,12 +330,31 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
     }
   };
 
-  // Color palette for text color picker
+  // Close color picker on escape key
+  const handleColorPickerKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setShowColorPicker(false);
+    }
+  };
+
+  // Color palette for text color picker with names for accessibility
   const colorPalette = [
-    '#000000', '#333333', '#666666', '#999999',
-    '#07c160', '#10b981', '#3b82f6', '#6366f1',
-    '#8b5cf6', '#ec4899', '#ef4444', '#f97316',
-    '#eab308', '#84cc16', '#14b8a6', '#06b6d4'
+    { hex: '#000000', name: '黑色 Black' },
+    { hex: '#333333', name: '深灰 Dark Gray' },
+    { hex: '#666666', name: '灰色 Gray' },
+    { hex: '#999999', name: '浅灰 Light Gray' },
+    { hex: '#07c160', name: '微信绿 WeChat Green' },
+    { hex: '#10b981', name: '翠绿 Emerald' },
+    { hex: '#3b82f6', name: '蓝色 Blue' },
+    { hex: '#6366f1', name: '靛蓝 Indigo' },
+    { hex: '#8b5cf6', name: '紫色 Purple' },
+    { hex: '#ec4899', name: '粉色 Pink' },
+    { hex: '#ef4444', name: '红色 Red' },
+    { hex: '#f97316', name: '橙色 Orange' },
+    { hex: '#eab308', name: '黄色 Yellow' },
+    { hex: '#84cc16', name: '青绿 Lime' },
+    { hex: '#14b8a6', name: '青色 Teal' },
+    { hex: '#06b6d4', name: '天蓝 Cyan' }
   ];
 
   const triggerImageUpload = () => {
@@ -341,7 +392,11 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
       />
 
       {/* Toolbar */}
-      <div className="flex items-center gap-0.5 p-2 border-b border-gray-100 bg-gray-50 overflow-x-auto shrink-0 flex-wrap">
+      <div 
+        className="flex items-center gap-0.5 p-2 border-b border-gray-100 bg-gray-50 overflow-x-auto shrink-0 flex-wrap"
+        role="toolbar"
+        aria-label="文章格式化工具栏"
+      >
         {/* Undo/Redo */}
         <button onClick={() => execCmd('undo')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Undo (撤销)">
             <span className="material-icons text-sm">undo</span>
@@ -367,24 +422,32 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
         <div className="w-px h-4 bg-gray-300 mx-1"></div>
         
         {/* Text Color */}
-        <div className="relative">
+        <div className="relative" onKeyDown={handleColorPickerKeyDown}>
           <button 
             onClick={() => setShowColorPicker(!showColorPicker)} 
             className="p-1.5 hover:bg-gray-200 rounded text-gray-700 flex items-center" 
             title="Text Color (文字颜色)"
+            aria-haspopup="true"
+            aria-expanded={showColorPicker}
           >
             <span className="material-icons text-sm">format_color_text</span>
             <span className="material-icons text-[10px]">arrow_drop_down</span>
           </button>
           {showColorPicker && (
-            <div className="absolute top-full left-0 mt-1 p-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 grid grid-cols-4 gap-1">
+            <div 
+              className="absolute top-full left-0 mt-1 p-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 grid grid-cols-4 gap-1"
+              role="listbox"
+              aria-label="选择文字颜色"
+            >
               {colorPalette.map((color) => (
                 <button
-                  key={color}
-                  onClick={() => applyTextColor(color)}
-                  className="w-6 h-6 rounded border border-gray-200 hover:scale-110 transition-transform"
-                  style={{ backgroundColor: color }}
-                  title={color}
+                  key={color.hex}
+                  onClick={() => applyTextColor(color.hex)}
+                  className="w-6 h-6 rounded border border-gray-200 hover:scale-110 transition-transform focus:ring-2 focus:ring-green-500"
+                  style={{ backgroundColor: color.hex }}
+                  title={color.name}
+                  aria-label={color.name}
+                  role="option"
                 />
               ))}
             </div>
@@ -457,23 +520,32 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
 
       {/* Link Dialog */}
       {showLinkDialog && (
-        <div className="absolute inset-0 bg-black/30 z-50 flex items-center justify-center">
+        <div 
+          className="absolute inset-0 bg-black/30 z-50 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="link-dialog-title"
+          onKeyDown={(e) => { if (e.key === 'Escape') { setShowLinkDialog(false); setLinkUrl(''); setLinkText(''); } }}
+        >
           <div className="bg-white rounded-lg shadow-xl p-4 w-80">
-            <h3 className="text-sm font-bold text-gray-800 mb-3">插入链接</h3>
+            <h3 id="link-dialog-title" className="text-sm font-bold text-gray-800 mb-3">插入链接</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-gray-600 mb-1">链接地址</label>
+                <label htmlFor="link-url-input" className="block text-xs text-gray-600 mb-1">链接地址</label>
                 <input 
+                  id="link-url-input"
                   type="url"
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
                   placeholder="https://example.com"
                   className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  autoFocus
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-600 mb-1">显示文字 (可选)</label>
+                <label htmlFor="link-text-input" className="block text-xs text-gray-600 mb-1">显示文字 (可选)</label>
                 <input 
+                  id="link-text-input"
                   type="text"
                   value={linkText}
                   onChange={(e) => setLinkText(e.target.value)}
