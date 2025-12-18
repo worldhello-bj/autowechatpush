@@ -2,6 +2,7 @@ import express from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import bodyParser from 'body-parser';
 
 // ESM environment helpers
 const __filename = fileURLToPath(import.meta.url);
@@ -9,6 +10,8 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+app.use(bodyParser.json({ limit: '20mb' }));
 
 // Utility: Check Public IP for Whitelist
 async function logPublicIP() {
@@ -87,6 +90,33 @@ const wechatProxy = createProxyMiddleware({
 
 // Use Proxy for API requests
 app.use('/api/wechat', wechatProxy);
+
+// Simple backend stitching service
+const sanitizeDataUrl = (value = '') => {
+    const trimmed = value.trim();
+    const dataUrlPattern = /^data:image\/(?:png|jpeg|jpg|gif|webp|svg\+xml);base64,[A-Za-z0-9+/=]+$/i;
+    return dataUrlPattern.test(trimmed) ? trimmed : null;
+};
+
+app.post('/api/stitch-images', (req, res) => {
+    try {
+        const { images = [], width = '100%' } = req.body || {};
+        const safeImages = Array.isArray(images) ? images.map(sanitizeDataUrl).filter(Boolean) : [];
+        if (!safeImages.length) {
+            return res.status(400).json({ error: 'No valid images provided' });
+        }
+        const safeWidth = typeof width === 'string' && /^([0-9]+%|[0-9]+px)$/i.test(width.trim()) ? width.trim() : '100%';
+        const sections = safeImages.map((src, idx) => `
+  <section style="margin-top: ${idx === 0 ? '0' : '-1px'}; line-height: 0; font-size: 0; background-color: transparent;">
+    <img src="${src}" style="vertical-align: top; width: 100%; display: block;" />
+  </section>`).join('');
+        const html = `<section style="max-width: ${safeWidth}; margin: 0 auto; box-sizing: border-box;">${sections}</section>`;
+        res.json({ html });
+    } catch (e) {
+        console.error('[Stitch] Error:', e);
+        res.status(500).json({ error: 'Stitching failed', details: e.message });
+    }
+});
 
 // Serve Static Files (Frontend)
 app.use(express.static(path.join(__dirname, 'dist')));

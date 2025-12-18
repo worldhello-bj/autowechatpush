@@ -567,6 +567,8 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   
   // HTML Editor Ref (for inserting at cursor)
   const htmlEditorRef = useRef<HtmlEditorRef>(null);
+  const stitchFileInputRef = useRef<HTMLInputElement>(null);
+  const [stitchLoading, setStitchLoading] = useState(false);
 
   // Draft State
   const [foundDraft, setFoundDraft] = useState(false);
@@ -662,7 +664,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       setArticleDigest(result.digest);
       setSources(result.sources);
       
-      const generatedHtml = convertBlocksToHtml(result.blocks);
+      const generatedHtml = result.html ?? convertBlocksToHtml(result.blocks);
       setHtmlContent(generatedHtml);
 
     } catch (e: any) {
@@ -703,6 +705,47 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleStitchUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const readers = files.map(file => new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string) || '');
+      reader.readAsDataURL(file);
+    }));
+
+    Promise.all(readers)
+      .then(async (imgs) => {
+        const validImgs = imgs.filter(Boolean);
+        if (!validImgs.length) return;
+        setStitchLoading(true);
+        const resp = await fetch('/api/stitch-images', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ images: validImgs })
+        });
+        if (!resp.ok) throw new Error('Stitch failed');
+        const data = await resp.json();
+        const stitchedHtml = data.html;
+        if (!stitchedHtml) return;
+
+        if (htmlEditorRef.current) {
+          htmlEditorRef.current.insertHtmlAtCursor(stitchedHtml);
+        } else {
+          setHtmlContent((prev) => (prev.trim() ? `${prev}\n${stitchedHtml}` : stitchedHtml));
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        onError('拼接服务调用失败，请重试');
+      })
+      .finally(() => {
+        setStitchLoading(false);
+        if (e.target) e.target.value = '';
+      });
   };
 
   const handleTTS = async () => {
@@ -1533,12 +1576,12 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                       ✨ 文案AI负责内容创作 → 美化AI负责排版设计 → 更优质的输出效果
                     </p>
                   </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Image Analysis Upload */}
-            <div className={`border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 transition text-center relative ${aiProvider === AIProvider.DEEPSEEK ? 'hover:bg-gray-50 opacity-80' : 'hover:bg-gray-100'}`}>
+              {/* Image Analysis Upload */}
+              <div className={`border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 transition text-center relative ${aiProvider === AIProvider.DEEPSEEK ? 'hover:bg-gray-50 opacity-80' : 'hover:bg-gray-100'}`}>
                  <input 
                     type="file" 
                     accept="image/*" 
@@ -1546,10 +1589,10 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                  />
                  <div className="pointer-events-none flex flex-col items-center justify-center">
-                    {uploadedImagePreview ? (
-                         <div className="relative">
-                            <img src={uploadedImagePreview} alt="Context" className="h-24 object-contain rounded shadow-sm mb-2" />
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${analyzingImage ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                     {uploadedImagePreview ? (
+                          <div className="relative">
+                             <img src={uploadedImagePreview} alt="Context" className="h-24 object-contain rounded shadow-sm mb-2" />
+                             <span className={`text-xs px-2 py-0.5 rounded-full ${analyzingImage ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
                                 {analyzingImage ? 'Analyzing...' : (aiProvider !== AIProvider.DEEPSEEK ? 'Analyzed & Ready' : 'Cover Only')}
                             </span>
                          </div>
@@ -1561,11 +1604,39 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                         </>
                     )}
                  </div>
-            </div>
+               </div>
 
-            <button 
-                onClick={handleGenerate}
-                disabled={loading || analyzingImage}
+              {/* Backend Stitch Control */}
+              <div className="border border-green-200 rounded-lg p-4 bg-green-50 flex flex-col gap-2">
+                 <div className="flex items-center gap-2">
+                   <span className="material-icons text-green-600">photo_library</span>
+                   <div className="text-sm font-semibold text-gray-800">无缝拼接（后端接口）</div>
+                 </div>
+                 <p className="text-xs text-gray-600">选择多张图片，通过后端接口按顺序拼接为长图并插入编辑器（与封面上传分离）。</p>
+                 <div className="flex items-center gap-3">
+                   <input
+                     type="file"
+                     accept="image/*"
+                     multiple
+                     ref={stitchFileInputRef}
+                     onChange={handleStitchUpload}
+                     className="hidden"
+                   />
+                   <button
+                     type="button"
+                     onClick={() => stitchFileInputRef.current?.click()}
+                     disabled={stitchLoading}
+                     className={`px-3 py-1.5 rounded text-white text-sm shadow ${stitchLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
+                   >
+                     {stitchLoading ? '拼接中...' : '选择图片并拼接'}
+                   </button>
+                   <span className="text-[11px] text-gray-500">后端完成拼接，line-height:0 + -1px 去缝</span>
+                 </div>
+              </div>
+
+              <button 
+                  onClick={handleGenerate}
+                  disabled={loading || analyzingImage}
                 className={`w-full font-semibold py-3 px-4 rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed transition flex justify-center items-center gap-2 ${
                   useDualAI && aiProvider !== AIProvider.GOOGLE && !isFormattingMode
                     ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
