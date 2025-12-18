@@ -722,14 +722,14 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         const validImgs = imgs.filter(Boolean);
         if (!validImgs.length) return;
         setStitchLoading(true);
-        const resp = await fetch('/api/stitch-images', {
+        const resp = await fetch('/api/v1/utility/stitch-images', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ images: validImgs })
         });
         if (!resp.ok) throw new Error('Stitch failed');
         const data = await resp.json();
-        const stitchedHtml = data.html;
+        const stitchedHtml = data.data?.html || data.html;
         if (!stitchedHtml) return;
 
         if (htmlEditorRef.current) {
