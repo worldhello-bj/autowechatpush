@@ -47,8 +47,9 @@ app.use(limiter);
 app.use(requestIdMiddleware);
 
 // Body parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Limit set to 70mb to accommodate base64-encoded files (video max is 50MB, base64 adds ~33% overhead)
+app.use(express.json({ limit: '70mb' }));
+app.use(express.urlencoded({ extended: true, limit: '70mb' }));
 
 // Request logging
 app.use((req, res, next) => {
