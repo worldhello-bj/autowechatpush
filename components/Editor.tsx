@@ -1606,14 +1606,11 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                  </div>
                </div>
 
-              {/* Backend Stitch Control */}
-              <div className="border border-green-200 rounded-lg p-4 bg-green-50 flex flex-col gap-2">
-                 <div className="flex items-center gap-2">
-                   <span className="material-icons text-green-600">photo_library</span>
-                   <div className="text-sm font-semibold text-gray-800">无缝拼接（后端接口）</div>
-                 </div>
-                 <p className="text-xs text-gray-600">选择多张图片，通过后端接口按顺序拼接为长图并插入编辑器（与封面上传分离）。</p>
-                 <div className="flex items-center gap-3">
+              {/* Backend Stitch Control - Compact */}
+              <div className="border border-green-200 rounded-lg p-2 bg-green-50">
+                 <div className="flex items-center gap-2 flex-wrap">
+                   <span className="material-icons text-green-600 text-sm">photo_library</span>
+                   <span className="text-xs font-medium text-gray-700">无缝拼接</span>
                    <input
                      type="file"
                      accept="image/*"
@@ -1626,11 +1623,11 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                      type="button"
                      onClick={() => stitchFileInputRef.current?.click()}
                      disabled={stitchLoading}
-                     className={`px-3 py-1.5 rounded text-white text-sm shadow ${stitchLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
+                     className={`px-2 py-1 rounded text-white text-xs shadow ${stitchLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
                    >
                      {stitchLoading ? '拼接中...' : '选择图片并拼接'}
                    </button>
-                   <span className="text-[11px] text-gray-500">后端完成拼接，line-height:0 + -1px 去缝</span>
+                   <span className="text-[10px] text-gray-400 hidden sm:inline">多图拼接为长图</span>
                  </div>
               </div>
 
