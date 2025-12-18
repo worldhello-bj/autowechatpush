@@ -341,7 +341,7 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
         ) : (
             <div 
                 ref={contentRef}
-                className="prose max-w-none px-5 pb-10 focus:outline-none article-content min-h-[300px]"
+                className="max-w-none px-5 pb-10 focus:outline-none article-content min-h-[300px]"
                 contentEditable
                 onInput={handleInput}
                 onBlur={() => {
