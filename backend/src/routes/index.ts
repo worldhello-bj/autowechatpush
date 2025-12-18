@@ -5,6 +5,7 @@ import aiRoutes from './aiRoutes.js';
 import materialRoutes from './materialRoutes.js';
 import userRoutes from './userRoutes.js';
 import adminRoutes from './adminRoutes.js';
+import utilityRoutes from './utilityRoutes.js';
 
 const router = Router();
 
@@ -15,5 +16,6 @@ router.use('/ai', aiRoutes);
 router.use('/materials', materialRoutes);
 router.use('/user', userRoutes);
 router.use('/admin', adminRoutes);
+router.use('/utility', utilityRoutes);
 
 export default router;
