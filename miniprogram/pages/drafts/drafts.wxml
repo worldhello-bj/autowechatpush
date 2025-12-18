@@ -1,0 +1,51 @@
+<!--pages/drafts/drafts.wxml-->
+<!-- 草稿箱页面 -->
+
+<view class="container">
+  <view class="page-header">
+    <text class="title-lg">草稿箱</text>
+  </view>
+
+  <!-- 有草稿时显示 -->
+  <view wx:if="{{draft}}" class="draft-card card">
+    <view class="draft-content">
+      <view class="draft-header">
+        <view class="draft-info">
+          <text class="draft-title">{{draft.title || '未命名草稿'}}</text>
+          <text class="draft-digest">{{draft.digest || '暂无摘要'}}</text>
+        </view>
+        <view class="draft-badge">本地草稿</view>
+      </view>
+      
+      <view class="draft-footer">
+        <text class="draft-time">最后编辑: {{draft.formattedTime}}</text>
+        <view class="draft-actions">
+          <text class="action-link" bindtap="continueDraft">继续编辑</text>
+          <text class="action-link danger" bindtap="deleteDraft">删除</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 无草稿时显示 -->
+  <view wx:else class="empty-state">
+    <text class="empty-icon">📝</text>
+    <text class="empty-text">暂无保存的草稿</text>
+    <button class="btn-primary mt-lg" bindtap="goToEditor">
+      创建新文章
+    </button>
+  </view>
+
+  <!-- 草稿管理提示 -->
+  <view class="tips-card card">
+    <view class="tips-header">
+      <text class="tips-icon">💡</text>
+      <text class="tips-title">草稿管理提示</text>
+    </view>
+    <view class="tips-content">
+      <text class="tips-item">• 草稿会自动保存到本地存储</text>
+      <text class="tips-item">• 切换设备需要重新创建草稿</text>
+      <text class="tips-item">• 建议定期将重要内容导出备份</text>
+    </view>
+  </view>
+</view>

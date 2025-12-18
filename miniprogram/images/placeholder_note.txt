@@ -1,0 +1,21 @@
+# Tab Bar Icons Placeholder
+
+这些图标文件需要手动添加：
+- editor.png (81x81 灰色编辑器图标)
+- editor-active.png (81x81 绿色编辑器图标)
+- drafts.png (81x81 灰色草稿图标)
+- drafts-active.png (81x81 绿色草稿图标)
+- settings.png (81x81 灰色设置图标)
+- settings-active.png (81x81 绿色设置图标)
+
+推荐尺寸: 81x81 像素
+推荐格式: PNG (透明背景)
+普通状态颜色: #999999
+选中状态颜色: #07c160
+
+可以使用以下工具生成图标:
+- https://www.iconfont.cn/
+- https://icons8.com/
+- https://www.flaticon.com/
+
+或者在微信开发者工具中会提示缺少图标，届时再添加。
