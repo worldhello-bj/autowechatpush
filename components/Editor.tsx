@@ -567,6 +567,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   
   // HTML Editor Ref (for inserting at cursor)
   const htmlEditorRef = useRef<HtmlEditorRef>(null);
+  const stitchFileInputRef = useRef<HTMLInputElement>(null);
 
   // Draft State
   const [foundDraft, setFoundDraft] = useState(false);
@@ -703,6 +704,41 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const buildSeamlessImagesHtml = (imgs: string[]): string => {
+    if (!imgs.length) return '';
+    const sections = imgs.map((src, idx) => `
+      <section style="margin-top: ${idx === 0 ? '0' : '-1px'}; line-height: 0; font-size: 0; background-color: transparent;">
+        <img src="${src}" style="vertical-align: top; width: 100%; display: block;" />
+      </section>
+    `).join('\n');
+    return `<section style="max-width: 100%; margin: 0 auto; box-sizing: border-box;">${sections}</section>`;
+  };
+
+  const handleStitchUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const readers = files.map(file => new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string) || '');
+      reader.readAsDataURL(file);
+    }));
+
+    Promise.all(readers).then((imgs) => {
+      const validImgs = imgs.filter(Boolean);
+      const stitchedHtml = buildSeamlessImagesHtml(validImgs);
+      if (!stitchedHtml) return;
+
+      if (htmlEditorRef.current) {
+        htmlEditorRef.current.insertHtmlAtCursor(stitchedHtml);
+      } else {
+        setHtmlContent((prev) => (prev.trim() ? `${prev}\n${stitchedHtml}` : stitchedHtml));
+      }
+    }).finally(() => {
+      if (e.target) e.target.value = '';
+    });
   };
 
   const handleTTS = async () => {
@@ -1533,17 +1569,25 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                       ✨ 文案AI负责内容创作 → 美化AI负责排版设计 → 更优质的输出效果
                     </p>
                   </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Image Analysis Upload */}
-            <div className={`border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 transition text-center relative ${aiProvider === AIProvider.DEEPSEEK ? 'hover:bg-gray-50 opacity-80' : 'hover:bg-gray-100'}`}>
+              {/* Image Analysis Upload */}
+              <div className={`border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 transition text-center relative ${aiProvider === AIProvider.DEEPSEEK ? 'hover:bg-gray-50 opacity-80' : 'hover:bg-gray-100'}`}>
                  <input 
                     type="file" 
                     accept="image/*" 
                     onChange={handleImageUpload}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                 />
+                 <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    ref={stitchFileInputRef}
+                    onChange={handleStitchUpload}
+                    className="hidden"
                  />
                  <div className="pointer-events-none flex flex-col items-center justify-center">
                     {uploadedImagePreview ? (
@@ -1561,11 +1605,23 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                         </>
                     )}
                  </div>
-            </div>
+                 <div className="pointer-events-auto mt-3 flex flex-col gap-2">
+                   <button
+                     type="button"
+                     onClick={() => stitchFileInputRef.current?.click()}
+                     className="text-xs bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 transition shadow"
+                   >
+                     上传多图并无缝拼接
+                   </button>
+                   <p className="text-[11px] text-gray-500 leading-relaxed">
+                     选择多张图片后自动按顺序拼接为长图，保持无缝衔接。
+                   </p>
+                 </div>
+              </div>
 
-            <button 
-                onClick={handleGenerate}
-                disabled={loading || analyzingImage}
+              <button 
+                  onClick={handleGenerate}
+                  disabled={loading || analyzingImage}
                 className={`w-full font-semibold py-3 px-4 rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed transition flex justify-center items-center gap-2 ${
                   useDualAI && aiProvider !== AIProvider.GOOGLE && !isFormattingMode
                     ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
