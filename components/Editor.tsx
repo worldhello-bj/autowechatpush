@@ -1524,7 +1524,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                     placeholder={isFormattingMode 
                         ? "Paste your article content here. The AI will format it into a rich WeChat layout..." 
                         : "e.g. Write a guide about traveling to Kyoto in Autumn..."}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent min-h-[120px]"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent min-h-[80px] max-h-[150px] overflow-y-auto resize-y"
                 />
             </div>
 
@@ -1598,9 +1598,9 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                          </div>
                     ) : (
                         <>
-                             <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                             <span className="text-sm text-gray-500 font-medium">Upload Image (Cover)</span>
-                             {aiProvider !== AIProvider.DEEPSEEK && <span className="text-xs text-gray-400 mt-1">+ Image Analysis ({getProviderName()})</span>}
+                             <svg className="w-6 h-6 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                             <span className="text-xs text-gray-500 font-medium">Upload Image (Cover)</span>
+                             {aiProvider !== AIProvider.DEEPSEEK && <span className="text-[10px] text-gray-400 mt-0.5">+ Image Analysis ({getProviderName()})</span>}
                         </>
                     )}
                  </div>
@@ -1681,14 +1681,14 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
               }
               setShowMaterialLibrary(true);
             }}
-            className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition"
+            className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition"
           >
             <div className="flex items-center gap-2">
-              <span className="material-icons text-blue-600">folder_special</span>
-              <span className="font-semibold text-gray-800">素材库</span>
-              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">NEW</span>
+              <span className="material-icons text-blue-600 text-lg">folder_special</span>
+              <span className="font-medium text-sm text-gray-800">素材库</span>
+              <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">NEW</span>
             </div>
-            <span className="material-icons text-gray-500">open_in_new</span>
+            <span className="material-icons text-gray-500 text-sm">open_in_new</span>
           </button>
         </div>
 
@@ -1696,14 +1696,14 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <button 
             onClick={() => setShowAITools(true)}
-            className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100 transition"
+            className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100 transition"
           >
             <div className="flex items-center gap-2">
-              <span className="material-icons text-purple-600">psychology</span>
-              <span className="font-semibold text-gray-800">AI 智能工具</span>
-              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">含滑动条</span>
+              <span className="material-icons text-purple-600 text-lg">psychology</span>
+              <span className="font-medium text-sm text-gray-800">AI 智能工具</span>
+              <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">含滑动条</span>
             </div>
-            <span className="material-icons text-gray-500">open_in_new</span>
+            <span className="material-icons text-gray-500 text-sm">open_in_new</span>
           </button>
         </div>
 
@@ -1717,14 +1717,14 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
               }
               setShowDesignTemplates(true);
             }}
-            className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-pink-50 to-orange-50 hover:from-pink-100 hover:to-orange-100 transition"
+            className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-pink-50 to-orange-50 hover:from-pink-100 hover:to-orange-100 transition"
           >
             <div className="flex items-center gap-2">
-              <span className="material-icons text-pink-600">palette</span>
-              <span className="font-semibold text-gray-800">精美设计格式库</span>
-              <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">{allDesignTemplates.length}+</span>
+              <span className="material-icons text-pink-600 text-lg">palette</span>
+              <span className="font-medium text-sm text-gray-800">精美设计格式库</span>
+              <span className="text-[10px] bg-pink-100 text-pink-700 px-1.5 py-0.5 rounded-full">{allDesignTemplates.length}+</span>
             </div>
-            <span className="material-icons text-gray-500">open_in_new</span>
+            <span className="material-icons text-gray-500 text-sm">open_in_new</span>
           </button>
         </div>
       </div>
@@ -1735,10 +1735,10 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
             <button 
                 onClick={handleTTS}
                 disabled={aiProvider === AIProvider.DEEPSEEK}
-                className={`p-2 rounded-full shadow-lg transition-colors ${isPlaying ? 'bg-red-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'} ${aiProvider === AIProvider.DEEPSEEK ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`p-1.5 rounded-full shadow-lg transition-colors ${isPlaying ? 'bg-red-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'} ${aiProvider === AIProvider.DEEPSEEK ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title={aiProvider === AIProvider.DEEPSEEK ? "TTS unavailable with DeepSeek" : "Read Article Aloud"}
             >
-                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
             </button>
          </div>
 
