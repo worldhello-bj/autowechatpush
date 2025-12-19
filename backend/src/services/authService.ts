@@ -286,6 +286,50 @@ export const seedAdminUser = async (): Promise<void> => {
 };
 
 /**
+ * Seed a default test user for development/demo purposes
+ * Called during server startup (only in non-production environments)
+ */
+export const seedTestUser = async (): Promise<void> => {
+  // Only seed test user in non-production environments for security
+  if (config.NODE_ENV === 'production') {
+    logger.info('Skipping test user seeding in production environment');
+    return;
+  }
+  
+  const testEmail = 'test';  // Using 'test' as both username and email identifier
+  
+  // Check if test user already exists
+  if (emailIndex.has(testEmail)) {
+    logger.info('Test user already exists', { email: testEmail });
+    return;
+  }
+  
+  const userId = uuidv4();
+  const passwordHash = await hashPassword('123456');
+  const now = new Date();
+  
+  const testUser: User = {
+    id: userId,
+    email: testEmail,
+    passwordHash,
+    name: 'Test User',
+    createdAt: now,
+    updatedAt: now,
+    quota: 1000, // Generous quota for testing
+    role: 'user',
+  };
+  
+  users.set(userId, testUser);
+  emailIndex.set(testEmail, userId);
+  
+  // Initialize quota service for test user with FREE plan
+  initializeUserQuota(userId, QuotaPlan.FREE);
+  setUserTotalQuota(userId, testUser.quota);
+  
+  logger.info('Test user seeded successfully', { email: testEmail, userId });
+};
+
+/**
  * List all users (admin only)
  */
 export const listAllUsers = (page: number = 1, limit: number = 20): {
