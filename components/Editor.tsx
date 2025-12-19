@@ -63,10 +63,6 @@ import {
   getTemplatesByCategory, 
   DesignTemplate 
 } from '../services/designTemplates';
-import { getAccessToken as getAuthToken } from '../services/apiClient';
-
-// API base URL for fetching API keys from backend
-const API_BASE = '/api/v1';
 
 interface EditorProps {
   onError: (msg: string) => void;
@@ -1247,62 +1243,9 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     const savedProvider = localStorage.getItem(PROVIDER_KEY);
     if (savedProvider) setAiProvider(savedProvider as AIProvider);
 
-    // Fetch API keys from backend (admin-configured) in parallel
-    const fetchApiKeys = async () => {
-      const authToken = getAuthToken();
-      if (!authToken) return;
-      
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      };
-      
-      try {
-        // Fetch all API keys in parallel for better performance
-        const [wechatRes, googleRes, deepseekRes, dashscopeRes] = await Promise.all([
-          fetch(`${API_BASE}/user/api-key/wechat`, { headers }),
-          fetch(`${API_BASE}/user/api-key/google`, { headers }),
-          fetch(`${API_BASE}/user/api-key/deepseek`, { headers }),
-          fetch(`${API_BASE}/user/api-key/dashscope`, { headers }),
-        ]);
-        
-        // Process WeChat credentials
-        if (wechatRes.ok) {
-          const wechatData = await wechatRes.json();
-          if (wechatData.success && wechatData.data?.key) {
-            setWechatCreds(wechatData.data.key);
-          }
-        }
-        
-        // Process Google API key
-        if (googleRes.ok) {
-          const googleData = await googleRes.json();
-          if (googleData.success && googleData.data?.key) {
-            setGoogleApiKey(googleData.data.key);
-          }
-        }
-        
-        // Process DeepSeek API key
-        if (deepseekRes.ok) {
-          const deepseekData = await deepseekRes.json();
-          if (deepseekData.success && deepseekData.data?.key) {
-            setDeepSeekApiKey(deepseekData.data.key);
-          }
-        }
-        
-        // Process DashScope API key
-        if (dashscopeRes.ok) {
-          const dashscopeData = await dashscopeRes.json();
-          if (dashscopeData.success && dashscopeData.data?.key) {
-            setDashScopeApiKey(dashscopeData.data.key);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch API keys from backend:', error);
-      }
-    };
-    
-    fetchApiKeys();
+    // Note: API keys are managed by admin and used by backend services.
+    // The frontend no longer fetches API keys directly for security reasons.
+    // All AI operations should go through the backend AI endpoints.
 
     return () => {
        if (audioSourceRef.current) audioSourceRef.current.stop();
