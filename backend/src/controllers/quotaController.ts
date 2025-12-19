@@ -7,6 +7,8 @@ import {
   upgradePlan,
   getUserUsageHistory,
   getUserUsageStats,
+  getApiConfigStatus,
+  getApiKey,
 } from '../services/index.js';
 import { updateQuotaSchema, QuotaPlan } from '../types/index.js';
 
@@ -212,5 +214,72 @@ export const getUsageStats = async (req: Request, res: Response) => {
       requestId: req.requestId 
     });
     sendError(res, 500, 'QUOTA_ERROR', message);
+  }
+};
+
+/**
+ * Get API configuration status (whether APIs are configured, not the actual keys)
+ * GET /api/v1/user/api-config
+ */
+export const getApiConfigStatusHandler = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return sendError(res, 401, 'AUTH_REQUIRED', 'Authentication required');
+    }
+
+    const status = getApiConfigStatus();
+    
+    logger.debug('API config status retrieved', { 
+      userId: req.user.userId,
+      requestId: req.requestId 
+    });
+
+    sendSuccess(res, status);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to get API config status';
+    logger.error('Get API config status failed', { 
+      error: message, 
+      requestId: req.requestId 
+    });
+    sendError(res, 500, 'CONFIG_ERROR', message);
+  }
+};
+
+/**
+ * Get specific API key for user (returns actual key for authenticated users to use AI services)
+ * GET /api/v1/user/api-key/:type
+ */
+export const getApiKeyHandler = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return sendError(res, 401, 'AUTH_REQUIRED', 'Authentication required');
+    }
+
+    const keyType = req.params.type as 'google' | 'deepseek' | 'dashscope' | 'wechat';
+    
+    if (!['google', 'deepseek', 'dashscope', 'wechat'].includes(keyType)) {
+      return sendError(res, 400, 'INVALID_KEY_TYPE', 'Invalid API key type');
+    }
+
+    const key = getApiKey(keyType);
+    
+    if (!key) {
+      return sendError(res, 404, 'KEY_NOT_CONFIGURED', `${keyType} API key is not configured`);
+    }
+
+    logger.debug('API key retrieved', { 
+      userId: req.user.userId,
+      keyType,
+      requestId: req.requestId 
+    });
+
+    sendSuccess(res, { key });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to get API key';
+    logger.error('Get API key failed', { 
+      error: message, 
+      requestId: req.requestId 
+    });
+    sendError(res, 500, 'KEY_ERROR', message);
   }
 };

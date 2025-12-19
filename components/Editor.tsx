@@ -63,6 +63,10 @@ import {
   getTemplatesByCategory, 
   DesignTemplate 
 } from '../services/designTemplates';
+import { getAccessToken as getAuthToken } from '../services/apiClient';
+
+// API base URL for fetching API keys from backend
+const API_BASE = '/api/v1';
 
 interface EditorProps {
   onError: (msg: string) => void;
@@ -519,11 +523,7 @@ const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
 };
 
 const DRAFT_KEY = 'wechat_editor_draft';
-const CREDS_KEY = 'wechat_creds';
 const PROVIDER_KEY = 'ai_provider';
-const GOOGLE_KEY = 'google_api_key';
-const DEEPSEEK_KEY = 'deepseek_key';
-const DASHSCOPE_KEY = 'dashscope_key';
 
 const Editor: React.FC<EditorProps> = ({ onError }) => {
   // --- State ---
@@ -536,13 +536,12 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   const [imageContext, setImageContext] = useState<string>('');
   const [uploadedImagePreview, setUploadedImagePreview] = useState<string | null>(null);
   
-  // WeChat Config
+  // WeChat Config (managed by admin via backend)
   const [wechatCreds, setWechatCreds] = useState<WeChatCredentials>({ appId: '', appSecret: '' });
-  const [showConfig, setShowConfig] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
 
-  // AI Provider Config
+  // AI Provider Config (managed by admin via backend)
   const [aiProvider, setAiProvider] = useState<AIProvider>(AIProvider.GOOGLE);
   const [googleApiKey, setGoogleApiKey] = useState('');
   const [deepSeekApiKey, setDeepSeekApiKey] = useState('');
@@ -800,8 +799,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   
   const handlePublish = async () => {
      if (!wechatCreds.appId || !wechatCreds.appSecret) {
-         setShowConfig(true);
-         onError("Please configure WeChat Credentials first.");
+         onError("WeChat API 未配置。请联系管理员在后台配置 AppID 和 AppSecret。");
          return;
      }
      
@@ -878,11 +876,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     setHtmlContent(draft.content || '');
     setTopic(draft.topic || '');
     setFoundDraft(false);
-  };
-
-  const handleConfigSave = () => {
-      localStorage.setItem(CREDS_KEY, JSON.stringify(wechatCreds));
-      setShowConfig(false);
   };
 
   // --- AI Tools Handlers ---
@@ -1251,24 +1244,61 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         setFoundDraft(true);
     }
 
-    const rawCreds = localStorage.getItem(CREDS_KEY);
-    if (rawCreds) {
-        try {
-            setWechatCreds(JSON.parse(rawCreds));
-        } catch(e) {}
-    }
-
     const savedProvider = localStorage.getItem(PROVIDER_KEY);
     if (savedProvider) setAiProvider(savedProvider as AIProvider);
 
-    const savedGoogleKey = localStorage.getItem(GOOGLE_KEY);
-    if (savedGoogleKey) setGoogleApiKey(savedGoogleKey);
-
-    const savedDSKey = localStorage.getItem(DEEPSEEK_KEY);
-    if (savedDSKey) setDeepSeekApiKey(savedDSKey);
-
-    const savedDashKey = localStorage.getItem(DASHSCOPE_KEY);
-    if (savedDashKey) setDashScopeApiKey(savedDashKey);
+    // Fetch API keys from backend (admin-configured)
+    const fetchApiKeys = async () => {
+      const authToken = getAuthToken();
+      if (!authToken) return;
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+      };
+      
+      try {
+        // Fetch WeChat credentials
+        const wechatRes = await fetch(`${API_BASE}/user/api-key/wechat`, { headers });
+        if (wechatRes.ok) {
+          const wechatData = await wechatRes.json();
+          if (wechatData.success && wechatData.data?.key) {
+            setWechatCreds(wechatData.data.key);
+          }
+        }
+        
+        // Fetch Google API key
+        const googleRes = await fetch(`${API_BASE}/user/api-key/google`, { headers });
+        if (googleRes.ok) {
+          const googleData = await googleRes.json();
+          if (googleData.success && googleData.data?.key) {
+            setGoogleApiKey(googleData.data.key);
+          }
+        }
+        
+        // Fetch DeepSeek API key
+        const deepseekRes = await fetch(`${API_BASE}/user/api-key/deepseek`, { headers });
+        if (deepseekRes.ok) {
+          const deepseekData = await deepseekRes.json();
+          if (deepseekData.success && deepseekData.data?.key) {
+            setDeepSeekApiKey(deepseekData.data.key);
+          }
+        }
+        
+        // Fetch DashScope API key
+        const dashscopeRes = await fetch(`${API_BASE}/user/api-key/dashscope`, { headers });
+        if (dashscopeRes.ok) {
+          const dashscopeData = await dashscopeRes.json();
+          if (dashscopeData.success && dashscopeData.data?.key) {
+            setDashScopeApiKey(dashscopeData.data.key);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch API keys from backend:', error);
+      }
+    };
+    
+    fetchApiKeys();
 
     return () => {
        if (audioSourceRef.current) audioSourceRef.current.stop();
@@ -1307,40 +1337,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                 <button onClick={loadLocalDraft} className="bg-white text-blue-600 px-3 py-1 rounded text-sm font-bold hover:bg-blue-50">Restore Draft</button>
             </div>
         </div>
-      )}
-
-      {/* Settings Modal (Quick Access) */}
-      {showConfig && (
-          <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-                  <h3 className="text-lg font-bold mb-4">WeChat API Configuration</h3>
-                  <div className="space-y-4">
-                      <div>
-                          <label className="block text-sm font-medium text-gray-700">AppID</label>
-                          <input 
-                            type="text" 
-                            value={wechatCreds.appId} 
-                            onChange={e => setWechatCreds(prev => ({...prev, appId: e.target.value}))}
-                            className="w-full mt-1 p-2 border rounded"
-                            placeholder="wx..."
-                          />
-                      </div>
-                      <div>
-                          <label className="block text-sm font-medium text-gray-700">AppSecret</label>
-                          <input 
-                            type="password" 
-                            value={wechatCreds.appSecret} 
-                            onChange={e => setWechatCreds(prev => ({...prev, appSecret: e.target.value}))}
-                            className="w-full mt-1 p-2 border rounded"
-                          />
-                      </div>
-                  </div>
-                  <div className="mt-6 flex justify-end gap-3">
-                      <button onClick={() => setShowConfig(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
-                      <button onClick={handleConfigSave} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Save</button>
-                  </div>
-              </div>
-          </div>
       )}
 
       {/* Guide Modal */}
@@ -1486,9 +1482,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
             <div className="flex gap-2">
                 <button onClick={saveLocalDraft} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition" title="Save Local Draft">
                     <span className="material-icons">save</span>
-                </button>
-                <button onClick={() => setShowConfig(true)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-full transition" title="API Settings">
-                    <span className="material-icons">settings</span>
                 </button>
             </div>
         </div>

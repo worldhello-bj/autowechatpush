@@ -6,6 +6,8 @@ import {
   upgradeUserPlan,
   getUsageHistory,
   getUsageStats,
+  getApiConfigStatusHandler,
+  getApiKeyHandler,
 } from '../controllers/index.js';
 import { authGuard } from '../middleware/index.js';
 
@@ -52,5 +54,19 @@ router.get('/quota/history', authGuard, getUsageHistory);
  * @access Private
  */
 router.get('/quota/stats', authGuard, getUsageStats);
+
+/**
+ * @route GET /api/v1/user/api-config
+ * @desc Get API configuration status (whether APIs are configured)
+ * @access Private
+ */
+router.get('/api-config', authGuard, getApiConfigStatusHandler);
+
+/**
+ * @route GET /api/v1/user/api-key/:type
+ * @desc Get specific API key for using AI services
+ * @access Private
+ */
+router.get('/api-key/:type', authGuard, getApiKeyHandler);
 
 export default router;

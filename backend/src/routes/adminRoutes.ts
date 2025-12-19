@@ -8,6 +8,8 @@ import {
   resetUserPassword,
   removeUser,
   getDashboardStats,
+  getConfig,
+  patchConfig,
 } from '../controllers/index.js';
 import { authGuard, adminOnly } from '../middleware/index.js';
 
@@ -23,6 +25,20 @@ router.use(adminOnly);
  * @access Admin only
  */
 router.get('/stats', getDashboardStats);
+
+/**
+ * @route GET /api/v1/admin/config
+ * @desc Get API configuration
+ * @access Admin only
+ */
+router.get('/config', getConfig);
+
+/**
+ * @route PATCH /api/v1/admin/config
+ * @desc Update API configuration
+ * @access Admin only
+ */
+router.patch('/config', patchConfig);
 
 /**
  * @route GET /api/v1/admin/users

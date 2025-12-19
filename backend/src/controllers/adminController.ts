@@ -9,6 +9,8 @@ import {
   updateUserPassword,
   createUserByAdmin,
   getUserStats,
+  getApiConfig,
+  updateApiConfig,
 } from '../services/index.js';
 
 const logger = createLogger('admin');
@@ -250,5 +252,72 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const message = error instanceof Error ? error.message : 'Failed to get stats';
     logger.error('Failed to get dashboard stats', { error: message, requestId: req.requestId });
     sendError(res, 500, 'STATS_FAILED', message);
+  }
+};
+
+/**
+ * Get API configuration (admin only)
+ * GET /api/v1/admin/config
+ */
+export const getConfig = async (req: Request, res: Response) => {
+  try {
+    logger.info('Admin fetching API config', { 
+      adminId: req.user?.userId,
+      requestId: req.requestId 
+    });
+    
+    const config = getApiConfig();
+    
+    // Mask sensitive values for logging, but return full config to admin
+    sendSuccess(res, {
+      wechatAppId: config.wechatAppId,
+      wechatAppSecret: config.wechatAppSecret,
+      googleApiKey: config.googleApiKey,
+      deepSeekApiKey: config.deepSeekApiKey,
+      dashScopeApiKey: config.dashScopeApiKey,
+      updatedAt: config.updatedAt,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to get config';
+    logger.error('Failed to get API config', { error: message, requestId: req.requestId });
+    sendError(res, 500, 'GET_CONFIG_FAILED', message);
+  }
+};
+
+/**
+ * Update API configuration (admin only)
+ * PATCH /api/v1/admin/config
+ */
+export const patchConfig = async (req: Request, res: Response) => {
+  try {
+    const { wechatAppId, wechatAppSecret, googleApiKey, deepSeekApiKey, dashScopeApiKey } = req.body;
+    
+    logger.info('Admin updating API config', { 
+      adminId: req.user?.userId,
+      keysUpdated: Object.keys(req.body).filter(k => req.body[k] !== undefined),
+      requestId: req.requestId 
+    });
+    
+    const updates: Record<string, string> = {};
+    if (wechatAppId !== undefined) updates.wechatAppId = wechatAppId;
+    if (wechatAppSecret !== undefined) updates.wechatAppSecret = wechatAppSecret;
+    if (googleApiKey !== undefined) updates.googleApiKey = googleApiKey;
+    if (deepSeekApiKey !== undefined) updates.deepSeekApiKey = deepSeekApiKey;
+    if (dashScopeApiKey !== undefined) updates.dashScopeApiKey = dashScopeApiKey;
+    
+    const config = updateApiConfig(updates, req.user?.userId || 'unknown');
+    
+    sendSuccess(res, {
+      wechatAppId: config.wechatAppId,
+      wechatAppSecret: config.wechatAppSecret,
+      googleApiKey: config.googleApiKey,
+      deepSeekApiKey: config.deepSeekApiKey,
+      dashScopeApiKey: config.dashScopeApiKey,
+      updatedAt: config.updatedAt,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update config';
+    logger.error('Failed to update API config', { error: message, requestId: req.requestId });
+    sendError(res, 500, 'UPDATE_CONFIG_FAILED', message);
   }
 };

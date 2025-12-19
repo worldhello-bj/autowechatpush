@@ -21,6 +21,15 @@ interface AdminStats {
   totalQuotaAllocated: number;
 }
 
+interface ApiConfig {
+  wechatAppId: string;
+  wechatAppSecret: string;
+  googleApiKey: string;
+  deepSeekApiKey: string;
+  dashScopeApiKey: string;
+  updatedAt?: string;
+}
+
 // Token management
 const getAccessToken = (): string | null => localStorage.getItem('admin_access_token');
 const getRefreshToken = (): string | null => localStorage.getItem('admin_refresh_token');
@@ -197,17 +206,29 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'apiconfig'>('dashboard');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  
+  // API Config State
+  const [apiConfig, setApiConfig] = useState<ApiConfig>({
+    wechatAppId: '',
+    wechatAppSecret: '',
+    googleApiKey: '',
+    deepSeekApiKey: '',
+    dashScopeApiKey: '',
+  });
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
+  const [configMessage, setConfigMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Fetch stats and users
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [statsResult, usersResult] = await Promise.all([
+        const [statsResult, usersResult, configResult] = await Promise.all([
           request<AdminStats>('/admin/stats'),
           request<{ users: User[] }>('/admin/users'),
+          request<ApiConfig>('/admin/config'),
         ]);
         
         if (statsResult.success && statsResult.data) {
@@ -215,6 +236,9 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
         }
         if (usersResult.success && usersResult.data) {
           setUsers(usersResult.data.users);
+        }
+        if (configResult.success && configResult.data) {
+          setApiConfig(configResult.data);
         }
       } finally {
         setIsLoading(false);
@@ -260,6 +284,29 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
       setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
     } else {
       alert(result.error?.message || '修改失败');
+    }
+  };
+
+  const handleSaveApiConfig = async () => {
+    setIsSavingConfig(true);
+    setConfigMessage(null);
+    
+    try {
+      const result = await request<ApiConfig>('/admin/config', {
+        method: 'PATCH',
+        body: JSON.stringify(apiConfig),
+      });
+      
+      if (result.success && result.data) {
+        setApiConfig(result.data);
+        setConfigMessage({ type: 'success', text: 'API配置保存成功！' });
+      } else {
+        setConfigMessage({ type: 'error', text: result.error?.message || '保存失败' });
+      }
+    } catch {
+      setConfigMessage({ type: 'error', text: '保存失败，请重试' });
+    } finally {
+      setIsSavingConfig(false);
     }
   };
 
@@ -317,6 +364,17 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
             >
               <span className="material-icons text-sm mr-2 align-middle">people</span>
               用户管理
+            </button>
+            <button
+              onClick={() => setActiveTab('apiconfig')}
+              className={`px-6 py-3 font-medium rounded-t-lg transition ${
+                activeTab === 'apiconfig' 
+                  ? 'bg-gray-100 text-gray-800' 
+                  : 'text-white/70 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <span className="material-icons text-sm mr-2 align-middle">api</span>
+              API设置
             </button>
           </div>
         </div>
@@ -392,7 +450,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
               </div>
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'users' ? (
           /* Users Tab */
           <div className="bg-white rounded-xl shadow-sm">
             <div className="p-6 border-b flex items-center justify-between">
@@ -456,6 +514,140 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        ) : (
+          /* API Config Tab */
+          <div className="bg-white rounded-xl shadow-sm">
+            <div className="p-6 border-b">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <span className="material-icons text-purple-500">api</span>
+                API配置管理
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                配置系统使用的各种API密钥，这些配置将被所有用户共享使用。
+              </p>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* WeChat Configuration */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  <span className="material-icons text-green-500 text-lg">chat</span>
+                  微信公众号配置
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">AppID</label>
+                    <input
+                      type="text"
+                      value={apiConfig.wechatAppId}
+                      onChange={(e) => setApiConfig({ ...apiConfig, wechatAppId: e.target.value })}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 font-mono text-sm"
+                      placeholder="wx..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">AppSecret</label>
+                    <input
+                      type="password"
+                      value={apiConfig.wechatAppSecret}
+                      onChange={(e) => setApiConfig({ ...apiConfig, wechatAppSecret: e.target.value })}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 font-mono text-sm"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* AI API Keys */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  <span className="material-icons text-blue-500 text-lg">psychology</span>
+                  AI服务API密钥
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Google API Key
+                      <span className="text-gray-400 font-normal ml-2">(Gemini)</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={apiConfig.googleApiKey}
+                      onChange={(e) => setApiConfig({ ...apiConfig, googleApiKey: e.target.value })}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 font-mono text-sm"
+                      placeholder="AIza..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      DeepSeek API Key
+                    </label>
+                    <input
+                      type="password"
+                      value={apiConfig.deepSeekApiKey}
+                      onChange={(e) => setApiConfig({ ...apiConfig, deepSeekApiKey: e.target.value })}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 font-mono text-sm"
+                      placeholder="sk-..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      DashScope API Key
+                      <span className="text-gray-400 font-normal ml-2">(Qwen/通义千问)</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={apiConfig.dashScopeApiKey}
+                      onChange={(e) => setApiConfig({ ...apiConfig, dashScopeApiKey: e.target.value })}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 font-mono text-sm"
+                      placeholder="sk-..."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                <div>
+                  {configMessage && (
+                    <div className={`text-sm flex items-center gap-2 ${
+                      configMessage.type === 'success' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      <span className="material-icons text-lg">
+                        {configMessage.type === 'success' ? 'check_circle' : 'error'}
+                      </span>
+                      {configMessage.text}
+                    </div>
+                  )}
+                  {apiConfig.updatedAt && (
+                    <div className="text-xs text-gray-400 mt-1">
+                      上次更新: {new Date(apiConfig.updatedAt).toLocaleString('zh-CN')}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={handleSaveApiConfig}
+                  disabled={isSavingConfig}
+                  className="flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
+                >
+                  {isSavingConfig ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      保存中...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-icons text-lg">save</span>
+                      保存配置
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}
