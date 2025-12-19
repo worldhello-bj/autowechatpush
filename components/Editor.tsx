@@ -1247,7 +1247,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     const savedProvider = localStorage.getItem(PROVIDER_KEY);
     if (savedProvider) setAiProvider(savedProvider as AIProvider);
 
-    // Fetch API keys from backend (admin-configured)
+    // Fetch API keys from backend (admin-configured) in parallel
     const fetchApiKeys = async () => {
       const authToken = getAuthToken();
       if (!authToken) return;
@@ -1258,8 +1258,15 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       };
       
       try {
-        // Fetch WeChat credentials
-        const wechatRes = await fetch(`${API_BASE}/user/api-key/wechat`, { headers });
+        // Fetch all API keys in parallel for better performance
+        const [wechatRes, googleRes, deepseekRes, dashscopeRes] = await Promise.all([
+          fetch(`${API_BASE}/user/api-key/wechat`, { headers }),
+          fetch(`${API_BASE}/user/api-key/google`, { headers }),
+          fetch(`${API_BASE}/user/api-key/deepseek`, { headers }),
+          fetch(`${API_BASE}/user/api-key/dashscope`, { headers }),
+        ]);
+        
+        // Process WeChat credentials
         if (wechatRes.ok) {
           const wechatData = await wechatRes.json();
           if (wechatData.success && wechatData.data?.key) {
@@ -1267,8 +1274,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
           }
         }
         
-        // Fetch Google API key
-        const googleRes = await fetch(`${API_BASE}/user/api-key/google`, { headers });
+        // Process Google API key
         if (googleRes.ok) {
           const googleData = await googleRes.json();
           if (googleData.success && googleData.data?.key) {
@@ -1276,8 +1282,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
           }
         }
         
-        // Fetch DeepSeek API key
-        const deepseekRes = await fetch(`${API_BASE}/user/api-key/deepseek`, { headers });
+        // Process DeepSeek API key
         if (deepseekRes.ok) {
           const deepseekData = await deepseekRes.json();
           if (deepseekData.success && deepseekData.data?.key) {
@@ -1285,8 +1290,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
           }
         }
         
-        // Fetch DashScope API key
-        const dashscopeRes = await fetch(`${API_BASE}/user/api-key/dashscope`, { headers });
+        // Process DashScope API key
         if (dashscopeRes.ok) {
           const dashscopeData = await dashscopeRes.json();
           if (dashscopeData.success && dashscopeData.data?.key) {

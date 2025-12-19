@@ -292,6 +292,20 @@ export const patchConfig = async (req: Request, res: Response) => {
   try {
     const { wechatAppId, wechatAppSecret, googleApiKey, deepSeekApiKey, dashScopeApiKey } = req.body;
     
+    // Input validation for API key formats
+    if (wechatAppId !== undefined && wechatAppId !== '' && !wechatAppId.startsWith('wx')) {
+      return sendError(res, 400, 'INVALID_WECHAT_APPID', 'WeChat AppID should start with "wx"');
+    }
+    if (googleApiKey !== undefined && googleApiKey !== '' && !googleApiKey.startsWith('AIza')) {
+      return sendError(res, 400, 'INVALID_GOOGLE_KEY', 'Google API Key should start with "AIza"');
+    }
+    if (deepSeekApiKey !== undefined && deepSeekApiKey !== '' && !deepSeekApiKey.startsWith('sk-')) {
+      return sendError(res, 400, 'INVALID_DEEPSEEK_KEY', 'DeepSeek API Key should start with "sk-"');
+    }
+    if (dashScopeApiKey !== undefined && dashScopeApiKey !== '' && !dashScopeApiKey.startsWith('sk-')) {
+      return sendError(res, 400, 'INVALID_DASHSCOPE_KEY', 'DashScope API Key should start with "sk-"');
+    }
+    
     logger.info('Admin updating API config', { 
       adminId: req.user?.userId,
       keysUpdated: Object.keys(req.body).filter(k => req.body[k] !== undefined),

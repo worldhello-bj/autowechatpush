@@ -13,8 +13,16 @@ export interface ApiConfig {
   updatedBy: string;
 }
 
-// In-memory storage for API configurations (singleton - shared across all users)
-// In production, this should be stored in a database with encryption
+/**
+ * In-memory storage for API configurations (singleton - shared across all users)
+ * 
+ * SECURITY NOTE: This is a demo implementation using in-memory storage.
+ * In production, API keys should be:
+ * 1. Stored in a secure database with encryption at rest
+ * 2. Encrypted using a key derivation function (e.g., PBKDF2, Argon2)
+ * 3. Accessed through a secure key management service (e.g., AWS Secrets Manager, HashiCorp Vault)
+ * 4. Never logged in plain text
+ */
 let apiConfig: ApiConfig = {
   wechatAppId: '',
   wechatAppSecret: '',
