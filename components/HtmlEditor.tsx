@@ -75,6 +75,10 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
   };
 
   const execCmd = (command: string, value: string = '') => {
+    // Ensure the editor is focused before executing commands
+    if (contentRef.current) {
+      contentRef.current.focus();
+    }
     document.execCommand(command, false, value);
     handleInput(); // sync change
   };
