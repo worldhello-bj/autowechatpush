@@ -30,7 +30,7 @@ export interface JwtPayload {
 
 // Auth schemas
 export const loginSchema = z.object({
-  email: z.string().email('Invalid email format'),
+  email: z.string().min(1, 'Email or username is required'),  // Can be email or username
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 

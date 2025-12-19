@@ -27,11 +27,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
     
     // Validation
     if (!email || !password) {
-      setError('请填写邮箱和密码');
+      setError(mode === 'login' ? '请填写用户名/邮箱和密码' : '请填写邮箱和密码');
       return;
     }
     
-    if (!validateEmail(email)) {
+    // Only validate email format in register mode
+    if (mode === 'register' && !validateEmail(email)) {
       setError('请输入有效的邮箱地址');
       return;
     }
@@ -120,21 +121,21 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
               </div>
             )}
 
-            {/* Email */}
+            {/* Email/Username */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                邮箱地址
+                {mode === 'login' ? '用户名或邮箱' : '邮箱地址'}
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-gray-400 text-xl">
-                  email
+                  {mode === 'login' ? 'person' : 'email'}
                 </span>
                 <input
-                  type="email"
+                  type={mode === 'login' ? 'text' : 'email'}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
-                  placeholder="your@email.com"
+                  placeholder={mode === 'login' ? '用户名或邮箱' : 'your@email.com'}
                   disabled={isLoading}
                 />
               </div>

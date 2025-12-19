@@ -28,6 +28,9 @@ const sessions: Map<string, UserSession> = new Map();
 // Index for email lookup
 const emailIndex: Map<string, string> = new Map(); // email -> userId
 
+// Index for username (name) lookup
+const nameIndex: Map<string, string> = new Map(); // name (lowercase) -> userId
+
 // Constants
 const ADMIN_UNLIMITED_QUOTA = 999999;
 
@@ -40,6 +43,11 @@ export const registerUser = async (data: RegisterRequest): Promise<AuthResponse>
   // Check if email already exists
   if (emailIndex.has(data.email.toLowerCase())) {
     throw new Error('Email already registered');
+  }
+  
+  // Check if username already exists
+  if (nameIndex.has(data.name.toLowerCase())) {
+    throw new Error('Username already taken');
   }
   
   const userId = uuidv4();
@@ -60,6 +68,7 @@ export const registerUser = async (data: RegisterRequest): Promise<AuthResponse>
   // Store user
   users.set(userId, user);
   emailIndex.set(user.email, userId);
+  nameIndex.set(user.name.toLowerCase(), userId);
   
   // Initialize quota service for this user (FREE plan by default)
   initializeUserQuota(userId, QuotaPlan.FREE);
@@ -94,26 +103,32 @@ export const registerUser = async (data: RegisterRequest): Promise<AuthResponse>
 };
 
 /**
- * Login user
+ * Login user (supports email or username)
  */
 export const loginUser = async (data: LoginRequest): Promise<AuthResponse> => {
-  logger.info('User login attempt', { email: data.email });
+  const identifier = data.email.toLowerCase(); // Can be email or username
+  logger.info('User login attempt', { identifier });
   
-  const userId = emailIndex.get(data.email.toLowerCase());
+  // Try to find user by email first, then by username
+  let userId = emailIndex.get(identifier);
   if (!userId) {
-    logger.warn('Login failed - user not found', { email: data.email });
-    throw new Error('Invalid email or password');
+    userId = nameIndex.get(identifier);
+  }
+  
+  if (!userId) {
+    logger.warn('Login failed - user not found', { identifier });
+    throw new Error('Invalid email/username or password');
   }
   
   const user = users.get(userId);
   if (!user) {
-    throw new Error('Invalid email or password');
+    throw new Error('Invalid email/username or password');
   }
   
   const isValidPassword = await verifyPassword(data.password, user.passwordHash);
   if (!isValidPassword) {
-    logger.warn('Login failed - invalid password', { email: data.email });
-    throw new Error('Invalid email or password');
+    logger.warn('Login failed - invalid password', { identifier });
+    throw new Error('Invalid email/username or password');
   }
   
   // Generate tokens
@@ -277,6 +292,7 @@ export const seedAdminUser = async (): Promise<void> => {
   
   users.set(userId, adminUser);
   emailIndex.set(adminEmail, userId);
+  nameIndex.set(config.ADMIN_NAME.toLowerCase(), userId);
   
   // Initialize quota service for admin with ENTERPRISE plan
   initializeUserQuota(userId, QuotaPlan.ENTERPRISE);
@@ -296,11 +312,12 @@ export const seedTestUser = async (): Promise<void> => {
     return;
   }
   
-  const testEmail = 'test';  // Using 'test' as both username and email identifier
+  const testUsername = 'test';  // Username for login (also used as name field)
+  const testEmail = 'test@local.dev'.toLowerCase();  // Email for the user
   
-  // Check if test user already exists
-  if (emailIndex.has(testEmail)) {
-    logger.info('Test user already exists', { email: testEmail });
+  // Check if test user already exists (by username)
+  if (nameIndex.has(testUsername)) {
+    logger.info('Test user already exists', { username: testUsername });
     return;
   }
   
@@ -312,7 +329,7 @@ export const seedTestUser = async (): Promise<void> => {
     id: userId,
     email: testEmail,
     passwordHash,
-    name: 'Test User',
+    name: testUsername,  // Username for login (name field is used as login identifier)
     createdAt: now,
     updatedAt: now,
     quota: 1000, // Generous quota for testing
@@ -321,12 +338,13 @@ export const seedTestUser = async (): Promise<void> => {
   
   users.set(userId, testUser);
   emailIndex.set(testEmail, userId);
+  nameIndex.set(testUsername.toLowerCase(), userId);
   
   // Initialize quota service for test user with FREE plan
   initializeUserQuota(userId, QuotaPlan.FREE);
   setUserTotalQuota(userId, testUser.quota);
   
-  logger.info('Test user seeded successfully', { email: testEmail, userId });
+  logger.info('Test user seeded successfully', { username: testUsername, email: testEmail, userId });
 };
 
 /**
@@ -411,6 +429,7 @@ export const deleteUser = (userId: string): boolean => {
   
   users.delete(userId);
   emailIndex.delete(user.email);
+  nameIndex.delete(user.name.toLowerCase());
   
   // Also delete all sessions for this user
   for (const [token, session] of sessions) {
@@ -461,6 +480,10 @@ export const createUserByAdmin = async (data: {
     throw new Error('Email already registered');
   }
   
+  if (nameIndex.has(data.name.toLowerCase())) {
+    throw new Error('Username already taken');
+  }
+  
   const userId = uuidv4();
   const passwordHash = await hashPassword(data.password);
   const now = new Date();
@@ -478,6 +501,7 @@ export const createUserByAdmin = async (data: {
   
   users.set(userId, user);
   emailIndex.set(email, userId);
+  nameIndex.set(data.name.toLowerCase(), userId);
   
   // Initialize quota service: admins get ENTERPRISE, regular users get FREE plan
   const quotaPlan = data.role === 'admin' ? QuotaPlan.ENTERPRISE : QuotaPlan.FREE;
