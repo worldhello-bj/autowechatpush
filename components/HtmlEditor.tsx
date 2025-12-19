@@ -28,6 +28,10 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
   const savedPositionRef = useRef<SavedCursorPosition | null>(null);
   const [showSource, setShowSource] = useState(false);
   const [internalHtml, setInternalHtml] = useState(initialHtml);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkText, setLinkText] = useState('');
 
   // Sync incoming props to internal state.
   // We separate the prop sync from the visual DOM sync to handle the source view correctly.
@@ -71,6 +75,10 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
   };
 
   const execCmd = (command: string, value: string = '') => {
+    // Ensure the editor is focused before executing commands
+    if (contentRef.current) {
+      contentRef.current.focus();
+    }
     document.execCommand(command, false, value);
     handleInput(); // sync change
   };
@@ -254,6 +262,105 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
     insertHtmlAtCursor(cardHtml);
   };
 
+  // Insert Quote Block
+  const insertQuote = () => {
+    const quoteHtml = `
+      <section style="margin: 20px 0; padding: 15px 20px; background-color: #f7f7f7; border-left: 4px solid #07c160; border-radius: 0 8px 8px 0;">
+          <section style="font-size: 15px; color: #666; font-style: italic; line-height: 1.6;">Enter quote here...</section>
+      </section>
+      <p><br/></p>
+    `;
+    insertHtmlAtCursor(quoteHtml);
+  };
+
+  // Insert Horizontal Divider
+  const insertDivider = () => {
+    const dividerHtml = `
+      <section style="margin: 25px 0; text-align: center;">
+          <section style="display: inline-block; width: 60%; height: 1px; background: linear-gradient(90deg, transparent, #07c160, transparent);"></section>
+      </section>
+      <p><br/></p>
+    `;
+    insertHtmlAtCursor(dividerHtml);
+  };
+
+  // Apply text color with validation
+  const applyTextColor = (color: string) => {
+    // Validate hex color format to prevent injection
+    if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
+      execCmd('foreColor', color);
+    }
+    setShowColorPicker(false);
+  };
+
+  // HTML escape helper to prevent XSS
+  const escapeHtml = (text: string): string => {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  };
+
+  // Insert link with proper sanitization
+  const insertLink = () => {
+    if (linkUrl) {
+      // Validate URL to prevent javascript: and other malicious protocols
+      let sanitizedUrl = linkUrl.trim();
+      let isValidUrl = false;
+      
+      try {
+        const url = new URL(sanitizedUrl, window.location.origin);
+        // Only allow http, https, and mailto protocols
+        if (['http:', 'https:', 'mailto:'].includes(url.protocol)) {
+          sanitizedUrl = url.href;
+          isValidUrl = true;
+        }
+      } catch {
+        // URL parsing failed
+        isValidUrl = false;
+      }
+      
+      // For invalid or relative URLs, default to '#' for safety
+      if (!isValidUrl) {
+        sanitizedUrl = '#';
+      }
+      
+      const displayText = escapeHtml(linkText || linkUrl);
+      // Don't escape the already-validated URL (it would break the href)
+      const linkHtml = `<a href="${sanitizedUrl}" style="color: #07c160; text-decoration: underline;">${displayText}</a>`;
+      insertHtmlAtCursor(linkHtml);
+      setLinkUrl('');
+      setLinkText('');
+      setShowLinkDialog(false);
+    }
+  };
+
+  // Close color picker on escape key
+  const handleColorPickerKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setShowColorPicker(false);
+    }
+  };
+
+  // Color palette for text color picker with names for accessibility
+  const colorPalette = [
+    { hex: '#000000', name: '黑色 Black' },
+    { hex: '#333333', name: '深灰 Dark Gray' },
+    { hex: '#666666', name: '灰色 Gray' },
+    { hex: '#999999', name: '浅灰 Light Gray' },
+    { hex: '#07c160', name: '微信绿 WeChat Green' },
+    { hex: '#10b981', name: '翠绿 Emerald' },
+    { hex: '#3b82f6', name: '蓝色 Blue' },
+    { hex: '#6366f1', name: '靛蓝 Indigo' },
+    { hex: '#8b5cf6', name: '紫色 Purple' },
+    { hex: '#ec4899', name: '粉色 Pink' },
+    { hex: '#ef4444', name: '红色 Red' },
+    { hex: '#f97316', name: '橙色 Orange' },
+    { hex: '#eab308', name: '黄色 Yellow' },
+    { hex: '#84cc16', name: '青绿 Lime' },
+    { hex: '#14b8a6', name: '青色 Teal' },
+    { hex: '#06b6d4', name: '天蓝 Cyan' }
+  ];
+
   const triggerImageUpload = () => {
     fileInputRef.current?.click();
   };
@@ -289,37 +396,186 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
       />
 
       {/* Toolbar */}
-      <div className="flex items-center gap-1 p-2 border-b border-gray-100 bg-gray-50 overflow-x-auto shrink-0">
-        <button onClick={() => execCmd('bold')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Bold">
-            <span className="material-icons text-sm font-bold">format_bold</span>
+      <div 
+        className="flex items-center gap-0.5 p-2 border-b border-gray-100 bg-gray-50 overflow-x-auto shrink-0 flex-wrap"
+        role="toolbar"
+        aria-label="文章格式化工具栏"
+      >
+        {/* Undo/Redo */}
+        <button onClick={() => execCmd('undo')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Undo (撤销)">
+            <span className="material-icons text-sm">undo</span>
         </button>
-        <button onClick={() => execCmd('italic')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Italic">
-            <span className="material-icons text-sm italic">format_italic</span>
+        <button onClick={() => execCmd('redo')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Redo (重做)">
+            <span className="material-icons text-sm">redo</span>
         </button>
         <div className="w-px h-4 bg-gray-300 mx-1"></div>
-        <button onClick={() => execCmd('formatBlock', '<h3>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 font-bold" title="Header">
-             H
+        
+        {/* Text Formatting */}
+        <button onClick={() => execCmd('bold')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Bold (加粗)">
+            <span className="material-icons text-sm">format_bold</span>
         </button>
-        <button onClick={() => execCmd('formatBlock', '<p>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 font-serif" title="Paragraph">
+        <button onClick={() => execCmd('italic')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Italic (斜体)">
+            <span className="material-icons text-sm">format_italic</span>
+        </button>
+        <button onClick={() => execCmd('underline')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Underline (下划线)">
+            <span className="material-icons text-sm">format_underlined</span>
+        </button>
+        <button onClick={() => execCmd('strikeThrough')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Strikethrough (删除线)">
+            <span className="material-icons text-sm">strikethrough_s</span>
+        </button>
+        <div className="w-px h-4 bg-gray-300 mx-1"></div>
+        
+        {/* Text Color */}
+        <div className="relative" onKeyDown={handleColorPickerKeyDown}>
+          <button 
+            onClick={() => setShowColorPicker(!showColorPicker)} 
+            className="p-1.5 hover:bg-gray-200 rounded text-gray-700 flex items-center" 
+            title="Text Color (文字颜色)"
+            aria-haspopup="true"
+            aria-expanded={showColorPicker}
+          >
+            <span className="material-icons text-sm">format_color_text</span>
+            <span className="material-icons text-[10px]">arrow_drop_down</span>
+          </button>
+          {showColorPicker && (
+            <div 
+              className="absolute top-full left-0 mt-1 p-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 grid grid-cols-4 gap-1"
+              role="listbox"
+              aria-label="选择文字颜色"
+            >
+              {colorPalette.map((color) => (
+                <button
+                  key={color.hex}
+                  onClick={() => applyTextColor(color.hex)}
+                  className="w-6 h-6 rounded border border-gray-200 hover:scale-110 transition-transform focus:ring-2 focus:ring-green-500"
+                  style={{ backgroundColor: color.hex }}
+                  title={color.name}
+                  aria-label={color.name}
+                  role="option"
+                />
+              ))}
+            </div>
+          )}
+        </div>
+        <button onClick={() => execCmd('removeFormat')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Clear Formatting (清除格式)">
+            <span className="material-icons text-sm">format_clear</span>
+        </button>
+        <div className="w-px h-4 bg-gray-300 mx-1"></div>
+        
+        {/* Headers */}
+        <button onClick={() => execCmd('formatBlock', '<h2>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 font-bold text-xs" title="Heading 2 (标题2)">
+             H2
+        </button>
+        <button onClick={() => execCmd('formatBlock', '<h3>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 font-bold text-xs" title="Heading 3 (标题3)">
+             H3
+        </button>
+        <button onClick={() => execCmd('formatBlock', '<p>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 text-xs" title="Paragraph (段落)">
              P
         </button>
         <div className="w-px h-4 bg-gray-300 mx-1"></div>
-        <button onClick={insertCard} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 flex items-center gap-1" title="Insert Card / Text Box">
-            <span className="material-icons text-sm">check_box_outline_blank</span>
+        
+        {/* Alignment */}
+        <button onClick={() => execCmd('justifyLeft')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Align Left (左对齐)">
+            <span className="material-icons text-sm">format_align_left</span>
         </button>
-        <button onClick={triggerImageUpload} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 flex items-center gap-1" title="Insert Image">
+        <button onClick={() => execCmd('justifyCenter')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Align Center (居中)">
+            <span className="material-icons text-sm">format_align_center</span>
+        </button>
+        <button onClick={() => execCmd('justifyRight')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Align Right (右对齐)">
+            <span className="material-icons text-sm">format_align_right</span>
+        </button>
+        <div className="w-px h-4 bg-gray-300 mx-1"></div>
+        
+        {/* Lists */}
+        <button onClick={() => execCmd('insertUnorderedList')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Bullet List (无序列表)">
+            <span className="material-icons text-sm">format_list_bulleted</span>
+        </button>
+        <button onClick={() => execCmd('insertOrderedList')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Numbered List (有序列表)">
+            <span className="material-icons text-sm">format_list_numbered</span>
+        </button>
+        <div className="w-px h-4 bg-gray-300 mx-1"></div>
+        
+        {/* Insert Elements */}
+        <button onClick={() => setShowLinkDialog(true)} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Link (插入链接)">
+            <span className="material-icons text-sm">link</span>
+        </button>
+        <button onClick={triggerImageUpload} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Image (插入图片)">
             <span className="material-icons text-sm">add_photo_alternate</span>
         </button>
+        <button onClick={insertQuote} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Quote (插入引用)">
+            <span className="material-icons text-sm">format_quote</span>
+        </button>
+        <button onClick={insertCard} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Card (插入卡片)">
+            <span className="material-icons text-sm">dashboard</span>
+        </button>
+        <button onClick={insertDivider} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Divider (插入分割线)">
+            <span className="material-icons text-sm">horizontal_rule</span>
+        </button>
         
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
             <button 
                 onClick={toggleSource} 
-                className={`text-xs font-medium px-2 py-1 rounded border transition-colors ${showSource ? 'bg-green-100 text-green-700 border-green-200' : 'text-gray-600 hover:bg-gray-100'}`}
+                className={`text-xs font-medium px-2 py-1 rounded border transition-colors ${showSource ? 'bg-green-100 text-green-700 border-green-200' : 'text-gray-600 hover:bg-gray-100 border-gray-200'}`}
             >
-                {showSource ? 'Visual' : 'HTML'}
+                {showSource ? '可视化' : 'HTML'}
             </button>
         </div>
       </div>
+
+      {/* Link Dialog */}
+      {showLinkDialog && (
+        <div 
+          className="absolute inset-0 bg-black/30 z-50 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="link-dialog-title"
+          onKeyDown={(e) => { if (e.key === 'Escape') { setShowLinkDialog(false); setLinkUrl(''); setLinkText(''); } }}
+        >
+          <div className="bg-white rounded-lg shadow-xl p-4 w-80">
+            <h3 id="link-dialog-title" className="text-sm font-bold text-gray-800 mb-3">插入链接</h3>
+            <div className="space-y-3">
+              <div>
+                <label htmlFor="link-url-input" className="block text-xs text-gray-600 mb-1">链接地址</label>
+                <input 
+                  id="link-url-input"
+                  type="url"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label htmlFor="link-text-input" className="block text-xs text-gray-600 mb-1">显示文字 (可选)</label>
+                <input 
+                  id="link-text-input"
+                  type="text"
+                  value={linkText}
+                  onChange={(e) => setLinkText(e.target.value)}
+                  placeholder="点击这里"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button 
+                onClick={() => { setShowLinkDialog(false); setLinkUrl(''); setLinkText(''); }}
+                className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded"
+              >
+                取消
+              </button>
+              <button 
+                onClick={insertLink}
+                disabled={!linkUrl}
+                className="px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                插入
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto relative scroll-smooth">
@@ -341,7 +597,7 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
         ) : (
             <div 
                 ref={contentRef}
-                className="prose max-w-none px-5 pb-10 focus:outline-none article-content min-h-[300px]"
+                className="max-w-none px-5 pb-10 focus:outline-none article-content min-h-[300px]"
                 contentEditable
                 onInput={handleInput}
                 onBlur={() => {

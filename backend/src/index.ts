@@ -7,7 +7,7 @@ import { config } from './config/index.js';
 import routes from './routes/index.js';
 import { requestIdMiddleware, logger } from './utils/index.js';
 import { errorHandler, notFoundHandler } from './middleware/index.js';
-import { seedAdminUser, initQuotaStore } from './services/index.js';
+import { seedAdminUser, seedTestUser, initQuotaStore } from './services/index.js';
 
 // Create Express app
 const app = express();
@@ -86,6 +86,16 @@ const startServer = async () => {
     logger.error('Failed to seed admin user', { error });
   }
 
+  // Seed test user on startup (only in non-production environments)
+  if (config.NODE_ENV !== 'production') {
+    try {
+      await seedTestUser();
+      logger.info('✅ Test user initialization complete (username: test, password: 123456)');
+    } catch (error) {
+      logger.error('Failed to seed test user', { error });
+    }
+  }
+
   // Start server
   const PORT = config.PORT;
   app.listen(PORT, () => {
@@ -93,6 +103,9 @@ const startServer = async () => {
     logger.info(`📊 Environment: ${config.NODE_ENV}`);
     logger.info(`🔗 API Base: http://localhost:${PORT}/api/v1`);
     logger.info(`👤 Admin: ${config.ADMIN_EMAIL}`);
+    if (config.NODE_ENV !== 'production') {
+      logger.info(`🧪 Test Account: test / 123456`);
+    }
     logger.info('');
     logger.info('Available endpoints:');
     logger.info('  GET  /api/v1/health        - Health check');

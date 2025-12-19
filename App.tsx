@@ -5,9 +5,6 @@ import LogSettings from './components/LogSettings';
 import PromptEditor from './components/PromptEditor';
 import AuthPage from './components/AuthPage';
 import { AuthProvider, useAuth } from './components/AuthContext';
-import { AIProvider } from './types';
-import { setThinkingMode, setMultiRoundLayoutMode } from './services/deepSeekService';
-import { setDualAIThinkingMode, setDualAIMultiRoundLayoutMode } from './services/dualAIService';
 
 // --- Shared Types ---
 interface UserProfile {
@@ -193,54 +190,12 @@ const SettingsPage: React.FC = () => {
   const [config, setConfig] = useState<WeChatConfig>({ appId: '', appSecret: '' });
   const [showConfigSecret, setShowConfigSecret] = useState(false);
 
-  // AI Provider State
-  const [aiProvider, setAiProvider] = useState<AIProvider>(AIProvider.GOOGLE);
-  
-  // Provider Keys
-  const [googleKey, setGoogleKey] = useState('');
-  const [showGoogleKey, setShowGoogleKey] = useState(false);
-
-  const [deepSeekKey, setDeepSeekKey] = useState('');
-  const [showDeepSeekKey, setShowDeepSeekKey] = useState(false);
-  const [deepSeekThinkingMode, setDeepSeekThinkingMode] = useState(false);
-  const [multiRoundLayoutMode, setMultiRoundLayoutMode] = useState(false);
-  
-  const [dashScopeKey, setDashScopeKey] = useState('');
-  const [showDashScopeKey, setShowDashScopeKey] = useState(false);
-
   useEffect(() => {
     const savedProfile = localStorage.getItem('user_profile');
     if (savedProfile) setProfile(JSON.parse(savedProfile));
 
     const savedCreds = localStorage.getItem('wechat_creds');
     if (savedCreds) setConfig(JSON.parse(savedCreds));
-
-    const savedProvider = localStorage.getItem('ai_provider');
-    if (savedProvider) setAiProvider(savedProvider as AIProvider);
-
-    const savedGoogleKey = localStorage.getItem('google_api_key');
-    if (savedGoogleKey) setGoogleKey(savedGoogleKey);
-
-    const savedDSKey = localStorage.getItem('deepseek_key');
-    if (savedDSKey) setDeepSeekKey(savedDSKey);
-    
-    const savedThinkingMode = localStorage.getItem('deepseek_thinking_mode');
-    if (savedThinkingMode) {
-      const enabled = savedThinkingMode === 'true';
-      setDeepSeekThinkingMode(enabled);
-      setThinkingMode(enabled);
-      setDualAIThinkingMode(enabled);
-    }
-    
-    const savedMultiRoundLayoutMode = localStorage.getItem('multi_round_layout_mode');
-    if (savedMultiRoundLayoutMode) {
-      const enabled = savedMultiRoundLayoutMode === 'true';
-      setMultiRoundLayoutMode(enabled);
-      setDualAIMultiRoundLayoutMode(enabled);
-    }
-    
-    const savedDashKey = localStorage.getItem('dashscope_key');
-    if (savedDashKey) setDashScopeKey(savedDashKey);
   }, []);
 
   const handleSaveProfile = () => {
@@ -250,23 +205,6 @@ const SettingsPage: React.FC = () => {
 
   const handleSaveConfig = () => {
     localStorage.setItem('wechat_creds', JSON.stringify(config));
-    localStorage.setItem('ai_provider', aiProvider);
-    
-    // Save API Keys
-    localStorage.setItem('google_api_key', googleKey);
-    localStorage.setItem('deepseek_key', deepSeekKey);
-    localStorage.setItem('dashscope_key', dashScopeKey);
-    
-    // Save DeepSeek thinking mode (apply to both deepSeekService and dualAIService)
-    localStorage.setItem('deepseek_thinking_mode', String(deepSeekThinkingMode));
-    setThinkingMode(deepSeekThinkingMode);
-    setDualAIThinkingMode(deepSeekThinkingMode);
-    
-    // Save multi-round layout mode (apply to both deepSeekService and dualAIService)
-    localStorage.setItem('multi_round_layout_mode', String(multiRoundLayoutMode));
-    setMultiRoundLayoutMode(multiRoundLayoutMode);
-    setDualAIMultiRoundLayoutMode(multiRoundLayoutMode);
-    
     alert("Configuration saved!");
   };
 
@@ -320,168 +258,6 @@ const SettingsPage: React.FC = () => {
                     <button onClick={() => setIsEditingProfile(true)} className="ml-auto text-sm text-green-600 font-medium hover:underline border border-green-600 rounded px-3 py-1 hover:bg-green-50">
                         Edit Profile
                     </button>
-                )}
-             </div>
-          </div>
-
-          {/* AI Provider Settings */}
-          <div className="p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="material-icons text-gray-400">smart_toy</span> AI Provider
-             </h3>
-             <div className="space-y-4 max-w-lg">
-                <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-2">Select Provider</label>
-                   <div className="flex flex-col gap-2">
-                       <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition ${aiProvider === AIProvider.GOOGLE ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:bg-gray-50'}`}>
-                           <input 
-                              type="radio" 
-                              name="provider" 
-                              value={AIProvider.GOOGLE}
-                              checked={aiProvider === AIProvider.GOOGLE}
-                              onChange={() => setAiProvider(AIProvider.GOOGLE)}
-                              className="text-green-600 focus:ring-green-500"
-                           />
-                           <div>
-                               <span className="font-medium block text-gray-900">Google Gemini</span>
-                               <span className="text-xs text-gray-500">Includes Search, Image Analysis, TTS</span>
-                           </div>
-                       </label>
-                       
-                       <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition ${aiProvider === AIProvider.DEEPSEEK ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}>
-                           <input 
-                              type="radio" 
-                              name="provider" 
-                              value={AIProvider.DEEPSEEK}
-                              checked={aiProvider === AIProvider.DEEPSEEK}
-                              onChange={() => setAiProvider(AIProvider.DEEPSEEK)}
-                              className="text-blue-600 focus:ring-blue-500"
-                           />
-                           <div>
-                               <span className="font-medium block text-gray-900">DeepSeek</span>
-                               <span className="text-xs text-gray-500">文本生成，支持思考模式 (Thinking Mode)</span>
-                           </div>
-                       </label>
-
-                       <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition ${aiProvider === AIProvider.QWEN ? 'border-purple-600 bg-purple-50' : 'border-gray-200 hover:bg-gray-50'}`}>
-                           <input 
-                              type="radio" 
-                              name="provider" 
-                              value={AIProvider.QWEN}
-                              checked={aiProvider === AIProvider.QWEN}
-                              onChange={() => setAiProvider(AIProvider.QWEN)}
-                              className="text-purple-600 focus:ring-purple-500"
-                           />
-                           <div>
-                               <span className="font-medium block text-gray-900">Qwen (Tongyi Qianwen)</span>
-                               <span className="text-xs text-gray-500">Includes Web Search, Image Analysis, TTS</span>
-                           </div>
-                       </label>
-                   </div>
-                </div>
-
-                {/* API Key Inputs */}
-                {aiProvider === AIProvider.GOOGLE && (
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Google Gemini API Key</label>
-                        <div className="relative">
-                            <input 
-                                type={showGoogleKey ? "text" : "password"} 
-                                value={googleKey}
-                                onChange={e => setGoogleKey(e.target.value)}
-                                className="w-full mt-1 p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500 font-mono text-sm"
-                                placeholder="AIza..."
-                            />
-                             <button 
-                                onClick={() => setShowGoogleKey(!showGoogleKey)}
-                                className="absolute right-2 top-1.5 text-gray-400 hover:text-gray-600"
-                            >
-                                <span className="material-icons text-lg">{showGoogleKey ? 'visibility_off' : 'visibility'}</span>
-                            </button>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                            Leave empty if using environment variables (process.env.API_KEY).
-                        </div>
-                    </div>
-                )}
-
-                {aiProvider === AIProvider.DEEPSEEK && (
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">DeepSeek API Key</label>
-                        <div className="relative">
-                            <input 
-                                type={showDeepSeekKey ? "text" : "password"} 
-                                value={deepSeekKey}
-                                onChange={e => setDeepSeekKey(e.target.value)}
-                                className="w-full mt-1 p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                                placeholder="sk-..."
-                            />
-                             <button 
-                                onClick={() => setShowDeepSeekKey(!showDeepSeekKey)}
-                                className="absolute right-2 top-1.5 text-gray-400 hover:text-gray-600"
-                            >
-                                <span className="material-icons text-lg">{showDeepSeekKey ? 'visibility_off' : 'visibility'}</span>
-                            </button>
-                        </div>
-                        
-                        {/* Thinking Mode Toggle */}
-                        <div className="mt-4 flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
-                            <div>
-                                <div className="font-medium text-gray-800 text-sm">思考模式 (Thinking Mode)</div>
-                                <div className="text-xs text-gray-500">启用后，DeepSeek 将进行深度思考以提升回答质量</div>
-                            </div>
-                            <button 
-                                onClick={() => setDeepSeekThinkingMode(!deepSeekThinkingMode)}
-                                role="switch"
-                                aria-checked={deepSeekThinkingMode}
-                                aria-label="思考模式 (Thinking Mode)"
-                                className={`w-12 h-6 rounded-full relative transition-colors focus:outline-none ${deepSeekThinkingMode ? 'bg-blue-500' : 'bg-gray-300'}`}
-                            >
-                                <div className={`w-4 h-4 bg-white rounded-full absolute top-1 shadow-sm transition-all ${deepSeekThinkingMode ? 'right-1' : 'left-1'}`}></div>
-                            </button>
-                        </div>
-                        
-                        {/* Multi-Round Layout Mode Toggle */}
-                        <div className="mt-3 flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-100">
-                            <div>
-                                <div className="font-medium text-gray-800 text-sm">多轮排版模式 (Multi-Round Layout)</div>
-                                <div className="text-xs text-gray-500">分轮次生成：背景→文案→图片→总结 (高token消耗)</div>
-                            </div>
-                            <button 
-                                onClick={() => setMultiRoundLayoutMode(!multiRoundLayoutMode)}
-                                role="switch"
-                                aria-checked={multiRoundLayoutMode}
-                                aria-label="多轮排版模式 (Multi-Round Layout Mode)"
-                                className={`w-12 h-6 rounded-full relative transition-colors focus:outline-none ${multiRoundLayoutMode ? 'bg-purple-500' : 'bg-gray-300'}`}
-                            >
-                                <div className={`w-4 h-4 bg-white rounded-full absolute top-1 shadow-sm transition-all ${multiRoundLayoutMode ? 'right-1' : 'left-1'}`}></div>
-                            </button>
-                        </div>
-                    </div>
-                )}
-                
-                {aiProvider === AIProvider.QWEN && (
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">DashScope API Key (Qwen)</label>
-                        <div className="relative">
-                            <input 
-                                type={showDashScopeKey ? "text" : "password"} 
-                                value={dashScopeKey}
-                                onChange={e => setDashScopeKey(e.target.value)}
-                                className="w-full mt-1 p-2 border border-gray-300 rounded focus:ring-purple-500 focus:border-purple-500 font-mono text-sm"
-                                placeholder="sk-..."
-                            />
-                             <button 
-                                onClick={() => setShowDashScopeKey(!showDashScopeKey)}
-                                className="absolute right-2 top-1.5 text-gray-400 hover:text-gray-600"
-                            >
-                                <span className="material-icons text-lg">{showDashScopeKey ? 'visibility_off' : 'visibility'}</span>
-                            </button>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                            Requires a key from Aliyun DashScope.
-                        </div>
-                    </div>
                 )}
              </div>
           </div>
