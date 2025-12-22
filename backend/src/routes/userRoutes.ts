@@ -6,6 +6,7 @@ import {
   upgradeUserPlan,
   getUsageHistory,
   getUsageStats,
+  getApiConfigStatusHandler,
 } from '../controllers/index.js';
 import { authGuard } from '../middleware/index.js';
 
@@ -52,5 +53,15 @@ router.get('/quota/history', authGuard, getUsageHistory);
  * @access Private
  */
 router.get('/quota/stats', authGuard, getUsageStats);
+
+/**
+ * @route GET /api/v1/user/api-config
+ * @desc Get API configuration status (whether APIs are configured, not the actual keys)
+ * @access Private
+ * 
+ * NOTE: API keys are never exposed to users. All AI operations should go through
+ * backend proxy endpoints (e.g., /api/v1/ai/generate) which use the keys internally.
+ */
+router.get('/api-config', authGuard, getApiConfigStatusHandler);
 
 export default router;

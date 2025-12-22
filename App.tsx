@@ -13,11 +13,6 @@ interface UserProfile {
   avatar: string;
 }
 
-interface WeChatConfig {
-  appId: string;
-  appSecret: string;
-}
-
 // --- Placeholder Page Components ---
 
 const DraftsPage: React.FC = () => {
@@ -185,27 +180,15 @@ const SettingsPage: React.FC = () => {
   // Profile State
   const [profile, setProfile] = useState<UserProfile>({ name: 'Admin', email: 'admin@example.com', avatar: 'https://picsum.photos/100/100' });
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  
-  // Credentials State
-  const [config, setConfig] = useState<WeChatConfig>({ appId: '', appSecret: '' });
-  const [showConfigSecret, setShowConfigSecret] = useState(false);
 
   useEffect(() => {
     const savedProfile = localStorage.getItem('user_profile');
     if (savedProfile) setProfile(JSON.parse(savedProfile));
-
-    const savedCreds = localStorage.getItem('wechat_creds');
-    if (savedCreds) setConfig(JSON.parse(savedCreds));
   }, []);
 
   const handleSaveProfile = () => {
     localStorage.setItem('user_profile', JSON.stringify(profile));
     setIsEditingProfile(false);
-  };
-
-  const handleSaveConfig = () => {
-    localStorage.setItem('wechat_creds', JSON.stringify(config));
-    alert("Configuration saved!");
   };
 
   return (
@@ -259,47 +242,6 @@ const SettingsPage: React.FC = () => {
                         Edit Profile
                     </button>
                 )}
-             </div>
-          </div>
-
-          {/* API Configuration */}
-          <div className="p-6">
-             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="material-icons text-gray-400">api</span> WeChat Configuration
-             </h3>
-             <div className="space-y-4 max-w-lg">
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700">AppID</label>
-                    <input 
-                        type="text" 
-                        value={config.appId}
-                        onChange={e => setConfig({...config, appId: e.target.value})}
-                        className="w-full mt-1 p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500 font-mono text-sm"
-                        placeholder="wx..."
-                    />
-                 </div>
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700">AppSecret</label>
-                    <div className="relative">
-                        <input 
-                            type={showConfigSecret ? "text" : "password"} 
-                            value={config.appSecret}
-                            onChange={e => setConfig({...config, appSecret: e.target.value})}
-                            className="w-full mt-1 p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500 font-mono text-sm"
-                        />
-                        <button 
-                            onClick={() => setShowConfigSecret(!showConfigSecret)}
-                            className="absolute right-2 top-1.5 text-gray-400 hover:text-gray-600"
-                        >
-                            <span className="material-icons text-lg">{showConfigSecret ? 'visibility_off' : 'visibility'}</span>
-                        </button>
-                    </div>
-                 </div>
-                 <div className="pt-2">
-                     <button onClick={handleSaveConfig} className="bg-gray-900 text-white px-4 py-2 rounded text-sm hover:bg-black">
-                         Save Configuration
-                     </button>
-                 </div>
              </div>
           </div>
 

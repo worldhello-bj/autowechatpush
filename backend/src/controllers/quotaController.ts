@@ -7,6 +7,7 @@ import {
   upgradePlan,
   getUserUsageHistory,
   getUserUsageStats,
+  getApiConfigStatus,
 } from '../services/index.js';
 import { updateQuotaSchema, QuotaPlan } from '../types/index.js';
 
@@ -212,5 +213,36 @@ export const getUsageStats = async (req: Request, res: Response) => {
       requestId: req.requestId 
     });
     sendError(res, 500, 'QUOTA_ERROR', message);
+  }
+};
+
+/**
+ * Get API configuration status (whether APIs are configured, not the actual keys)
+ * GET /api/v1/user/api-config
+ * 
+ * NOTE: API keys are never exposed to users for security reasons.
+ * All AI operations should go through backend proxy endpoints which use the keys internally.
+ */
+export const getApiConfigStatusHandler = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return sendError(res, 401, 'AUTH_REQUIRED', 'Authentication required');
+    }
+
+    const status = getApiConfigStatus();
+    
+    logger.debug('API config status retrieved', { 
+      userId: req.user.userId,
+      requestId: req.requestId 
+    });
+
+    sendSuccess(res, status);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to get API config status';
+    logger.error('Get API config status failed', { 
+      error: message, 
+      requestId: req.requestId 
+    });
+    sendError(res, 500, 'CONFIG_ERROR', message);
   }
 };
