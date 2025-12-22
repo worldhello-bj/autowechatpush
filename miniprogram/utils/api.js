@@ -84,9 +84,12 @@ async function refreshAccessToken() {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
 
+  const baseUrl = getApiBaseUrl();
+  if (!baseUrl) return false;
+
   return new Promise((resolve) => {
     wx.request({
-      url: `${getApiBaseUrl()}/auth/refresh`,
+      url: `${baseUrl}/auth/refresh`,
       method: 'POST',
       header: {
         'Content-Type': 'application/json'
@@ -114,6 +117,20 @@ async function refreshAccessToken() {
  * @returns {Promise<Object>} - 响应数据
  */
 async function request(endpoint, options = {}) {
+  const baseUrl = getApiBaseUrl();
+  
+  // 验证API基础地址是否已配置
+  if (!baseUrl) {
+    console.error('[API] 请求失败: 后端API地址未配置');
+    return {
+      success: false,
+      error: {
+        code: 'API_NOT_CONFIGURED',
+        message: '请先在设置页面配置后端API地址'
+      }
+    };
+  }
+  
   const accessToken = getAccessToken();
   
   const header = {
@@ -127,7 +144,7 @@ async function request(endpoint, options = {}) {
 
   return new Promise((resolve) => {
     wx.request({
-      url: `${getApiBaseUrl()}${endpoint}`,
+      url: `${baseUrl}${endpoint}`,
       method: options.method || 'GET',
       header,
       data: options.data,
