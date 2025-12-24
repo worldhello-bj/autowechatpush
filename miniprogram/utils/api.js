@@ -272,20 +272,234 @@ const aiApi = {
    */
   getQuota: async () => {
     return request('/ai/quota');
+  },
+
+  /**
+   * 生成标题建议
+   * @param {string} content - 文章内容
+   * @param {number} count - 建议数量
+   * @param {string} apiKey - API密钥（可选）
+   */
+  generateTitles: async (content, count = 5, apiKey) => {
+    const header = {};
+    if (apiKey) {
+      header['X-API-Key'] = apiKey;
+    }
+    
+    return request('/ai/titles', {
+      method: 'POST',
+      header,
+      data: { content, count },
+      timeout: 30000
+    });
+  },
+
+  /**
+   * 生成文章摘要
+   * @param {string} content - 文章内容
+   * @param {number} maxLength - 摘要最大长度
+   * @param {string} apiKey - API密钥（可选）
+   */
+  generateSummary: async (content, maxLength = 120, apiKey) => {
+    const header = {};
+    if (apiKey) {
+      header['X-API-Key'] = apiKey;
+    }
+    
+    return request('/ai/summary', {
+      method: 'POST',
+      header,
+      data: { content, maxLength },
+      timeout: 30000
+    });
+  },
+
+  /**
+   * 提取关键词
+   * @param {string} content - 文章内容
+   * @param {number} count - 关键词数量
+   * @param {string} apiKey - API密钥（可选）
+   */
+  extractKeywords: async (content, count = 10, apiKey) => {
+    const header = {};
+    if (apiKey) {
+      header['X-API-Key'] = apiKey;
+    }
+    
+    return request('/ai/keywords', {
+      method: 'POST',
+      header,
+      data: { content, count },
+      timeout: 30000
+    });
+  },
+
+  /**
+   * 内容润色
+   * @param {string} content - 原文内容
+   * @param {string} style - 润色风格: 'formal', 'casual', 'professional', 'creative'
+   * @param {string} apiKey - API密钥（可选）
+   */
+  polishContent: async (content, style = 'professional', apiKey) => {
+    const header = {};
+    if (apiKey) {
+      header['X-API-Key'] = apiKey;
+    }
+    
+    return request('/ai/polish', {
+      method: 'POST',
+      header,
+      data: { content, style },
+      timeout: 60000
+    });
+  },
+
+  /**
+   * 翻译内容
+   * @param {string} content - 原文内容
+   * @param {string} targetLang - 目标语言: 'en', 'zh', 'ja', etc.
+   * @param {string} apiKey - API密钥（可选）
+   */
+  translateContent: async (content, targetLang = 'en', apiKey) => {
+    const header = {};
+    if (apiKey) {
+      header['X-API-Key'] = apiKey;
+    }
+    
+    return request('/ai/translate', {
+      method: 'POST',
+      header,
+      data: { content, targetLang },
+      timeout: 60000
+    });
+  },
+
+  /**
+   * 内容扩写
+   * @param {string} content - 原文内容
+   * @param {number} targetLength - 目标字数（大概）
+   * @param {string} apiKey - API密钥（可选）
+   */
+  expandContent: async (content, targetLength = 1000, apiKey) => {
+    const header = {};
+    if (apiKey) {
+      header['X-API-Key'] = apiKey;
+    }
+    
+    return request('/ai/expand', {
+      method: 'POST',
+      header,
+      data: { content, targetLength },
+      timeout: 90000
+    });
   }
 };
+
+// ========== 文件上传通用函数 ==========
+
+/**
+ * 上传文件到后端
+ * 使用 wx.uploadFile 进行真正的文件上传
+ * @param {string} filePath - 本地文件路径
+ * @param {string} endpoint - API端点
+ * @param {string} name - 文件对应的 key（后端接收的字段名）
+ * @param {Object} formData - 附加表单数据
+ * @param {Object} options - 额外选项
+ * @returns {Promise<Object>} - 响应数据
+ */
+async function uploadFile(filePath, endpoint, name = 'file', formData = {}, options = {}) {
+  const baseUrl = getApiBaseUrl();
+  
+  // 验证API基础地址是否已配置
+  if (!baseUrl) {
+    console.error('[API] 上传失败: 后端API地址未配置');
+    return {
+      success: false,
+      error: {
+        code: 'API_NOT_CONFIGURED',
+        message: '请先在设置页面配置后端API地址'
+      }
+    };
+  }
+  
+  const accessToken = getAccessToken();
+  const header = {};
+  
+  if (accessToken) {
+    header['Authorization'] = `Bearer ${accessToken}`;
+  }
+
+  return new Promise((resolve) => {
+    wx.uploadFile({
+      url: `${baseUrl}${endpoint}`,
+      filePath,
+      name,
+      formData,
+      header,
+      timeout: options.timeout || 60000,
+      success: (res) => {
+        try {
+          const data = JSON.parse(res.data);
+          console.log('[API] 上传响应:', data);
+          
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            resolve(data);
+          } else {
+            resolve({
+              success: false,
+              error: {
+                code: `HTTP_${res.statusCode}`,
+                message: data?.error?.message || '上传失败'
+              }
+            });
+          }
+        } catch (e) {
+          console.error('[API] 解析上传响应失败:', e);
+          resolve({
+            success: false,
+            error: {
+              code: 'PARSE_ERROR',
+              message: '解析响应失败'
+            }
+          });
+        }
+      },
+      fail: (err) => {
+        console.error('[API] 上传失败:', err);
+        resolve({
+          success: false,
+          error: {
+            code: 'UPLOAD_FAILED',
+            message: err.errMsg || '上传失败'
+          }
+        });
+      }
+    });
+  });
+}
 
 // ========== 素材API ==========
 
 const materialApi = {
   /**
-   * 上传素材
+   * 上传素材（Base64方式）
    */
   upload: async (data, filename, mimeType, type) => {
     return request('/materials', {
       method: 'POST',
       data: { data, filename, mimeType, type }
     });
+  },
+
+  /**
+   * 上传素材文件（文件上传方式，推荐）
+   * @param {string} filePath - 本地文件路径
+   * @param {string} type - 素材类型: 'image', 'video', 'audio'
+   * @returns {Promise<Object>} - { success, data: { id, url, ... } }
+   */
+  uploadFile: async (filePath, type = 'image') => {
+    console.log('[Material API] 上传素材文件:', filePath, type);
+    return uploadFile(filePath, '/materials/upload', 'file', { type });
   },
 
   /**
@@ -761,5 +975,6 @@ module.exports = {
   wechatAuthApi,
   
   // 通用请求
-  request
+  request,
+  uploadFile
 };
