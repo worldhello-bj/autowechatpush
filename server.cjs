@@ -3,9 +3,6 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const path = require('path');
 const bodyParser = require('body-parser');
 
-// CommonJS already has __dirname available
-// const __dirname is already defined in CommonJS
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -16,6 +13,14 @@ async function logPublicIP() {
     try {
         console.log("---------------------------------------------------------");
         console.log("[Server] 🔍 Checking Public IP for WeChat Whitelist...");
+        
+        // Check if fetch is available (Node.js 18+ or browser)
+        if (typeof fetch === 'undefined') {
+            console.warn("[Server] ⚠️  fetch is not available in this Node.js version. Please upgrade to Node.js 18+");
+            console.log("---------------------------------------------------------");
+            return;
+        }
+        
         const response = await fetch('https://api.ipify.org?format=json');
         const data = await response.json();
         console.log(`[Server] 🌍 \x1b[32mCurrent Public IP: ${data.ip}\x1b[0m`);

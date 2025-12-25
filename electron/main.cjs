@@ -108,8 +108,19 @@ function startServer() {
   
   try {
     // Directly require and start the server using Electron's built-in Node.js
-    // In production, server.cjs is bundled in app.asar or available in the app directory
-    const serverModule = require('../server.cjs');
+    // In production, server.cjs is bundled in app.asar at the app root level
+    // We need to use the correct path based on whether we're in development or production
+    let serverPath;
+    if (isDev) {
+      // In development, server.cjs is in the project root
+      serverPath = path.join(__dirname, '..', 'server.cjs');
+    } else {
+      // In production, server.cjs is in app.asar or app directory
+      serverPath = path.join(__dirname, '..', 'server.cjs');
+    }
+    
+    console.log('[Electron] Loading server from:', serverPath);
+    const serverModule = require(serverPath);
     
     // Start the server
     serverModule.startServer().then(() => {
