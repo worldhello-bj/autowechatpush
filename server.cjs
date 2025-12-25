@@ -1,15 +1,17 @@
-import express from 'express';
-import { createProxyMiddleware } from 'http-proxy-middleware';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import bodyParser from 'body-parser';
-
-// ESM environment helpers
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const express = require('express');
+const { createProxyMiddleware } = require('http-proxy-middleware');
+const path = require('path');
+const bodyParser = require('body-parser');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Determine the correct dist path based on environment
+// In Electron production, dist is in process.resourcesPath/dist
+// When running standalone or in dev, dist is relative to __dirname
+const distPath = process.resourcesPath 
+  ? path.join(process.resourcesPath, 'dist')
+  : path.join(__dirname, 'dist');
 
 app.use(bodyParser.json({ limit: '20mb' }));
 
@@ -18,6 +20,14 @@ async function logPublicIP() {
     try {
         console.log("---------------------------------------------------------");
         console.log("[Server] 🔍 Checking Public IP for WeChat Whitelist...");
+        
+        // Check if fetch is available (Node.js 18+ or browser)
+        if (typeof fetch === 'undefined') {
+            console.warn("[Server] ⚠️  fetch is not available in this Node.js version. Please upgrade to Node.js 18+");
+            console.log("---------------------------------------------------------");
+            return;
+        }
+        
         const response = await fetch('https://api.ipify.org?format=json');
         const data = await response.json();
         console.log(`[Server] 🌍 \x1b[32mCurrent Public IP: ${data.ip}\x1b[0m`);
@@ -119,15 +129,41 @@ app.post('/api/stitch-images', (req, res) => {
 });
 
 // Serve Static Files (Frontend)
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(distPath));
 
 // SPA Fallback
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(distPath, 'index.html'));
 });
 
-// Start Server
-app.listen(PORT, async () => {
-    console.log(`\n✅ Server running on http://localhost:${PORT}`);
-    await logPublicIP();
-});
+// Function to start the server
+function startServer() {
+    return new Promise((resolve, reject) => {
+        try {
+            const server = app.listen(PORT, async () => {
+                console.log(`\n✅ Server running on http://localhost:${PORT}`);
+                await logPublicIP();
+                resolve(server);
+            });
+            
+            server.on('error', (err) => {
+                console.error('[Server] Failed to start:', err);
+                reject(err);
+            });
+        } catch (err) {
+            console.error('[Server] Error starting server:', err);
+            reject(err);
+        }
+    });
+}
+
+// Export for use in Electron
+module.exports = { startServer, app };
+
+// Auto-start when run directly (not required from Electron)
+if (require.main === module) {
+    startServer().catch((err) => {
+        console.error('Failed to start server:', err);
+        process.exit(1);
+    });
+}

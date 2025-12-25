@@ -4,11 +4,9 @@
  */
 const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron');
 const path = require('path');
-const { spawn } = require('child_process');
 
 // Keep a global reference of the window object
 let mainWindow = null;
-let serverProcess = null;
 
 // Environment detection
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
@@ -47,9 +45,15 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   } else {
     // In production, load from built-in server
-    waitForServer().then(() => {
-      mainWindow.loadURL(`http://localhost:${PORT}`);
-    });
+    waitForServer()
+      .then(() => {
+        mainWindow.loadURL(`http://localhost:${PORT}`);
+      })
+      .catch((err) => {
+        console.error('[Electron] Server wait failed:', err);
+        // Show error dialog to help with debugging
+        dialog.showErrorBox('连接失败', '无法连接到后端服务，请检查日志。\n\n错误信息: ' + err.message);
+      });
   }
 
   // Handle external links
@@ -98,29 +102,31 @@ function waitForServer(retries = 30) {
  * Start the built-in Express server
  */
 function startServer() {
-  if (isDev) return; // Don't start server in dev mode
+  if (isDev) return Promise.resolve(); // Don't start server in dev mode
   
-  const serverPath = path.join(process.resourcesPath, 'server.js');
+  console.log('[Electron] Starting built-in server internally...');
   
-  console.log('[Electron] Starting built-in server...');
-  
-  serverProcess = spawn('node', [serverPath], {
-    cwd: process.resourcesPath,
-    env: {
-      ...process.env,
-      PORT: PORT.toString(),
-      NODE_ENV: 'production'
-    },
-    stdio: 'inherit'
-  });
-  
-  serverProcess.on('error', (err) => {
-    console.error('[Electron] Server error:', err);
-  });
-  
-  serverProcess.on('exit', (code) => {
-    console.log(`[Electron] Server exited with code ${code}`);
-  });
+  try {
+    // Directly require and start the server using Electron's built-in Node.js
+    // In production, server.cjs is bundled in app.asar at the app root level
+    const serverPath = path.join(__dirname, '..', 'server.cjs');
+    
+    console.log('[Electron] Loading server from:', serverPath);
+    const serverModule = require(serverPath);
+    
+    // Start the server and return the promise
+    return serverModule.startServer().then(() => {
+      console.log('[Electron] Internal server started successfully');
+    }).catch((err) => {
+      console.error('[Electron] Failed to start internal server:', err);
+      dialog.showErrorBox('启动错误', '无法启动内置服务器: ' + err.message);
+      throw err; // Re-throw to propagate the error
+    });
+  } catch (err) {
+    console.error('[Electron] Failed to load server module:', err);
+    dialog.showErrorBox('启动错误', '无法加载内置服务器模块: ' + err.message);
+    return Promise.reject(err);
+  }
 }
 
 /**
@@ -212,8 +218,8 @@ function createMenu() {
 }
 
 // App ready
-app.whenReady().then(() => {
-  startServer();
+app.whenReady().then(async () => {
+  await startServer();
   createWindow();
   
   app.on('activate', () => {
@@ -232,10 +238,8 @@ app.on('window-all-closed', () => {
 
 // Clean up before quit
 app.on('before-quit', () => {
-  if (serverProcess) {
-    serverProcess.kill();
-    serverProcess = null;
-  }
+  // Server cleanup is handled automatically when the app exits
+  // since it's running in the same process
 });
 
 // Handle certificate errors (for development)

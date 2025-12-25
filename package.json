@@ -16,7 +16,7 @@
     "build": "tsc && vite build",
     "build:admin": "vite build --config vite.admin.config.ts",
     "preview": "vite preview",
-    "start": "node server.js",
+    "start": "node server.cjs",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "npm run build && electron-builder",
     "electron:build:win": "npm run build && electron-builder --win",
@@ -58,17 +58,13 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "server.js",
+      "server.cjs",
       "package.json"
     ],
     "extraResources": [
       {
         "from": "dist",
         "to": "dist"
-      },
-      {
-        "from": "server.js",
-        "to": "server.js"
       }
     ],
     "win": {
