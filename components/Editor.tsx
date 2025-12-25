@@ -1250,7 +1250,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
 
   const getProviderName = () => {
        switch(aiProvider) {
-          case AIProvider.GOOGLE: return 'Google Gemini';
           case AIProvider.DEEPSEEK: return 'DeepSeek';
           case AIProvider.QWEN: return 'Qwen (Tongyi)';
           default: return 'Unknown';

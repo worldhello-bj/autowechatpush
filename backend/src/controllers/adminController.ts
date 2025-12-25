@@ -295,7 +295,6 @@ export const patchConfig = async (req: Request, res: Response) => {
     if (wechatAppId !== undefined && wechatAppId !== '' && !wechatAppId.startsWith('wx')) {
       return sendError(res, 400, 'INVALID_WECHAT_APPID', 'WeChat AppID should start with "wx"');
     }
-    }
     if (deepSeekApiKey !== undefined && deepSeekApiKey !== '' && !deepSeekApiKey.startsWith('sk-')) {
       return sendError(res, 400, 'INVALID_DEEPSEEK_KEY', 'DeepSeek API Key should start with "sk-"');
     }
