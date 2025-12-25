@@ -7,7 +7,7 @@ import { config } from './config/index.js';
 import routes from './routes/index.js';
 import { requestIdMiddleware, logger } from './utils/index.js';
 import { errorHandler, notFoundHandler } from './middleware/index.js';
-import { seedAdminUser, seedTestUser, initQuotaStore } from './services/index.js';
+import { seedAdminUser, seedTestUser, initQuotaStore, initUserStore } from './services/index.js';
 
 // Create Express app
 const app = express();
@@ -76,7 +76,9 @@ app.use(errorHandler);
 
 // Initialize server
 const startServer = async () => {
+  // Load persisted data
   await initQuotaStore();
+  await initUserStore();
 
   // Seed admin user on startup
   try {

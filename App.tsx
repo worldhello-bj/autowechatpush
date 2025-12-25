@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Link, NavLink, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Link, NavLink, Navigate, useLocation } from 'react-router-dom';
 import Editor from './components/Editor';
 import LogSettings from './components/LogSettings';
 import PromptEditor from './components/PromptEditor';
 import AuthPage from './components/AuthPage';
 import { AuthProvider, useAuth } from './components/AuthContext';
 import { WeChatCredentials } from './types';
+import analytics from './services/analytics';
 
 // --- Shared Types ---
 interface UserProfile {
@@ -208,6 +209,13 @@ const SettingsPage: React.FC = () => {
   const handleSaveWechatCreds = () => {
     localStorage.setItem('wechat_creds', JSON.stringify(wechatCreds));
     setIsEditingWechat(false);
+    
+    // Track settings update event
+    analytics.track('settings_update', {
+      type: 'wechat_credentials',
+      hasAppId: !!wechatCreds.appId,
+      hasAppSecret: !!wechatCreds.appSecret,
+    });
   };
 
   return (
@@ -477,6 +485,14 @@ const UserMenu: React.FC = () => {
 const AppLayout: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { isLoggedIn, isLoading } = useAuth();
+  const location = useLocation();
+
+  // Track page views
+  useEffect(() => {
+    if (isLoggedIn) {
+      analytics.track('page_view', { path: location.pathname });
+    }
+  }, [location.pathname, isLoggedIn]);
 
   // Helper for NavLink classes to style active tab
   const getNavLinkClass = ({ isActive }: { isActive: boolean }) => 

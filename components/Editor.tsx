@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import DOMPurify from 'dompurify';
 import { aiApi } from '../services/apiClient';
+import analytics from '../services/analytics';
 import { 
   GenerationResult
 } from '../services/geminiService';
@@ -664,6 +665,15 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       const generatedHtml = (result as any).html ?? convertBlocksToHtml(result.blocks);
       setHtmlContent(generatedHtml);
 
+      // Track article generation event
+      analytics.track('article_generate', {
+        provider: aiProvider,
+        useDualAI,
+        useSearch,
+        hasImage: !!imageContext,
+        topicLength: topic.length,
+      });
+
     } catch (e: any) {
       console.error('[Editor] Article generation error:', e);
       onError(e.message || "Failed to generate article. Please try again.");
@@ -836,6 +846,13 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
          const result = await saveDraft(token, payload);
          alert(`Success! Article saved to WeChat Draft Box.\nMedia ID: ${result.media_id}`);
 
+         // Track publish event
+         analytics.track('article_publish', {
+           titleLength: articleTitle.length,
+           contentLength: htmlContent.length,
+           hasCoverImage: !!uploadedImagePreview,
+         });
+
      } catch (e: any) {
          onError(e.message || "Failed to publish to WeChat");
      } finally {
@@ -855,6 +872,12 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     alert("Draft saved locally!");
+    
+    // Track draft save event
+    analytics.track('article_save_draft', {
+      titleLength: articleTitle.length,
+      contentLength: htmlContent.length,
+    });
   };
 
   const loadLocalDraft = () => {

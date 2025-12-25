@@ -1,4 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { randomUUID } from 'crypto';
 import { 
   User, 
   UserSession, 
@@ -21,7 +25,15 @@ import { initializeUserQuota, setUserTotalQuota } from './quotaService.js';
 
 const logger = createLogger('auth-service');
 
-// In-memory storage (for demo purposes - replace with PostgreSQL in production)
+// File paths for persistence
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_DIR = path.resolve(__dirname, '..', '..', 'data');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+let persistTimer: NodeJS.Timeout | null = null;
+let persistInFlight: Promise<void> | null = null;
+
+// In-memory storage with disk persistence
 const users: Map<string, User> = new Map();
 const sessions: Map<string, UserSession> = new Map();
 
@@ -33,6 +45,158 @@ const nameIndex: Map<string, string> = new Map(); // name (lowercase) -> userId
 
 // Constants
 const ADMIN_UNLIMITED_QUOTA = 999999;
+
+// Serialization types for persistence
+type UserSerialized = Omit<User, 'createdAt' | 'updatedAt'> & {
+  createdAt: string;
+  updatedAt: string;
+};
+
+interface PersistedUserData {
+  users: UserSerialized[];
+  version: string;
+}
+
+/**
+ * Flush user data to disk
+ */
+const flushPersist = async () => {
+  if (persistInFlight) {
+    // Retry after current flush completes
+    if (!persistTimer) {
+      persistTimer = setTimeout(() => {
+        persistTimer = null;
+        void flushPersist();
+      }, 50);
+    }
+    return;
+  }
+
+  const payload: PersistedUserData = {
+    version: '1.0',
+    users: Array.from(users.values()).map(u => ({
+      ...u,
+      createdAt: u.createdAt.toISOString(),
+      updatedAt: u.updatedAt.toISOString(),
+    })),
+  };
+
+  const tempFile = `${USERS_FILE}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;
+
+  const currentPersist = (async () => {
+    try {
+      await fs.promises.mkdir(DATA_DIR, { recursive: true });
+      await fs.promises.writeFile(tempFile, JSON.stringify(payload, null, 2), 'utf-8');
+      await fs.promises.rename(tempFile, USERS_FILE);
+      logger.debug('User data persisted to disk', { userCount: users.size });
+    } catch (error) {
+      logger.error('Failed to persist user data to disk', { error });
+      // Clean up temp file if it exists
+      try {
+        if (fs.existsSync(tempFile)) {
+          await fs.promises.unlink(tempFile);
+        }
+      } catch { /* ignore */ }
+    }
+  })();
+
+  persistInFlight = currentPersist.finally(() => {
+    if (persistInFlight === currentPersist) {
+      persistInFlight = null;
+    }
+  });
+
+  await persistInFlight;
+};
+
+/**
+ * Schedule user data persistence (debounced)
+ */
+const persistData = () => {
+  if (persistTimer) return;
+
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    void flushPersist();
+  }, 2000); // 2 second debounce
+};
+
+/**
+ * Validate date string
+ */
+const isValidDateString = (value: unknown): value is string => {
+  if (typeof value !== 'string') return false;
+  const d = new Date(value);
+  return !isNaN(d.getTime());
+};
+
+/**
+ * Load user data from disk
+ */
+const loadData = async () => {
+  try {
+    try {
+      await fs.promises.access(USERS_FILE, fs.constants.F_OK);
+    } catch {
+      logger.info('No existing user data file found, starting fresh');
+      return;
+    }
+
+    const raw = await fs.promises.readFile(USERS_FILE, 'utf-8');
+    const parsed = JSON.parse(raw) as Partial<PersistedUserData>;
+    
+    if (typeof parsed !== 'object' || parsed === null) {
+      logger.warn('User data file malformed (non-object), skipping load');
+      return;
+    }
+    
+    if (!Array.isArray(parsed.users)) {
+      logger.warn('User data file malformed (no users array), skipping load');
+      return;
+    }
+
+    // Load and validate each user
+    let loadedCount = 0;
+    parsed.users.forEach(u => {
+      if (
+        !u ||
+        typeof u.id !== 'string' ||
+        typeof u.email !== 'string' ||
+        typeof u.passwordHash !== 'string' ||
+        typeof u.name !== 'string' ||
+        typeof u.quota !== 'number' ||
+        !['user', 'admin'].includes(u.role) ||
+        !isValidDateString(u.createdAt) ||
+        !isValidDateString(u.updatedAt)
+      ) {
+        logger.warn('Skipping invalid user entry in data file', { userId: u?.id });
+        return;
+      }
+
+      const user: User = {
+        ...u,
+        createdAt: new Date(u.createdAt),
+        updatedAt: new Date(u.updatedAt),
+      };
+
+      users.set(user.id, user);
+      emailIndex.set(user.email.toLowerCase(), user.id);
+      nameIndex.set(user.name.toLowerCase(), user.id);
+      loadedCount++;
+    });
+
+    logger.info('User data loaded from disk', { userCount: loadedCount });
+  } catch (error) {
+    logger.error('Failed to load user data from disk', { error });
+  }
+};
+
+/**
+ * Initialize user data store (load from disk)
+ */
+export const initUserStore = async (): Promise<void> => {
+  await loadData();
+};
 
 /**
  * Register a new user
@@ -69,6 +233,9 @@ export const registerUser = async (data: RegisterRequest): Promise<AuthResponse>
   users.set(userId, user);
   emailIndex.set(user.email, userId);
   nameIndex.set(user.name.toLowerCase(), userId);
+  
+  // Persist user data to disk
+  persistData();
   
   // Initialize quota service for this user (FREE plan by default)
   initializeUserQuota(userId, QuotaPlan.FREE);
@@ -244,6 +411,9 @@ export const updateUserQuota = (userId: string, change: number): number => {
   user.quota = Math.max(0, user.quota + change);
   user.updatedAt = new Date();
   users.set(userId, user);
+  
+  // Persist user data to disk
+  persistData();
 
   // Keep quota service in sync for enforcement
   setUserTotalQuota(userId, user.quota);
@@ -294,6 +464,9 @@ export const seedAdminUser = async (): Promise<void> => {
   emailIndex.set(adminEmail, userId);
   nameIndex.set(config.ADMIN_NAME.toLowerCase(), userId);
   
+  // Persist user data to disk
+  persistData();
+  
   // Initialize quota service for admin with ENTERPRISE plan
   initializeUserQuota(userId, QuotaPlan.ENTERPRISE);
   setUserTotalQuota(userId, adminUser.quota);
@@ -339,6 +512,9 @@ export const seedTestUser = async (): Promise<void> => {
   users.set(userId, testUser);
   emailIndex.set(testEmail, userId);
   nameIndex.set(testUsername.toLowerCase(), userId);
+  
+  // Persist user data to disk
+  persistData();
   
   // Initialize quota service for test user with FREE plan
   initializeUserQuota(userId, QuotaPlan.FREE);
@@ -408,6 +584,9 @@ export const updateUserRole = (userId: string, newRole: 'user' | 'admin'): Omit<
   user.updatedAt = new Date();
   users.set(userId, user);
   
+  // Persist user data to disk
+  persistData();
+  
   logger.info('User role updated', { userId, newRole });
   
   const { passwordHash: _passwordHash, ...userWithoutPassword } = user;
@@ -431,6 +610,9 @@ export const deleteUser = (userId: string): boolean => {
   emailIndex.delete(user.email);
   nameIndex.delete(user.name.toLowerCase());
   
+  // Persist user data to disk
+  persistData();
+  
   // Also delete all sessions for this user
   for (const [token, session] of sessions) {
     if (session.userId === userId) {
@@ -452,6 +634,9 @@ export const updateUserPassword = async (userId: string, newPassword: string): P
   user.passwordHash = await hashPassword(newPassword);
   user.updatedAt = new Date();
   users.set(userId, user);
+  
+  // Persist user data to disk
+  persistData();
   
   // Invalidate all sessions for this user (force re-login)
   for (const [token, session] of sessions) {
@@ -502,6 +687,9 @@ export const createUserByAdmin = async (data: {
   users.set(userId, user);
   emailIndex.set(email, userId);
   nameIndex.set(data.name.toLowerCase(), userId);
+  
+  // Persist user data to disk
+  persistData();
   
   // Initialize quota service: admins get ENTERPRISE, regular users get FREE plan
   const quotaPlan = data.role === 'admin' ? QuotaPlan.ENTERPRISE : QuotaPlan.FREE;

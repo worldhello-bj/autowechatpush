@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authApi, User, isAuthenticated, clearTokens } from '../services/apiClient';
+import analytics from '../services/analytics';
 
 interface AuthContextType {
   user: User | null;
@@ -57,6 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const result = await authApi.login(email, password);
       if (result.success && result.data) {
         setUser(result.data.user);
+        analytics.track('user_login', { email });
         return { success: true };
       }
       return { 
@@ -77,6 +79,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const result = await authApi.register(email, password, name);
       if (result.success && result.data) {
         setUser(result.data.user);
+        analytics.track('user_register', { email, name });
         return { success: true };
       }
       return { 
@@ -93,6 +96,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async () => {
+    analytics.track('user_logout');
     await authApi.logout();
     setUser(null);
   };

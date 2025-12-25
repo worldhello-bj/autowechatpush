@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { loadPrompts, savePrompts, resetPrompts, getDefaultPrompts, PromptConfig } from '../services/promptConfig';
+import analytics from '../services/analytics';
 
 const PromptEditor: React.FC = () => {
   const [prompts, setPrompts] = useState<PromptConfig>(loadPrompts());
@@ -10,6 +11,13 @@ const PromptEditor: React.FC = () => {
     savePrompts(prompts);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+    
+    // Track prompt update event
+    analytics.track('prompt_update', {
+      hasSystemPrompt: !!prompts.systemPrompt,
+      hasGenerationPrompt: !!prompts.generationPrompt,
+      hasFormattingPrompt: !!prompts.formattingPrompt,
+    });
   };
 
   const handleReset = () => {
