@@ -102,36 +102,30 @@ function waitForServer(retries = 30) {
  * Start the built-in Express server
  */
 function startServer() {
-  if (isDev) return; // Don't start server in dev mode
+  if (isDev) return Promise.resolve(); // Don't start server in dev mode
   
   console.log('[Electron] Starting built-in server internally...');
   
   try {
     // Directly require and start the server using Electron's built-in Node.js
     // In production, server.cjs is bundled in app.asar at the app root level
-    // We need to use the correct path based on whether we're in development or production
-    let serverPath;
-    if (isDev) {
-      // In development, server.cjs is in the project root
-      serverPath = path.join(__dirname, '..', 'server.cjs');
-    } else {
-      // In production, server.cjs is in app.asar or app directory
-      serverPath = path.join(__dirname, '..', 'server.cjs');
-    }
+    const serverPath = path.join(__dirname, '..', 'server.cjs');
     
     console.log('[Electron] Loading server from:', serverPath);
     const serverModule = require(serverPath);
     
-    // Start the server
-    serverModule.startServer().then(() => {
+    // Start the server and return the promise
+    return serverModule.startServer().then(() => {
       console.log('[Electron] Internal server started successfully');
     }).catch((err) => {
       console.error('[Electron] Failed to start internal server:', err);
       dialog.showErrorBox('启动错误', '无法启动内置服务器: ' + err.message);
+      throw err; // Re-throw to propagate the error
     });
   } catch (err) {
     console.error('[Electron] Failed to load server module:', err);
     dialog.showErrorBox('启动错误', '无法加载内置服务器模块: ' + err.message);
+    return Promise.reject(err);
   }
 }
 
@@ -224,8 +218,8 @@ function createMenu() {
 }
 
 // App ready
-app.whenReady().then(() => {
-  startServer();
+app.whenReady().then(async () => {
+  await startServer();
   createWindow();
   
   app.on('activate', () => {

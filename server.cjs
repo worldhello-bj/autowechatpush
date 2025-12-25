@@ -6,6 +6,13 @@ const bodyParser = require('body-parser');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Determine the correct dist path based on environment
+// In Electron production, dist is in process.resourcesPath/dist
+// When running standalone or in dev, dist is relative to __dirname
+const distPath = process.resourcesPath 
+  ? path.join(process.resourcesPath, 'dist')
+  : path.join(__dirname, 'dist');
+
 app.use(bodyParser.json({ limit: '20mb' }));
 
 // Utility: Check Public IP for Whitelist
@@ -122,11 +129,11 @@ app.post('/api/stitch-images', (req, res) => {
 });
 
 // Serve Static Files (Frontend)
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(distPath));
 
 // SPA Fallback
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(distPath, 'index.html'));
 });
 
 // Function to start the server
