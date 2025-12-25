@@ -1,0 +1,412 @@
+# 服务器部署指南 (新手版)
+
+本指南将帮助您将后端 API 服务部署到您的服务器上。
+
+## 目录
+
+1. [服务器准备](#1-服务器准备)
+2. [安装必要软件](#2-安装必要软件)
+3. [获取代码](#3-获取代码)
+4. [配置环境变量](#4-配置环境变量)
+5. [部署后端服务](#5-部署后端服务)
+6. [配置反向代理（可选）](#6-配置反向代理可选)
+7. [设置开机自启](#7-设置开机自启)
+8. [常见问题](#8-常见问题)
+
+---
+
+## 1. 服务器准备
+
+### 1.1 系统要求
+
+- **操作系统**: Ubuntu 20.04/22.04 LTS (推荐) 或 CentOS 7/8
+- **内存**: 最低 1GB RAM
+- **存储**: 最低 10GB 可用空间
+- **网络**: 开放端口 80, 443, 3001
+
+### 1.2 连接服务器
+
+使用 SSH 连接到您的服务器：
+
+```bash
+# Windows: 使用 PowerShell 或 Git Bash
+# macOS/Linux: 使用终端
+ssh root@您的服务器IP地址
+```
+
+首次连接会提示确认指纹，输入 `yes` 继续。
+
+---
+
+## 2. 安装必要软件
+
+### 2.1 更新系统
+
+```bash
+# Ubuntu/Debian
+sudo apt update && sudo apt upgrade -y
+
+# CentOS/RHEL
+sudo yum update -y
+```
+
+### 2.2 安装 Node.js 18+
+
+```bash
+# 使用 NodeSource 安装 Node.js 18 (推荐)
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# 验证安装
+node -v   # 应显示 v18.x.x
+npm -v    # 应显示 9.x.x 或更高
+```
+
+### 2.3 安装 Git
+
+```bash
+# Ubuntu/Debian
+sudo apt install -y git
+
+# 验证安装
+git --version
+```
+
+### 2.4 安装 PM2（进程管理器）
+
+```bash
+sudo npm install -g pm2
+```
+
+---
+
+## 3. 获取代码
+
+### 3.1 克隆仓库
+
+```bash
+# 创建工作目录
+mkdir -p /opt/wechat-ai-publisher
+cd /opt/wechat-ai-publisher
+
+# 克隆代码仓库
+git clone https://github.com/worldhello-bj/autowechatpush.git .
+```
+
+### 3.2 安装依赖
+
+```bash
+# 进入后端目录
+cd backend
+
+# 安装依赖包
+npm install
+```
+
+---
+
+## 4. 配置环境变量
+
+### 4.1 创建配置文件
+
+```bash
+# 在 backend 目录下
+cp .env.example .env
+
+# 使用编辑器修改配置（这里使用 nano，新手友好）
+nano .env
+```
+
+### 4.2 修改配置内容
+
+打开 `.env` 文件后，修改以下关键配置：
+
+```bash
+# 服务器配置
+PORT=3001
+NODE_ENV=production
+
+# ⚠️ 重要：生成一个安全的密钥（至少32个字符）
+# 可以使用此命令生成: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+JWT_SECRET=请运行上方命令生成64位随机密钥并粘贴在这里
+
+# CORS 配置（允许访问的域名，多个用逗号分隔）
+# ⚠️ 生产环境请只填写您的真实域名，不要包含 localhost
+# 如果只有IP，格式如: http://您的IP:端口
+CORS_ORIGINS=http://您的域名
+
+# AI 服务密钥（可选，用户也可以在前端设置自己的密钥）
+DEEPSEEK_API_KEY=您的DeepSeek密钥
+DASHSCOPE_API_KEY=您的通义千问密钥
+GOOGLE_API_KEY=您的Google密钥
+```
+
+### 4.3 生成 JWT 密钥
+
+运行以下命令生成安全的随机密钥：
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+将输出的字符串复制到 `.env` 文件的 `JWT_SECRET` 中。
+
+### 4.4 保存配置
+
+如果使用 nano 编辑器：
+- 按 `Ctrl + O` 保存
+- 按 `Enter` 确认
+- 按 `Ctrl + X` 退出
+
+---
+
+## 5. 部署后端服务
+
+### 5.1 构建项目
+
+```bash
+# 确保在 backend 目录
+cd /opt/wechat-ai-publisher/backend
+
+# 构建 TypeScript 代码
+npm run build
+```
+
+### 5.2 使用 PM2 启动服务
+
+```bash
+# 启动服务
+pm2 start dist/index.js --name "wechat-api"
+
+# 查看运行状态
+pm2 status
+
+# 查看日志
+pm2 logs wechat-api
+```
+
+### 5.3 验证服务运行
+
+```bash
+# 测试健康检查接口
+curl http://localhost:3001/api/v1/health
+```
+
+如果返回类似 `{"status":"ok","timestamp":"..."}` 的响应，说明服务运行正常！
+
+---
+
+## 6. 配置反向代理（可选）
+
+如果您希望使用域名访问，需要配置 Nginx 反向代理。
+
+### 6.1 安装 Nginx
+
+```bash
+sudo apt install -y nginx
+```
+
+### 6.2 创建 Nginx 配置
+
+```bash
+sudo nano /etc/nginx/sites-available/wechat-api
+```
+
+添加以下内容：
+
+```nginx
+server {
+    listen 80;
+    server_name 您的域名或IP;
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_cache_bypass $http_upgrade;
+        
+        # SSE 支持
+        proxy_buffering off;
+        proxy_read_timeout 86400;
+    }
+}
+```
+
+### 6.3 启用配置
+
+```bash
+# 创建软链接
+sudo ln -s /etc/nginx/sites-available/wechat-api /etc/nginx/sites-enabled/
+
+# 测试配置
+sudo nginx -t
+
+# 重启 Nginx
+sudo systemctl restart nginx
+```
+
+### 6.4 配置 HTTPS（推荐）
+
+使用免费的 Let's Encrypt 证书：
+
+```bash
+# 安装 Certbot
+sudo apt install -y certbot python3-certbot-nginx
+
+# 获取证书（替换为您的域名和邮箱）
+sudo certbot --nginx -d 您的域名 --email 您的邮箱 --agree-tos
+```
+
+---
+
+## 7. 设置开机自启
+
+### 7.1 PM2 开机自启
+
+```bash
+# 生成启动脚本
+pm2 startup
+
+# 按照提示运行生成的命令（会显示一行 sudo 命令）
+
+# 保存当前进程列表
+pm2 save
+```
+
+### 7.2 验证自启动
+
+```bash
+# 重启服务器测试
+sudo reboot
+```
+
+重新连接后，运行 `pm2 status` 确认服务已自动启动。
+
+---
+
+## 8. 常见问题
+
+### Q: 端口 3001 无法访问？
+
+1. 检查防火墙：
+```bash
+# Ubuntu (UFW)
+sudo ufw allow 3001
+
+# CentOS (firewalld)
+sudo firewall-cmd --permanent --add-port=3001/tcp
+sudo firewall-cmd --reload
+```
+
+2. 检查云服务商安全组规则，确保开放 3001 端口。
+
+### Q: 服务启动失败？
+
+查看详细日志：
+```bash
+pm2 logs wechat-api --lines 100
+```
+
+常见原因：
+- `.env` 配置错误
+- Node.js 版本过低
+- 端口被占用
+
+### Q: 如何更新代码？
+
+```bash
+cd /opt/wechat-ai-publisher
+
+# 拉取最新代码
+git pull origin main
+
+# 重新安装依赖
+cd backend
+npm install
+
+# 重新构建
+npm run build
+
+# 重启服务
+pm2 restart wechat-api
+```
+
+### Q: 如何查看实时日志？
+
+```bash
+# 实时跟踪日志
+pm2 logs wechat-api --lines 50
+
+# 或使用
+tail -f ~/.pm2/logs/wechat-api-out.log
+```
+
+### Q: 内存不足怎么办？
+
+1. 创建交换空间：
+```bash
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+---
+
+## 部署检查清单
+
+- [ ] Node.js 18+ 已安装
+- [ ] 代码已克隆
+- [ ] `.env` 已配置
+- [ ] JWT_SECRET 已设置
+- [ ] 项目已构建 (`npm run build`)
+- [ ] PM2 已启动服务
+- [ ] 健康检查通过
+- [ ] 防火墙端口已开放
+- [ ] PM2 开机自启已配置
+
+---
+
+## 需要帮助？
+
+如果遇到问题，请：
+
+1. 查看 PM2 日志：`pm2 logs wechat-api`
+2. 检查 `.env` 配置是否正确
+3. 确认服务器端口是否开放
+4. 在 GitHub Issues 中提问
+
+---
+
+## Docker 部署（高级）
+
+如果您熟悉 Docker，可以使用容器化部署：
+
+```bash
+cd /opt/wechat-ai-publisher/backend
+
+# 构建镜像
+docker build -t wechat-api .
+
+# 运行容器
+# 注意：Docker 镜像内部使用端口 80（为微信云托管优化）
+# 这里将主机的 3001 端口映射到容器的 80 端口
+docker run -d \
+  --name wechat-api \
+  -p 3001:80 \
+  -e JWT_SECRET=请生成一个64位随机密钥 \
+  -e CORS_ORIGINS=http://您的域名 \
+  wechat-api
+
+# 验证服务运行
+curl http://localhost:3001/api/v1/health
+```
+
+---
+
+祝您部署顺利！🎉
