@@ -206,8 +206,11 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'apiconfig'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'apiconfig' | 'analytics'>('dashboard');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  
+  // Analytics State
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
   
   // API Config State
   const [apiConfig, setApiConfig] = useState<ApiConfig>({
@@ -225,10 +228,11 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [statsResult, usersResult, configResult] = await Promise.all([
+        const [statsResult, usersResult, configResult, analyticsResult] = await Promise.all([
           request<AdminStats>('/admin/stats'),
           request<{ users: User[] }>('/admin/users'),
           request<ApiConfig>('/admin/config'),
+          request<any>('/admin/analytics'),
         ]);
         
         if (statsResult.success && statsResult.data) {
@@ -239,6 +243,9 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
         }
         if (configResult.success && configResult.data) {
           setApiConfig(configResult.data);
+        }
+        if (analyticsResult.success && analyticsResult.data) {
+          setAnalyticsData(analyticsResult.data);
         }
       } finally {
         setIsLoading(false);
@@ -372,6 +379,21 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                   ? 'bg-gray-100 text-gray-800' 
                   : 'text-white/70 hover:text-white hover:bg-white/10'
               }`}
+            >
+              <span className="material-icons text-sm mr-2 align-middle">api</span>
+              API设置
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`px-6 py-3 font-medium rounded-t-lg transition ${
+                activeTab === 'analytics' 
+                  ? 'bg-gray-100 text-gray-800' 
+                  : 'text-white/70 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <span className="material-icons text-sm mr-2 align-middle">bar_chart</span>
+              数据分析
+            </button>
             >
               <span className="material-icons text-sm mr-2 align-middle">api</span>
               API设置
@@ -516,7 +538,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
               </table>
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'apiconfig' ? (
           /* API Config Tab */
           <div className="bg-white rounded-xl shadow-sm">
             <div className="p-6 border-b">
@@ -647,6 +669,121 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                     </>
                   )}
                 </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Analytics Tab */
+          <div className="space-y-6">
+            {/* Analytics Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {[
+                { label: '总事件数', value: analyticsData?.totalEvents || 0, icon: 'event', color: 'bg-blue-500' },
+                { label: '活跃用户(今日)', value: analyticsData?.activeUsersToday || 0, icon: 'today', color: 'bg-green-500' },
+                { label: '活跃用户(本周)', value: analyticsData?.activeUsersWeek || 0, icon: 'date_range', color: 'bg-orange-500' },
+                { label: '总用户数', value: analyticsData?.totalUsers || 0, icon: 'people', color: 'bg-purple-500' },
+              ].map((stat, i) => (
+                <div key={i} className="bg-white rounded-xl shadow-sm p-6 flex items-center justify-between">
+                  <div>
+                    <div className="text-gray-500 text-sm mb-1">{stat.label}</div>
+                    <div className="text-3xl font-bold text-gray-800">{stat.value.toLocaleString()}</div>
+                  </div>
+                  <div className={`w-14 h-14 ${stat.color} rounded-xl flex items-center justify-center`}>
+                    <span className="material-icons text-white text-2xl">{stat.icon}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Top Events */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <span className="material-icons text-blue-500">trending_up</span>
+                热门事件类型
+              </h3>
+              <div className="space-y-3">
+                {analyticsData?.topEvents?.slice(0, 10).map((event: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <span className="text-sm font-bold text-blue-600">{i + 1}</span>
+                      </div>
+                      <span className="font-mono text-sm text-gray-700">{event.eventType}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-gray-800">{event.count.toLocaleString()}</div>
+                        <div className="text-xs text-gray-400">次</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {(!analyticsData?.topEvents || analyticsData.topEvents.length === 0) && (
+                  <div className="text-center py-8 text-gray-400">
+                    <span className="material-icons text-4xl mb-2">info</span>
+                    <p>暂无数据</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Recent Events */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <span className="material-icons text-green-500">history</span>
+                最近事件
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b">
+                      <th className="pb-3 font-medium">时间</th>
+                      <th className="pb-3 font-medium">用户ID</th>
+                      <th className="pb-3 font-medium">事件类型</th>
+                      <th className="pb-3 font-medium">数据</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analyticsData?.recentEvents?.slice(0, 20).map((event: any) => (
+                      <tr key={event.id} className="border-b last:border-0 hover:bg-gray-50">
+                        <td className="py-3 text-gray-600">
+                          {new Date(event.timestamp).toLocaleString('zh-CN', {
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </td>
+                        <td className="py-3">
+                          <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                            {event.userId.substring(0, 8)}...
+                          </code>
+                        </td>
+                        <td className="py-3">
+                          <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                            {event.eventType}
+                          </span>
+                        </td>
+                        <td className="py-3 text-gray-500 text-xs">
+                          {event.eventData ? (
+                            <code className="bg-gray-50 px-2 py-1 rounded">
+                              {JSON.stringify(event.eventData).substring(0, 50)}
+                              {JSON.stringify(event.eventData).length > 50 ? '...' : ''}
+                            </code>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {(!analyticsData?.recentEvents || analyticsData.recentEvents.length === 0) && (
+                  <div className="text-center py-8 text-gray-400">
+                    <span className="material-icons text-4xl mb-2">info</span>
+                    <p>暂无事件记录</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

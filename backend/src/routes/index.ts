@@ -6,6 +6,7 @@ import materialRoutes from './materialRoutes.js';
 import userRoutes from './userRoutes.js';
 import adminRoutes from './adminRoutes.js';
 import utilityRoutes from './utilityRoutes.js';
+import analyticsRoutes from './analyticsRoutes.js';
 
 const router = Router();
 
@@ -17,5 +18,6 @@ router.use('/materials', materialRoutes);
 router.use('/user', userRoutes);
 router.use('/admin', adminRoutes);
 router.use('/utility', utilityRoutes);
+router.use('/analytics', analyticsRoutes);
 
 export default router;

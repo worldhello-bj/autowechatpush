@@ -10,6 +10,10 @@ import {
   getDashboardStats,
   getConfig,
   patchConfig,
+  getAnalytics,
+  getUserAnalytics,
+  getUserEventHistory,
+  getAllEvents,
 } from '../controllers/index.js';
 import { authGuard, adminOnly } from '../middleware/index.js';
 
@@ -88,5 +92,33 @@ router.patch('/users/:id/password', resetUserPassword);
  * @access Admin only
  */
 router.delete('/users/:id', removeUser);
+
+/**
+ * @route GET /api/v1/admin/analytics
+ * @desc Get analytics summary
+ * @access Admin only
+ */
+router.get('/analytics', getAnalytics);
+
+/**
+ * @route GET /api/v1/admin/analytics/events
+ * @desc Get all events with pagination
+ * @access Admin only
+ */
+router.get('/analytics/events', getAllEvents);
+
+/**
+ * @route GET /api/v1/admin/analytics/users/:userId
+ * @desc Get user activity summary
+ * @access Admin only
+ */
+router.get('/analytics/users/:userId', getUserAnalytics);
+
+/**
+ * @route GET /api/v1/admin/analytics/users/:userId/events
+ * @desc Get user event history
+ * @access Admin only
+ */
+router.get('/analytics/users/:userId/events', getUserEventHistory);
 
 export default router;

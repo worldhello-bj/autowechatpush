@@ -5,3 +5,4 @@ export * from './materialController.js';
 export * from './quotaController.js';
 export * from './adminController.js';
 export * from './utilityController.js';
+export * from './analyticsController.js';
