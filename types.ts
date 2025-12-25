@@ -89,7 +89,6 @@ export interface WechatPayload {
 }
 
 export enum AIProvider {
-  GOOGLE = 'google',
   DEEPSEEK = 'deepseek',
   QWEN = 'qwen'
 }

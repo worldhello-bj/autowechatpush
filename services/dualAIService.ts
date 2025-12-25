@@ -48,8 +48,8 @@ export interface UserPreferences {
 export interface DualAIConfig {
   contentApiKey: string;
   designApiKey: string;
-  contentProvider: 'google' | 'deepseek' | 'qwen';
-  designProvider: 'google' | 'deepseek' | 'qwen';
+  contentProvider: 'deepseek' | 'qwen';
+  designProvider: 'deepseek' | 'qwen';
   memory: AIMemory;
 }
 
@@ -376,7 +376,7 @@ export const getDualAIDeepSeekModel = (): DeepSeekDualModel =>
  * Make a single API call with optional multi-turn tool calling support for thinking mode
  */
 const callAPI = async (
-  provider: 'google' | 'deepseek' | 'qwen',
+  provider: 'deepseek' | 'qwen',
   apiKey: string,
   messages: any[],
   tools: any[],
@@ -400,8 +400,7 @@ const callAPI = async (
       model = 'deepseek-chat'; // Always use deepseek-chat, thinking is enabled via extra param
       break;
     default:
-      // For Google, we would use their SDK directly
-      throw new Error('Google provider should use SDK directly');
+      throw new Error('Unsupported provider');
   }
 
   logger.info(`Calling ${provider} API with model: ${model}, thinking mode: ${isDeepSeekThinking}`);

@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 // AI Provider enum
 export enum AIProvider {
-  GOOGLE = 'google',
   DEEPSEEK = 'deepseek',
   QWEN = 'qwen',
 }
@@ -62,7 +61,7 @@ export interface ArticleBlock {
 // AI Chat request schema
 export const aiChatRequestSchema = z.object({
   message: z.string().min(1, 'Message is required').max(10000, 'Message too long'),
-  provider: z.nativeEnum(AIProvider).default(AIProvider.GOOGLE),
+  provider: z.nativeEnum(AIProvider).default(AIProvider.DEEPSEEK),
   useSearch: z.boolean().default(false),
   imageContext: z.string().optional(),
   isFormattingMode: z.boolean().default(false),

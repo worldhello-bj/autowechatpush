@@ -19,7 +19,6 @@ const envSchema = z.object({
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
   
   // AI Provider Keys (optional, users can provide their own)
-  GOOGLE_API_KEY: z.string().optional(),
   DEEPSEEK_API_KEY: z.string().optional(),
   DASHSCOPE_API_KEY: z.string().optional(),
   
