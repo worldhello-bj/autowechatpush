@@ -17,7 +17,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api/v1': {
-        target: 'http://localhost:3001',
+        target: 'http://49.232.11.108:3001',
         changeOrigin: true
       }
     }
