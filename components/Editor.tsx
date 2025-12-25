@@ -614,7 +614,8 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         const contentKey = aiProvider === AIProvider.QWEN ? dashScopeApiKey : deepSeekApiKey;
         const designKey = aiProvider === AIProvider.QWEN ? dashScopeApiKey : deepSeekApiKey;
         
-        if (!contentKey) throw new Error(`${aiProvider === AIProvider.QWEN ? 'DashScope' : 'DeepSeek'} API Key is missing for Dual AI mode.`);
+        // Allow empty keys - backend will use server-configured keys as fallback
+        // if (!contentKey) throw new Error(`${aiProvider === AIProvider.QWEN ? 'DashScope' : 'DeepSeek'} API Key is missing for Dual AI mode.`);
         
         console.log('[Editor] Using Dual AI Mode - Content AI + Design AI');
         
@@ -703,8 +704,9 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         try {
           let analysis = "";
           if (aiProvider === AIProvider.QWEN) {
-             if (!dashScopeApiKey) throw new Error("DashScope Key missing for analysis.");
-             analysis = await analyzeImageQwen(base64String, mimeType, dashScopeApiKey);
+             // Allow empty key - backend will use server-configured key as fallback
+             // if (!dashScopeApiKey) throw new Error("DashScope Key missing for analysis.");
+             analysis = await analyzeImageQwen(base64String, mimeType, dashScopeApiKey || '');
           } else {
              analysis = await analyzeImage(base64String, mimeType, googleApiKey);
           }
@@ -786,8 +788,9 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       
       let audioBufferData: ArrayBuffer;
       if (aiProvider === AIProvider.QWEN) {
-          if (!dashScopeApiKey) throw new Error("DashScope Key missing for TTS.");
-          audioBufferData = await generateSpeechQwen(textToRead.slice(0, 500), dashScopeApiKey);
+          // Allow empty key - backend will use server-configured key as fallback
+          // if (!dashScopeApiKey) throw new Error("DashScope Key missing for TTS.");
+          audioBufferData = await generateSpeechQwen(textToRead.slice(0, 500), dashScopeApiKey || '');
       } else {
           audioBufferData = await generateSpeech(textToRead.slice(0, 800), googleApiKey); 
       }
