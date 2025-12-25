@@ -141,11 +141,9 @@ export const trackEvent = (
 
   events.push(event);
 
-  // Trim old events if we exceed max (use slice for better performance)
+  // Trim old events if we exceed max
   if (events.length > MAX_EVENTS) {
-    const trimmed = events.slice(-MAX_EVENTS);
-    events.length = 0;
-    events.push(...trimmed);
+    events.splice(0, events.length - MAX_EVENTS);
   }
 
   schedulePersist();
