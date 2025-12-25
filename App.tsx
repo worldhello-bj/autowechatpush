@@ -5,6 +5,7 @@ import LogSettings from './components/LogSettings';
 import PromptEditor from './components/PromptEditor';
 import AuthPage from './components/AuthPage';
 import { AuthProvider, useAuth } from './components/AuthContext';
+import { WeChatCredentials } from './types';
 
 // --- Shared Types ---
 interface UserProfile {
@@ -182,7 +183,7 @@ const SettingsPage: React.FC = () => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // WeChat Credentials State
-  const [wechatCreds, setWechatCreds] = useState({ appId: '', appSecret: '' });
+  const [wechatCreds, setWechatCreds] = useState<WeChatCredentials>({ appId: '', appSecret: '' });
   const [isEditingWechat, setIsEditingWechat] = useState(false);
 
   useEffect(() => {
