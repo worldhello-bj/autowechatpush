@@ -308,6 +308,8 @@ autowechatpush/
 | DeepSeek | [DeepSeek Platform](https://platform.deepseek.com/) |
 | Qwen | [阿里云百炼](https://dashscope.console.aliyun.com/) |
 
+> **提示（Google Gemini 必看）**：Gemini 请求是从浏览器/客户端直接发出的，前端无法读取后端 `.env` 中的 `GOOGLE_API_KEY`。请在应用左侧/顶部的 **Settings → Google Gemini** 中手动填写个人 API Key（以 `AIza` 开头），并点击保存，否则会看到 “Google Gemini API Key is missing. Please configure it in Settings.” 的报错。
+
 ### 2. 微信公众号配置
 
 1. 登录 [微信公众平台](https://mp.weixin.qq.com/)
