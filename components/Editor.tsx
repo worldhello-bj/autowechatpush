@@ -661,7 +661,13 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
           throw new Error(response.error?.message || 'Failed to generate article');
         }
         
-        result = response.data;
+        // Convert API response to GenerationResult type
+        result = {
+          title: response.data.title,
+          digest: response.data.digest,
+          blocks: response.data.blocks as any as ArticleBlock[],
+          sources: response.data.sources,
+        };
         console.log('[Editor] Backend API generated article successfully');
       }
 
