@@ -328,6 +328,70 @@ function chooseImage(count = 1, sourceType = ['album', 'camera']) {
 }
 
 /**
+ * 选择媒体文件（图片/视频）
+ * 使用新版API，支持更多配置
+ */
+function chooseMedia(count = 1, mediaType = ['image'], sourceType = ['album', 'camera']) {
+  return new Promise((resolve, reject) => {
+    wx.chooseMedia({
+      count,
+      mediaType,
+      sourceType,
+      maxDuration: 60,
+      sizeType: ['compressed'],
+      success: (res) => {
+        resolve(res.tempFiles);
+      },
+      fail: (err) => {
+        reject(err);
+      }
+    });
+  });
+}
+
+/**
+ * 压缩图片
+ * @param {string} filePath - 原图路径
+ * @param {number} quality - 压缩质量 0-100
+ * @returns {Promise<string>} - 压缩后的图片路径
+ */
+function compressImage(filePath, quality = 80) {
+  return new Promise((resolve, reject) => {
+    wx.compressImage({
+      src: filePath,
+      quality,
+      success: (res) => {
+        resolve(res.tempFilePath);
+      },
+      fail: (err) => {
+        // 压缩失败则返回原图
+        console.warn('[Utils] 图片压缩失败，使用原图:', err);
+        resolve(filePath);
+      }
+    });
+  });
+}
+
+/**
+ * 获取图片信息
+ * @param {string} filePath - 图片路径
+ * @returns {Promise<Object>} - 图片信息 { width, height, path, type }
+ */
+function getImageInfo(filePath) {
+  return new Promise((resolve, reject) => {
+    wx.getImageInfo({
+      src: filePath,
+      success: (res) => {
+        resolve(res);
+      },
+      fail: (err) => {
+        reject(err);
+      }
+    });
+  });
+}
+
+/**
  * 读取文件为Base64
  */
 function readFileAsBase64(filePath) {
@@ -338,6 +402,44 @@ function readFileAsBase64(filePath) {
       encoding: 'base64',
       success: (res) => {
         resolve(res.data);
+      },
+      fail: (err) => {
+        reject(err);
+      }
+    });
+  });
+}
+
+/**
+ * 保存文件到本地
+ * @param {string} tempFilePath - 临时文件路径
+ * @returns {Promise<string>} - 保存后的文件路径
+ */
+function saveFile(tempFilePath) {
+  return new Promise((resolve, reject) => {
+    wx.saveFile({
+      tempFilePath,
+      success: (res) => {
+        resolve(res.savedFilePath);
+      },
+      fail: (err) => {
+        reject(err);
+      }
+    });
+  });
+}
+
+/**
+ * 保存图片到相册
+ * @param {string} filePath - 图片路径
+ * @returns {Promise<boolean>}
+ */
+function saveImageToAlbum(filePath) {
+  return new Promise((resolve, reject) => {
+    wx.saveImageToPhotosAlbum({
+      filePath,
+      success: () => {
+        resolve(true);
       },
       fail: (err) => {
         reject(err);
@@ -369,5 +471,10 @@ module.exports = {
   copyToClipboard,
   previewImage,
   chooseImage,
-  readFileAsBase64
+  chooseMedia,
+  compressImage,
+  getImageInfo,
+  readFileAsBase64,
+  saveFile,
+  saveImageToAlbum
 };

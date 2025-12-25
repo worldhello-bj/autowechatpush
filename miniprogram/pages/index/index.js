@@ -16,7 +16,8 @@ const {
   chooseImage,
   readFileAsBase64,
   copyToClipboard,
-  generateId
+  generateId,
+  escapeHtml
 } = require('../../utils/util');
 
 // 预设文案模板
@@ -364,6 +365,16 @@ Page({
     }).join('');
   },
 
+  // 将纯文本内容转换为带样式的HTML段落（使用HTML转义防止XSS）
+  _convertTextToHtml(text) {
+    if (!text) return '';
+    return text
+      .split('\n\n')
+      .filter(p => p.trim())
+      .map(p => `<p style="font-size: 16px; line-height: 1.8; color: #444; margin: 12px 0;">${escapeHtml(p.trim())}</p>`)
+      .join('');
+  },
+
   // 复制内容
   async copyContent() {
     if (!this.data.articleHtml) {
@@ -518,8 +529,27 @@ Page({
   },
 
   async loadMaterials() {
-    // TODO: 从后端加载素材
-    // 暂时使用本地存储
+    // 尝试从后端加载素材，失败则使用本地存储
+    try {
+      const result = await materialApi.list('image', 1, 50);
+      if (result.success && result.data?.materials) {
+        const materials = {
+          images: result.data.materials.map(m => ({
+            id: m.id,
+            url: m.url,
+            createdAt: m.createdAt
+          })),
+          videos: [],
+          svgs: []
+        };
+        this.setData({ materials });
+        return;
+      }
+    } catch (e) {
+      console.log('[Index] 从后端加载素材失败，使用本地存储:', e);
+    }
+    
+    // 回退到本地存储
     try {
       const materials = wx.getStorageSync('user_materials') || { images: [], videos: [], svgs: [] };
       this.setData({ materials });
@@ -533,22 +563,45 @@ Page({
       const tempFilePaths = await chooseImage(1);
       if (tempFilePaths && tempFilePaths.length > 0) {
         const filePath = tempFilePaths[0];
-        const base64 = await readFileAsBase64(filePath);
         
-        // 保存到本地
-        const materials = this.data.materials;
-        materials.images.unshift({
-          id: generateId(),
-          url: `data:image/jpeg;base64,${base64}`,
-          createdAt: Date.now()
-        });
+        showLoading('上传中...');
         
-        wx.setStorageSync('user_materials', materials);
-        this.setData({ materials });
-        showSuccess('上传成功');
+        // 尝试上传到后端
+        const result = await materialApi.uploadFile(filePath, 'image');
+        
+        if (result.success && result.data) {
+          // 使用后端返回的URL
+          const materials = this.data.materials;
+          materials.images.unshift({
+            id: result.data.id || generateId(),
+            url: result.data.url || filePath,
+            createdAt: Date.now()
+          });
+          
+          this.setData({ materials });
+          hideLoading();
+          showSuccess('上传成功');
+        } else {
+          // 后端上传失败，回退到本地存储
+          console.log('[Index] 后端上传失败，保存到本地:', result.error);
+          const base64 = await readFileAsBase64(filePath);
+          
+          const materials = this.data.materials;
+          materials.images.unshift({
+            id: generateId(),
+            url: `data:image/jpeg;base64,${base64}`,
+            createdAt: Date.now()
+          });
+          
+          wx.setStorageSync('user_materials', materials);
+          this.setData({ materials });
+          hideLoading();
+          showToast('后端不可用，已保存到本地');
+        }
       }
     } catch (e) {
       console.error('[Index] 上传素材失败:', e);
+      hideLoading();
       showError('上传失败');
     }
   },
@@ -585,34 +638,246 @@ Page({
     this.setData({ showAITools: false });
   },
 
-  generateTitles() {
-    showToast('功能开发中');
-    // TODO: 实现标题生成
+  // 获取当前API密钥
+  _getApiKey() {
+    const { aiProvider } = this.data;
+    if (aiProvider === 'deepseek') {
+      return wx.getStorageSync('deepseek_key') || '';
+    } else if (aiProvider === 'qwen') {
+      return wx.getStorageSync('dashscope_key') || '';
+    } else {
+      return wx.getStorageSync('google_api_key') || '';
+    }
   },
 
-  generateSummary() {
-    showToast('功能开发中');
-    // TODO: 实现摘要生成
+  // 获取文章纯文本内容
+  // Note: This extracts plain text from internally-generated HTML for sending to AI APIs.
+  // The output is never rendered as HTML. When converting back to HTML, escapeHtml is used.
+  _getPlainTextContent() {
+    if (!this.data.articleHtml) {
+      return '';
+    }
+    // Strip HTML tags and decode entities for plain text extraction
+    // This is safe because: 1) source is our own generated HTML, 2) output goes to API, not DOM
+    return this.data.articleHtml
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .trim();
   },
 
-  extractKeywords() {
-    showToast('功能开发中');
-    // TODO: 实现关键词提取
+  // 生成标题建议
+  async generateTitles() {
+    const content = this._getPlainTextContent();
+    if (!content) {
+      showToast('请先生成文章内容');
+      return;
+    }
+
+    showLoading('生成标题中...');
+    this.setData({ showAITools: false });
+
+    try {
+      const apiKey = this._getApiKey();
+      const result = await aiApi.generateTitles(content, 5, apiKey);
+
+      if (result.success && result.data?.titles) {
+        const titles = result.data.titles;
+        // 显示标题选择列表
+        wx.showActionSheet({
+          itemList: titles.slice(0, 6),
+          success: (res) => {
+            this.setData({ articleTitle: titles[res.tapIndex] });
+            showSuccess('标题已更新');
+          }
+        });
+      } else {
+        showError(result.error?.message || '生成失败');
+      }
+    } catch (e) {
+      console.error('[Index] 生成标题失败:', e);
+      showError('生成失败');
+    } finally {
+      hideLoading();
+    }
   },
 
-  polishContent() {
-    showToast('功能开发中');
-    // TODO: 实现内容润色
+  // 生成文章摘要
+  async generateSummary() {
+    const content = this._getPlainTextContent();
+    if (!content) {
+      showToast('请先生成文章内容');
+      return;
+    }
+
+    showLoading('生成摘要中...');
+    this.setData({ showAITools: false });
+
+    try {
+      const apiKey = this._getApiKey();
+      const result = await aiApi.generateSummary(content, 120, apiKey);
+
+      if (result.success && result.data?.summary) {
+        this.setData({ articleDigest: result.data.summary });
+        showSuccess('摘要已生成');
+      } else {
+        showError(result.error?.message || '生成失败');
+      }
+    } catch (e) {
+      console.error('[Index] 生成摘要失败:', e);
+      showError('生成失败');
+    } finally {
+      hideLoading();
+    }
   },
 
-  translateContent() {
-    showToast('功能开发中');
-    // TODO: 实现翻译
+  // 提取关键词
+  async extractKeywords() {
+    const content = this._getPlainTextContent();
+    if (!content) {
+      showToast('请先生成文章内容');
+      return;
+    }
+
+    showLoading('提取关键词中...');
+    this.setData({ showAITools: false });
+
+    try {
+      const apiKey = this._getApiKey();
+      const result = await aiApi.extractKeywords(content, 10, apiKey);
+
+      if (result.success && result.data?.keywords) {
+        const keywords = result.data.keywords.join('、');
+        wx.showModal({
+          title: '关键词',
+          content: keywords,
+          showCancel: true,
+          cancelText: '关闭',
+          confirmText: '复制',
+          success: (res) => {
+            if (res.confirm) {
+              copyToClipboard(keywords);
+              showSuccess('已复制');
+            }
+          }
+        });
+      } else {
+        showError(result.error?.message || '提取失败');
+      }
+    } catch (e) {
+      console.error('[Index] 提取关键词失败:', e);
+      showError('提取失败');
+    } finally {
+      hideLoading();
+    }
   },
 
-  expandContent() {
-    showToast('功能开发中');
-    // TODO: 实现扩写
+  // 内容润色
+  async polishContent() {
+    const content = this._getPlainTextContent();
+    if (!content) {
+      showToast('请先生成文章内容');
+      return;
+    }
+
+    // 选择润色风格
+    wx.showActionSheet({
+      itemList: ['正式商务', '轻松随意', '专业学术', '创意文艺'],
+      success: async (res) => {
+        const styles = ['formal', 'casual', 'professional', 'creative'];
+        const style = styles[res.tapIndex];
+        
+        showLoading('润色中...');
+        this.setData({ showAITools: false });
+
+        try {
+          const apiKey = this._getApiKey();
+          const result = await aiApi.polishContent(content, style, apiKey);
+
+          if (result.success && result.data?.content) {
+            this.setData({ articleHtml: this._convertTextToHtml(result.data.content) });
+            showSuccess('润色完成');
+          } else {
+            showError(result.error?.message || '润色失败');
+          }
+        } catch (e) {
+          console.error('[Index] 内容润色失败:', e);
+          showError('润色失败');
+        } finally {
+          hideLoading();
+        }
+      }
+    });
+  },
+
+  // 翻译内容
+  async translateContent() {
+    const content = this._getPlainTextContent();
+    if (!content) {
+      showToast('请先生成文章内容');
+      return;
+    }
+
+    // 选择目标语言
+    wx.showActionSheet({
+      itemList: ['翻译为英文', '翻译为中文', '翻译为日文', '翻译为韩文'],
+      success: async (res) => {
+        const langs = ['en', 'zh', 'ja', 'ko'];
+        const targetLang = langs[res.tapIndex];
+        
+        showLoading('翻译中...');
+        this.setData({ showAITools: false });
+
+        try {
+          const apiKey = this._getApiKey();
+          const result = await aiApi.translateContent(content, targetLang, apiKey);
+
+          if (result.success && result.data?.content) {
+            this.setData({ articleHtml: this._convertTextToHtml(result.data.content) });
+            showSuccess('翻译完成');
+          } else {
+            showError(result.error?.message || '翻译失败');
+          }
+        } catch (e) {
+          console.error('[Index] 翻译失败:', e);
+          showError('翻译失败');
+        } finally {
+          hideLoading();
+        }
+      }
+    });
+  },
+
+  // 内容扩写
+  async expandContent() {
+    const content = this._getPlainTextContent();
+    if (!content) {
+      showToast('请先生成文章内容');
+      return;
+    }
+
+    showLoading('扩写中...');
+    this.setData({ showAITools: false });
+
+    try {
+      const apiKey = this._getApiKey();
+      // 目标扩写到约1000字
+      const result = await aiApi.expandContent(content, 1000, apiKey);
+
+      if (result.success && result.data?.content) {
+        this.setData({ articleHtml: this._convertTextToHtml(result.data.content) });
+        showSuccess('扩写完成');
+      } else {
+        showError(result.error?.message || '扩写失败');
+      }
+    } catch (e) {
+      console.error('[Index] 扩写失败:', e);
+      showError('扩写失败');
+    } finally {
+      hideLoading();
+    }
   },
 
   // ===== 模板库相关 =====
