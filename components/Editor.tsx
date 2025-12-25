@@ -1260,6 +1260,17 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     const savedProvider = localStorage.getItem(PROVIDER_KEY);
     if (savedProvider) setAiProvider(savedProvider as AIProvider);
 
+    // Load WeChat credentials from localStorage
+    const savedWechatCreds = localStorage.getItem('wechat_creds');
+    if (savedWechatCreds) {
+      try {
+        const creds = JSON.parse(savedWechatCreds);
+        setWechatCreds(creds);
+      } catch (e) {
+        console.error('Failed to parse WeChat credentials', e);
+      }
+    }
+
     // Note: API keys are managed by admin and used by backend services.
     // The frontend no longer fetches API keys directly for security reasons.
     // All AI operations should go through the backend AI endpoints.

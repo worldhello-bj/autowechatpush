@@ -181,14 +181,32 @@ const SettingsPage: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile>({ name: 'Admin', email: 'admin@example.com', avatar: 'https://picsum.photos/100/100' });
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
+  // WeChat Credentials State
+  const [wechatCreds, setWechatCreds] = useState({ appId: '', appSecret: '' });
+  const [isEditingWechat, setIsEditingWechat] = useState(false);
+
   useEffect(() => {
     const savedProfile = localStorage.getItem('user_profile');
     if (savedProfile) setProfile(JSON.parse(savedProfile));
+
+    const savedWechatCreds = localStorage.getItem('wechat_creds');
+    if (savedWechatCreds) {
+      try {
+        setWechatCreds(JSON.parse(savedWechatCreds));
+      } catch (e) {
+        console.error('Failed to parse WeChat credentials', e);
+      }
+    }
   }, []);
 
   const handleSaveProfile = () => {
     localStorage.setItem('user_profile', JSON.stringify(profile));
     setIsEditingProfile(false);
+  };
+
+  const handleSaveWechatCreds = () => {
+    localStorage.setItem('wechat_creds', JSON.stringify(wechatCreds));
+    setIsEditingWechat(false);
   };
 
   return (
@@ -273,6 +291,76 @@ const SettingsPage: React.FC = () => {
           {/* Prompt Configuration */}
           <div className="border-t border-gray-100">
              <PromptEditor />
+          </div>
+
+          {/* WeChat Public Account Configuration */}
+          <div className="p-6">
+             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="material-icons text-gray-400">cloud</span> 微信公众号配置
+             </h3>
+             <p className="text-sm text-gray-500 mb-4">
+                配置您的微信公众号 AppID 和 AppSecret，用于发布文章到微信公众平台。每个用户可以配置自己的公众号。
+             </p>
+             
+             {isEditingWechat ? (
+               <div className="space-y-3 max-w-md">
+                 <div>
+                   <label className="block text-xs text-gray-500 mb-1">AppID</label>
+                   <input 
+                     type="text" 
+                     value={wechatCreds.appId}
+                     onChange={e => setWechatCreds({...wechatCreds, appId: e.target.value})}
+                     placeholder="wx1234567890abcdef"
+                     className="w-full border border-gray-300 p-2 rounded text-sm font-mono"
+                   />
+                 </div>
+                 <div>
+                   <label className="block text-xs text-gray-500 mb-1">AppSecret</label>
+                   <input 
+                     type="password" 
+                     value={wechatCreds.appSecret}
+                     onChange={e => setWechatCreds({...wechatCreds, appSecret: e.target.value})}
+                     placeholder="••••••••••••••••••••••••••••••••"
+                     className="w-full border border-gray-300 p-2 rounded text-sm font-mono"
+                   />
+                 </div>
+                 <div className="flex gap-2">
+                   <button 
+                     onClick={handleSaveWechatCreds} 
+                     className="bg-green-600 text-white text-xs px-4 py-2 rounded hover:bg-green-700 transition"
+                   >
+                     保存配置
+                   </button>
+                   <button 
+                     onClick={() => setIsEditingWechat(false)} 
+                     className="text-gray-500 text-xs px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 transition"
+                   >
+                     取消
+                   </button>
+                 </div>
+               </div>
+             ) : (
+               <div className="space-y-3">
+                 <div className="bg-gray-50 rounded p-3 border border-gray-200">
+                   <div className="text-xs text-gray-500 mb-1">AppID</div>
+                   <div className="font-mono text-sm text-gray-800">
+                     {wechatCreds.appId || <span className="text-gray-400 italic">未配置</span>}
+                   </div>
+                 </div>
+                 <div className="bg-gray-50 rounded p-3 border border-gray-200">
+                   <div className="text-xs text-gray-500 mb-1">AppSecret</div>
+                   <div className="font-mono text-sm text-gray-800">
+                     {wechatCreds.appSecret ? '••••••••••••••••••••••••••••••••' : <span className="text-gray-400 italic">未配置</span>}
+                   </div>
+                 </div>
+                 <button 
+                   onClick={() => setIsEditingWechat(true)} 
+                   className="text-sm text-green-600 font-medium hover:underline border border-green-600 rounded px-4 py-2 hover:bg-green-50 transition"
+                 >
+                   编辑配置
+                 </button>
+               </div>
+             )}
           </div>
 
           {/* Log Settings */}
