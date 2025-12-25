@@ -4,28 +4,15 @@ import { AIProvider, AIChatRequest, GenerationResult, BlockType, ArticleBlock } 
 
 const logger = createLogger('ai-service');
 
-// DeepSeek API configuration
+// API configuration
 const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/chat/completions';
 const QWEN_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
-const GOOGLE_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 type LayoutFunctionArgs = {
   title?: string;
   digest?: string;
   blocks?: Array<Partial<ArticleBlock>>;
 };
-
-type GoogleErrorResponse = {
-  error?: { message?: string; status?: { message?: string } };
-  message?: string;
-};
-
-type GoogleFunctionCall = { name: string; args?: Record<string, unknown> };
-type GoogleCandidate = {
-  content?: { parts?: Array<{ functionCall?: GoogleFunctionCall }> };
-  groundingMetadata?: { groundingChunks?: Array<{ web?: { title: string; uri: string } }> };
-};
-type GoogleApiResponse = { candidates?: GoogleCandidate[] };
 
 // Tool definition for article layout
 const layoutArticleFunction = {
@@ -202,76 +189,6 @@ const callQwenAPI = async (
 /**
  * Make a request to Google Gemini API (backend proxy)
  */
-const callGoogleAPI = async (
-  apiKey: string,
-  messages: Array<{ role: string; content: string }>
-): Promise<GenerationResult> => {
-  logger.info('Calling Google Gemini API');
-
-  const userPart = messages.find((m) => m.role === 'user')?.content || '';
-  const systemPart = messages.find((m) => m.role === 'system')?.content || '';
-
-  const response = await fetch(GOOGLE_BASE_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: userPart }] }],
-      systemInstruction: { parts: [{ text: systemPart }] },
-      tools: [{ functionDeclarations: [layoutArticleFunction.function] }],
-    }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({})) as GoogleErrorResponse;
-    const errMsg = errorData.error?.message || errorData.error?.status?.message || errorData.message || response.statusText;
-    throw new Error(`Google Gemini API Error: ${errMsg}`);
-  }
-
-  const data = await response.json() as GoogleApiResponse;
-
-  const candidate = data.candidates?.[0];
-  const parts = candidate?.content?.parts || [];
-  const callPart = parts.find((p) => p.functionCall);
-
-  if (!callPart?.functionCall) {
-    throw new Error('Google Gemini did not return expected layout_article function call');
-  }
-
-  if (callPart.functionCall.name !== 'layout_article') {
-    throw new Error('Unexpected function call from Google Gemini');
-  }
-
-  const argsRaw = callPart.functionCall.args;
-  if (!argsRaw || typeof argsRaw !== 'object') {
-    throw new Error('Google Gemini returned invalid function call arguments');
-  }
-  const args = argsRaw as LayoutFunctionArgs;
-
-  const rawBlocks = Array.isArray(args.blocks) ? args.blocks : [];
-  const blocks = rawBlocks.map((b, index) => ({
-    id: `gg-${(globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function')
-      ? globalThis.crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(16).slice(2)}-${index}`}`,
-    ...b,
-  })) as ArticleBlock[];
-
-  const sources: { title: string; uri: string }[] = [];
-  const chunks = candidate?.groundingMetadata?.groundingChunks;
-  if (chunks) {
-    chunks.forEach((chunk) => {
-      if (chunk.web) {
-        sources.push({ title: chunk.web.title, uri: chunk.web.uri });
-      }
-    });
-  }
-
-  return {
-    title: args.title || 'Untitled Article',
-    digest: args.digest || 'No summary available.',
-    blocks,
-    sources,
-  };
-};
 
 /**
  * Build prompt for article generation
@@ -344,13 +261,6 @@ export const generateArticle = async (
         throw new Error('Qwen API key is required');
       }
       return callQwenAPI(apiKey, messages);
-    }
-    case AIProvider.GOOGLE: {
-      const apiKey = userApiKey || config.GOOGLE_API_KEY;
-      if (!apiKey) {
-        throw new Error('Google Gemini API key is required');
-      }
-      return callGoogleAPI(apiKey, messages);
     }
     default:
       throw new Error('Unsupported AI provider');

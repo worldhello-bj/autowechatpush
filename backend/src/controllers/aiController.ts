@@ -16,12 +16,10 @@ const getFallbackProvider = (primaryProvider: AIProvider): AIProvider | null => 
   // Try providers in order of preference, skipping the failed primary provider
   const providerOrder: AIProvider[] = [
     AIProvider.DEEPSEEK,
-    AIProvider.GOOGLE,
     AIProvider.QWEN,
   ];
   
   const providerConfigured: Record<AIProvider, boolean> = {
-    [AIProvider.GOOGLE]: configStatus.googleConfigured,
     [AIProvider.DEEPSEEK]: configStatus.deepSeekConfigured,
     [AIProvider.QWEN]: configStatus.dashScopeConfigured,
   };

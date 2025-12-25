@@ -6,7 +6,6 @@ const logger = createLogger('config-service');
 export interface ApiConfig {
   wechatAppId: string;
   wechatAppSecret: string;
-  googleApiKey: string;
   deepSeekApiKey: string;
   dashScopeApiKey: string;
   updatedAt: Date;
@@ -26,7 +25,6 @@ export interface ApiConfig {
 let apiConfig: ApiConfig = {
   wechatAppId: '',
   wechatAppSecret: '',
-  googleApiKey: '',
   deepSeekApiKey: '',
   dashScopeApiKey: '',
   updatedAt: new Date(),
@@ -46,14 +44,12 @@ export const getApiConfig = (): ApiConfig => {
  */
 export const getApiConfigStatus = (): {
   wechatConfigured: boolean;
-  googleConfigured: boolean;
   deepSeekConfigured: boolean;
   dashScopeConfigured: boolean;
   updatedAt: Date;
 } => {
   return {
     wechatConfigured: !!(apiConfig.wechatAppId && apiConfig.wechatAppSecret),
-    googleConfigured: !!apiConfig.googleApiKey,
     deepSeekConfigured: !!apiConfig.deepSeekApiKey,
     dashScopeConfigured: !!apiConfig.dashScopeApiKey,
     updatedAt: apiConfig.updatedAt,
@@ -63,10 +59,8 @@ export const getApiConfigStatus = (): {
 /**
  * Get specific API key for internal use (e.g., AI generation)
  */
-export const getApiKey = (keyType: 'google' | 'deepseek' | 'dashscope' | 'wechat'): string | { appId: string; appSecret: string } | null => {
+export const getApiKey = (keyType: 'deepseek' | 'dashscope' | 'wechat'): string | { appId: string; appSecret: string } | null => {
   switch (keyType) {
-    case 'google':
-      return apiConfig.googleApiKey || null;
     case 'deepseek':
       return apiConfig.deepSeekApiKey || null;
     case 'dashscope':
@@ -107,7 +101,7 @@ export const updateApiConfig = (
  * Clear a specific API key (admin only)
  */
 export const clearApiKey = (
-  keyType: 'wechatAppId' | 'wechatAppSecret' | 'googleApiKey' | 'deepSeekApiKey' | 'dashScopeApiKey',
+  keyType: 'wechatAppId' | 'wechatAppSecret' | 'deepSeekApiKey' | 'dashScopeApiKey',
   adminUserId: string
 ): ApiConfig => {
   logger.info('Clearing API key', { adminUserId, keyType });
@@ -133,9 +127,6 @@ export const initApiConfigFromEnv = (): void => {
   }
   if (process.env.WECHAT_APP_SECRET) {
     envConfig.wechatAppSecret = process.env.WECHAT_APP_SECRET;
-  }
-  if (process.env.GOOGLE_API_KEY) {
-    envConfig.googleApiKey = process.env.GOOGLE_API_KEY;
   }
   if (process.env.DEEPSEEK_API_KEY) {
     envConfig.deepSeekApiKey = process.env.DEEPSEEK_API_KEY;

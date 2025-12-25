@@ -3,21 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import DOMPurify from 'dompurify';
 import { aiApi } from '../services/apiClient';
 import { 
-  generateArticleStructure, 
-  analyzeImage, 
-  generateSpeech, 
-  GenerationResult,
-  generateTitleSuggestions,
-  generateSummary,
-  expandContent,
-  polishContent,
-  extractKeywords,
-  translateContent,
-  suggestStyles,
-  generateHook,
-  generateCTA,
-  rewriteContent,
-  StyleSuggestion
+  GenerationResult
 } from '../services/geminiService';
 import { 
   generateArticleStructureDeepSeek,
@@ -30,7 +16,8 @@ import {
   suggestStylesDeepSeek,
   generateHookDeepSeek,
   generateCTADeepSeek,
-  rewriteContentDeepSeek
+  rewriteContentDeepSeek,
+  StyleSuggestion
 } from '../services/deepSeekService';
 import { 
   generateArticleStructureQwen, 
@@ -539,8 +526,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   const [isPublishing, setIsPublishing] = useState(false);
 
   // AI Provider Config (managed by admin via backend)
-  const [aiProvider, setAiProvider] = useState<AIProvider>(AIProvider.GOOGLE);
-  const [googleApiKey, setGoogleApiKey] = useState('');
+  const [aiProvider, setAiProvider] = useState<AIProvider>(AIProvider.DEEPSEEK);
   const [deepSeekApiKey, setDeepSeekApiKey] = useState('');
   const [dashScopeApiKey, setDashScopeApiKey] = useState('');
 
@@ -697,17 +683,13 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       const mimeType = file.type;
       setUploadedImagePreview(reader.result as string);
 
-      // Analyze if Google or Qwen
-      if (aiProvider === AIProvider.GOOGLE || aiProvider === AIProvider.QWEN) {
+      // Analyze if Qwen
+      if (aiProvider === AIProvider.QWEN) {
         setAnalyzingImage(true);
         try {
           let analysis = "";
-          if (aiProvider === AIProvider.QWEN) {
-             // Allow empty key - backend will use server-configured key as fallback
-             analysis = await analyzeImageQwen(base64String, mimeType, dashScopeApiKey || '');
-          } else {
-             analysis = await analyzeImage(base64String, mimeType, googleApiKey);
-          }
+          // Allow empty key - backend will use server-configured key as fallback
+          analysis = await analyzeImageQwen(base64String, mimeType, dashScopeApiKey || '');
           setImageContext(analysis);
         } catch (err: any) {
           onError("Failed to analyze image: " + err.message);
@@ -785,12 +767,8 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       setIsPlaying(true);
       
       let audioBufferData: ArrayBuffer;
-      if (aiProvider === AIProvider.QWEN) {
-          // Allow empty key - backend will use server-configured key as fallback
-          audioBufferData = await generateSpeechQwen(textToRead.slice(0, 500), dashScopeApiKey || '');
-      } else {
-          audioBufferData = await generateSpeech(textToRead.slice(0, 800), googleApiKey); 
-      }
+      // Allow empty key - backend will use server-configured key as fallback
+      audioBufferData = await generateSpeechQwen(textToRead.slice(0, 500), dashScopeApiKey || '');
       
       if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -912,8 +890,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         titles = await generateTitleSuggestionsDeepSeek(content, 5, deepSeekApiKey);
       } else if (aiProvider === AIProvider.QWEN) {
         titles = await generateTitleSuggestionsQwen(content, 5, dashScopeApiKey);
-      } else {
-        titles = await generateTitleSuggestions(content, 5, googleApiKey);
       }
       setTitleSuggestions(titles);
     } catch (e: any) {
@@ -936,8 +912,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         summary = await generateSummaryDeepSeek(content, 120, deepSeekApiKey);
       } else if (aiProvider === AIProvider.QWEN) {
         summary = await generateSummaryQwen(content, 120, dashScopeApiKey);
-      } else {
-        summary = await generateSummary(content, 120, googleApiKey);
       }
       setArticleDigest(summary);
     } catch (e: any) {
@@ -960,8 +934,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         kws = await extractKeywordsDeepSeek(content, 10, deepSeekApiKey);
       } else if (aiProvider === AIProvider.QWEN) {
         kws = await extractKeywordsQwen(content, 10, dashScopeApiKey);
-      } else {
-        kws = await extractKeywords(content, 10, googleApiKey);
       }
       setKeywords(kws);
     } catch (e: any) {
@@ -984,8 +956,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         styles = await suggestStylesDeepSeek(content, deepSeekApiKey);
       } else if (aiProvider === AIProvider.QWEN) {
         styles = await suggestStylesQwen(content, dashScopeApiKey);
-      } else {
-        styles = await suggestStyles(content, googleApiKey);
       }
       setStyleSuggestions(styles);
     } catch (e: any) {
@@ -1007,8 +977,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         hook = await generateHookDeepSeek(topic, style, deepSeekApiKey);
       } else if (aiProvider === AIProvider.QWEN) {
         hook = await generateHookQwen(topic, style, dashScopeApiKey);
-      } else {
-        hook = await generateHook(topic, style, googleApiKey);
       }
       setGeneratedHook(hook);
     } catch (e: any) {
@@ -1031,8 +999,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         cta = await generateCTADeepSeek(content, ctaType, deepSeekApiKey);
       } else if (aiProvider === AIProvider.QWEN) {
         cta = await generateCTAQwen(content, ctaType, dashScopeApiKey);
-      } else {
-        cta = await generateCTA(content, ctaType, googleApiKey);
       }
       setGeneratedCTA(cta);
     } catch (e: any) {
@@ -1055,8 +1021,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         polished = await polishContentDeepSeek(content, tone, deepSeekApiKey);
       } else if (aiProvider === AIProvider.QWEN) {
         polished = await polishContentQwen(content, tone, dashScopeApiKey);
-      } else {
-        polished = await polishContent(content, tone, googleApiKey);
       }
       // Convert polished text back to safe HTML
       setHtmlContent(textToSafeHtml(polished));
@@ -1080,8 +1044,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         rewritten = await rewriteContentDeepSeek(content, style, deepSeekApiKey);
       } else if (aiProvider === AIProvider.QWEN) {
         rewritten = await rewriteContentQwen(content, style, dashScopeApiKey);
-      } else {
-        rewritten = await rewriteContent(content, style, googleApiKey);
       }
       setHtmlContent(textToSafeHtml(rewritten));
     } catch (e: any) {
@@ -1104,8 +1066,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         translated = await translateContentDeepSeek(content, targetLang, deepSeekApiKey);
       } else if (aiProvider === AIProvider.QWEN) {
         translated = await translateContentQwen(content, targetLang, dashScopeApiKey);
-      } else {
-        translated = await translateContent(content, targetLang, googleApiKey);
       }
       setHtmlContent(textToSafeHtml(translated));
     } catch (e: any) {
@@ -1128,8 +1088,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         expanded = await expandContentDeepSeek(content, style, deepSeekApiKey);
       } else if (aiProvider === AIProvider.QWEN) {
         expanded = await expandContentQwen(content, style, dashScopeApiKey);
-      } else {
-        expanded = await expandContent(content, style, googleApiKey);
       }
       setHtmlContent(textToSafeHtml(expanded));
     } catch (e: any) {
@@ -1284,7 +1242,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   // Helper to determine badge color
   const getProviderColor = () => {
       switch(aiProvider) {
-          case AIProvider.GOOGLE: return 'bg-green-500';
           case AIProvider.DEEPSEEK: return 'bg-blue-500';
           case AIProvider.QWEN: return 'bg-purple-500';
           default: return 'bg-gray-500';
@@ -1293,7 +1250,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
 
   const getProviderName = () => {
        switch(aiProvider) {
-          case AIProvider.GOOGLE: return 'Google Gemini';
           case AIProvider.DEEPSEEK: return 'DeepSeek';
           case AIProvider.QWEN: return 'Qwen (Tongyi)';
           default: return 'Unknown';
@@ -1506,13 +1462,13 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                         className="rounded text-green-600 focus:ring-green-500 w-4 h-4"
                     />
                     <span className="text-sm font-medium text-gray-700">
-                        {aiProvider === AIProvider.GOOGLE ? 'Use Google Search' : 'Use Web Search'}
+                        Use Web Search
                     </span>
                 </label>
                 
                 {/* Dual AI Mode Toggle */}
                 <label className={`flex items-center gap-2 px-3 py-2 rounded-md border transition ${
-                  aiProvider === AIProvider.GOOGLE || isFormattingMode 
+                  isFormattingMode 
                     ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200' 
                     : useDualAI 
                       ? 'cursor-pointer bg-gradient-to-r from-purple-50 to-blue-50 border-purple-300' 
@@ -1522,7 +1478,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                         type="checkbox" 
                         checked={useDualAI} 
                         onChange={(e) => setUseDualAI(e.target.checked)}
-                        disabled={aiProvider === AIProvider.GOOGLE || isFormattingMode}
+                        disabled={isFormattingMode}
                         className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4"
                     />
                     <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
@@ -1534,7 +1490,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
             </div>
 
             {/* Dual AI Mode Info */}
-            {useDualAI && aiProvider !== AIProvider.GOOGLE && !isFormattingMode && (
+            {useDualAI && !isFormattingMode && (
               <div className="p-3 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
                 <div className="flex items-center gap-2 text-sm">
                   <span className="material-icons text-purple-500 text-lg">auto_awesome</span>
@@ -1603,7 +1559,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                   onClick={handleGenerate}
                   disabled={loading || analyzingImage}
                 className={`w-full font-semibold py-3 px-4 rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed transition flex justify-center items-center gap-2 ${
-                  useDualAI && aiProvider !== AIProvider.GOOGLE && !isFormattingMode
+                  useDualAI && !isFormattingMode
                     ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
                     : 'bg-green-600 text-white hover:bg-green-700'
                 }`}
@@ -1616,7 +1572,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                 ) : (
                     <>
                         <span className="material-icons">{isFormattingMode ? 'brush' : (useDualAI ? 'psychology' : 'auto_awesome')}</span> 
-                        {isFormattingMode ? 'Format Article' : (useDualAI && aiProvider !== AIProvider.GOOGLE ? '双AI生成' : 'Generate Article')}
+                        {isFormattingMode ? 'Format Article' : (useDualAI ? '双AI生成' : 'Generate Article')}
                     </>
                 )}
             </button>

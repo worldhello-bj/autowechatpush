@@ -272,7 +272,6 @@ export const getConfig = async (req: Request, res: Response) => {
     sendSuccess(res, {
       wechatAppId: config.wechatAppId,
       wechatAppSecret: config.wechatAppSecret,
-      googleApiKey: config.googleApiKey,
       deepSeekApiKey: config.deepSeekApiKey,
       dashScopeApiKey: config.dashScopeApiKey,
       updatedAt: config.updatedAt,
@@ -290,14 +289,11 @@ export const getConfig = async (req: Request, res: Response) => {
  */
 export const patchConfig = async (req: Request, res: Response) => {
   try {
-    const { wechatAppId, wechatAppSecret, googleApiKey, deepSeekApiKey, dashScopeApiKey } = req.body;
+    const { wechatAppId, wechatAppSecret, deepSeekApiKey, dashScopeApiKey } = req.body;
     
     // Input validation for API key formats
     if (wechatAppId !== undefined && wechatAppId !== '' && !wechatAppId.startsWith('wx')) {
       return sendError(res, 400, 'INVALID_WECHAT_APPID', 'WeChat AppID should start with "wx"');
-    }
-    if (googleApiKey !== undefined && googleApiKey !== '' && !googleApiKey.startsWith('AIza')) {
-      return sendError(res, 400, 'INVALID_GOOGLE_KEY', 'Google API Key should start with "AIza"');
     }
     if (deepSeekApiKey !== undefined && deepSeekApiKey !== '' && !deepSeekApiKey.startsWith('sk-')) {
       return sendError(res, 400, 'INVALID_DEEPSEEK_KEY', 'DeepSeek API Key should start with "sk-"');
@@ -315,7 +311,6 @@ export const patchConfig = async (req: Request, res: Response) => {
     const updates: Record<string, string> = {};
     if (wechatAppId !== undefined) updates.wechatAppId = wechatAppId;
     if (wechatAppSecret !== undefined) updates.wechatAppSecret = wechatAppSecret;
-    if (googleApiKey !== undefined) updates.googleApiKey = googleApiKey;
     if (deepSeekApiKey !== undefined) updates.deepSeekApiKey = deepSeekApiKey;
     if (dashScopeApiKey !== undefined) updates.dashScopeApiKey = dashScopeApiKey;
     
@@ -324,7 +319,6 @@ export const patchConfig = async (req: Request, res: Response) => {
     sendSuccess(res, {
       wechatAppId: config.wechatAppId,
       wechatAppSecret: config.wechatAppSecret,
-      googleApiKey: config.googleApiKey,
       deepSeekApiKey: config.deepSeekApiKey,
       dashScopeApiKey: config.dashScopeApiKey,
       updatedAt: config.updatedAt,
