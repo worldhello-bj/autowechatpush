@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import DOMPurify from 'dompurify';
+import { aiApi } from '../services/apiClient';
 import { 
   generateArticleStructure, 
   analyzeImage, 
@@ -644,26 +645,42 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
           console.log('[Editor] Design Notes:', dualResult.designNotes);
         }
         
-      } else if (aiProvider === AIProvider.DEEPSEEK) {
-        if (!deepSeekApiKey) throw new Error("DeepSeek API Key is missing. Please configure it in Settings.");
-        result = await generateArticleStructureDeepSeek(topic, deepSeekApiKey, isFormattingMode);
-      } else if (aiProvider === AIProvider.QWEN) {
-        if (!dashScopeApiKey) throw new Error("DashScope API Key is missing. Please configure it in Settings.");
-        result = await generateArticleStructureQwen(topic, dashScopeApiKey, useSearch, imageContext, isFormattingMode);
       } else {
-        // Default to Google
-        result = await generateArticleStructure(topic, useSearch, imageContext, googleApiKey, isFormattingMode);
+        // Use backend API with automatic fallback support
+        console.log('[Editor] Using Backend AI API with provider:', aiProvider);
+        
+        const response = await aiApi.generate({
+          message: topic,
+          provider: aiProvider,
+          useSearch: useSearch,
+          imageContext: imageContext || undefined,
+          isFormattingMode: isFormattingMode,
+        });
+        
+        if (!response.success || !response.data) {
+          throw new Error(response.error?.message || 'Failed to generate article');
+        }
+        
+        // Convert API response to GenerationResult type
+        result = {
+          title: response.data.title,
+          digest: response.data.digest,
+          blocks: response.data.blocks as any as ArticleBlock[],
+          sources: response.data.sources,
+        };
+        console.log('[Editor] Backend API generated article successfully');
       }
 
       setArticleTitle(result.title);
       setArticleDigest(result.digest);
       setSources(result.sources);
       
-      const generatedHtml = result.html ?? convertBlocksToHtml(result.blocks);
+      const generatedHtml = (result as any).html ?? convertBlocksToHtml(result.blocks);
       setHtmlContent(generatedHtml);
 
     } catch (e: any) {
-      onError(e.message || "Failed to generate article");
+      console.error('[Editor] Article generation error:', e);
+      onError(e.message || "Failed to generate article. Please try again.");
     } finally {
       setLoading(false);
     }

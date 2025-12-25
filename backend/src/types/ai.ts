@@ -87,7 +87,7 @@ export interface GroundingSource {
 
 // SSE Event types
 export interface SSEEvent {
-  type: 'thinking' | 'content' | 'block' | 'complete' | 'error';
+  type: 'thinking' | 'content' | 'block' | 'complete' | 'error' | 'info';
   data: unknown;
   timestamp: number;
 }
