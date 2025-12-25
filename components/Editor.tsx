@@ -614,7 +614,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         const contentKey = aiProvider === AIProvider.QWEN ? dashScopeApiKey : deepSeekApiKey;
         const designKey = aiProvider === AIProvider.QWEN ? dashScopeApiKey : deepSeekApiKey;
         
-        if (!contentKey) throw new Error(`${aiProvider === AIProvider.QWEN ? 'DashScope' : 'DeepSeek'} API Key is missing for Dual AI mode.`);
+        // Allow empty keys - backend will use server-configured keys as fallback
         
         console.log('[Editor] Using Dual AI Mode - Content AI + Design AI');
         
@@ -703,8 +703,8 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         try {
           let analysis = "";
           if (aiProvider === AIProvider.QWEN) {
-             if (!dashScopeApiKey) throw new Error("DashScope Key missing for analysis.");
-             analysis = await analyzeImageQwen(base64String, mimeType, dashScopeApiKey);
+             // Allow empty key - backend will use server-configured key as fallback
+             analysis = await analyzeImageQwen(base64String, mimeType, dashScopeApiKey || '');
           } else {
              analysis = await analyzeImage(base64String, mimeType, googleApiKey);
           }
@@ -786,8 +786,8 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       
       let audioBufferData: ArrayBuffer;
       if (aiProvider === AIProvider.QWEN) {
-          if (!dashScopeApiKey) throw new Error("DashScope Key missing for TTS.");
-          audioBufferData = await generateSpeechQwen(textToRead.slice(0, 500), dashScopeApiKey);
+          // Allow empty key - backend will use server-configured key as fallback
+          audioBufferData = await generateSpeechQwen(textToRead.slice(0, 500), dashScopeApiKey || '');
       } else {
           audioBufferData = await generateSpeech(textToRead.slice(0, 800), googleApiKey); 
       }
@@ -1259,6 +1259,17 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
 
     const savedProvider = localStorage.getItem(PROVIDER_KEY);
     if (savedProvider) setAiProvider(savedProvider as AIProvider);
+
+    // Load WeChat credentials from localStorage
+    const savedWechatCreds = localStorage.getItem('wechat_creds');
+    if (savedWechatCreds) {
+      try {
+        const creds = JSON.parse(savedWechatCreds);
+        setWechatCreds(creds);
+      } catch (e) {
+        console.error('Failed to parse WeChat credentials', e);
+      }
+    }
 
     // Note: API keys are managed by admin and used by backend services.
     // The frontend no longer fetches API keys directly for security reasons.
