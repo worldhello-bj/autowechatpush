@@ -1,6 +1,6 @@
 import { config } from '../config/index.js';
 import { createLogger } from '../utils/index.js';
-import { AIProvider, AIChatRequest, GenerationResult, BlockType } from '../types/index.js';
+import { AIProvider, AIChatRequest, GenerationResult, BlockType, ArticleBlock } from '../types/index.js';
 
 const logger = createLogger('ai-service');
 
@@ -8,6 +8,12 @@ const logger = createLogger('ai-service');
 const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/chat/completions';
 const QWEN_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
 const GOOGLE_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+
+type LayoutFunctionArgs = {
+  title?: string;
+  digest?: string;
+  blocks?: Array<Partial<ArticleBlock>>;
+};
 
 // Tool definition for article layout
 const layoutArticleFunction = {
@@ -227,13 +233,13 @@ const callGoogleAPI = async (
     throw new Error('Unexpected function call from Google Gemini');
   }
 
-  const args = callPart.functionCall.args || {};
+  const args = (callPart.functionCall.args || {}) as LayoutFunctionArgs;
 
-  const rawBlocks = Array.isArray((args as any).blocks) ? (args as any).blocks as Array<Record<string, unknown>> : [];
+  const rawBlocks = Array.isArray(args.blocks) ? args.blocks : [];
   const blocks = rawBlocks.map((b, index) => ({
     id: `gg-${Date.now()}-${index}`,
     ...b,
-  })) as any;
+  })) as ArticleBlock[];
 
   const sources: { title: string; uri: string }[] = [];
   const chunks = candidate?.groundingMetadata?.groundingChunks;
@@ -246,8 +252,8 @@ const callGoogleAPI = async (
   }
 
   return {
-    title: (args as any).title || 'Untitled Article',
-    digest: (args as any).digest || 'No summary available.',
+    title: args.title || 'Untitled Article',
+    digest: args.digest || 'No summary available.',
     blocks,
     sources,
   };
@@ -325,14 +331,15 @@ export const generateArticle = async (
       }
       return callQwenAPI(apiKey, messages);
     }
-    case AIProvider.GOOGLE:
-    default: {
+    case AIProvider.GOOGLE: {
       const apiKey = userApiKey || config.GOOGLE_API_KEY;
       if (!apiKey) {
         throw new Error('Google Gemini API key is required');
       }
       return callGoogleAPI(apiKey, messages);
     }
+    default:
+      throw new Error('Unsupported AI provider');
   }
 };
 
