@@ -15,6 +15,18 @@ type LayoutFunctionArgs = {
   blocks?: Array<Partial<ArticleBlock>>;
 };
 
+type GoogleErrorResponse = {
+  error?: { message?: string; status?: { message?: string } };
+  message?: string;
+};
+
+type GoogleFunctionCall = { name: string; args?: Record<string, unknown> };
+type GoogleCandidate = {
+  content?: { parts?: Array<{ functionCall?: GoogleFunctionCall }> };
+  groundingMetadata?: { groundingChunks?: Array<{ web?: { title: string; uri: string } }> };
+};
+type GoogleApiResponse = { candidates?: GoogleCandidate[] };
+
 // Tool definition for article layout
 const layoutArticleFunction = {
   type: 'function',
@@ -210,17 +222,12 @@ const callGoogleAPI = async (
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({})) as { error?: { message?: string; status?: { message?: string } }; message?: string };
+    const errorData = await response.json().catch(() => ({})) as GoogleErrorResponse;
     const errMsg = errorData.error?.message || errorData.error?.status?.message || errorData.message || response.statusText;
     throw new Error(`Google Gemini API Error: ${errMsg}`);
   }
 
-  const data = await response.json() as {
-    candidates?: Array<{
-      content?: { parts?: Array<{ functionCall?: { name: string; args?: Record<string, unknown> } }> };
-      groundingMetadata?: { groundingChunks?: Array<{ web?: { title: string; uri: string } }> };
-    }>;
-  };
+  const data = await response.json() as GoogleApiResponse;
 
   const candidate = data.candidates?.[0];
   const parts = candidate?.content?.parts || [];
@@ -237,10 +244,8 @@ const callGoogleAPI = async (
   const args = (callPart.functionCall.args || {}) as LayoutFunctionArgs;
 
   const rawBlocks = Array.isArray(args.blocks) ? args.blocks : [];
-  const blocks = rawBlocks.map((b) => ({
-    id: (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function')
-      ? globalThis.crypto.randomUUID()
-      : `gg-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  const blocks = rawBlocks.map((b, index) => ({
+    id: `gg-${Date.now()}-${index}`,
     ...b,
   })) as ArticleBlock[];
 
