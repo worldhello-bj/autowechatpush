@@ -15,8 +15,8 @@ const getFallbackProvider = (primaryProvider: AIProvider): AIProvider | null => 
   
   // Try providers in order of preference, skipping the failed primary provider
   const providerOrder: AIProvider[] = [
-    AIProvider.GOOGLE,
     AIProvider.DEEPSEEK,
+    AIProvider.GOOGLE,
     AIProvider.QWEN,
   ];
   
