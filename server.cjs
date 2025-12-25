@@ -1,12 +1,10 @@
-import express from 'express';
-import { createProxyMiddleware } from 'http-proxy-middleware';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import bodyParser from 'body-parser';
+const express = require('express');
+const { createProxyMiddleware } = require('http-proxy-middleware');
+const path = require('path');
+const bodyParser = require('body-parser');
 
-// ESM environment helpers
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// CommonJS already has __dirname available
+// const __dirname is already defined in CommonJS
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -126,8 +124,34 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// Start Server
-app.listen(PORT, async () => {
-    console.log(`\n✅ Server running on http://localhost:${PORT}`);
-    await logPublicIP();
-});
+// Function to start the server
+function startServer() {
+    return new Promise((resolve, reject) => {
+        try {
+            const server = app.listen(PORT, async () => {
+                console.log(`\n✅ Server running on http://localhost:${PORT}`);
+                await logPublicIP();
+                resolve(server);
+            });
+            
+            server.on('error', (err) => {
+                console.error('[Server] Failed to start:', err);
+                reject(err);
+            });
+        } catch (err) {
+            console.error('[Server] Error starting server:', err);
+            reject(err);
+        }
+    });
+}
+
+// Export for use in Electron
+module.exports = { startServer, app };
+
+// Auto-start when run directly (not required from Electron)
+if (require.main === module) {
+    startServer().catch((err) => {
+        console.error('Failed to start server:', err);
+        process.exit(1);
+    });
+}
