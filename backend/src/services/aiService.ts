@@ -211,9 +211,9 @@ const callGoogleAPI = async (
   const userPart = messages.find((m) => m.role === 'user')?.content || '';
   const systemPart = messages.find((m) => m.role === 'system')?.content || '';
 
-  const response = await fetch(`${GOOGLE_BASE_URL}?key=${apiKey}`, {
+  const response = await fetch(GOOGLE_BASE_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: userPart }] }],
       systemInstruction: { parts: [{ text: systemPart }] },
@@ -241,11 +241,17 @@ const callGoogleAPI = async (
     throw new Error('Unexpected function call from Google Gemini');
   }
 
-  const args = (callPart.functionCall.args || {}) as LayoutFunctionArgs;
+  const argsRaw = callPart.functionCall.args;
+  if (!argsRaw || typeof argsRaw !== 'object') {
+    throw new Error('Google Gemini returned invalid function call arguments');
+  }
+  const args = argsRaw as LayoutFunctionArgs;
 
   const rawBlocks = Array.isArray(args.blocks) ? args.blocks : [];
   const blocks = rawBlocks.map((b, index) => ({
-    id: `gg-${Date.now()}-${index}`,
+    id: `gg-${(globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function')
+      ? globalThis.crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}-${index}`}`,
     ...b,
   })) as ArticleBlock[];
 
