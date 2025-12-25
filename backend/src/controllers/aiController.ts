@@ -2,13 +2,47 @@ import { Request, Response } from 'express';
 import { sendSuccess, sendError, createLogger } from '../utils/index.js';
 import { generateArticle, generateArticleParallel } from '../services/index.js';
 import { checkQuota, consumeQuota, getUserQuotaStatus } from '../services/index.js';
-import { AIChatRequest, SSEEvent } from '../types/index.js';
+import { getApiConfigStatus } from '../services/index.js';
+import { AIChatRequest, SSEEvent, AIProvider } from '../types/index.js';
 
 const logger = createLogger('ai');
 
 /**
+ * Get fallback provider when primary provider fails
+ */
+const getFallbackProvider = (primaryProvider: AIProvider): AIProvider | null => {
+  const configStatus = getApiConfigStatus();
+  
+  // Try providers in order of preference, skipping the failed primary provider
+  const providerOrder: AIProvider[] = [
+    AIProvider.GOOGLE,
+    AIProvider.DEEPSEEK,
+    AIProvider.QWEN,
+  ];
+  
+  const providerConfigured: Record<AIProvider, boolean> = {
+    [AIProvider.GOOGLE]: configStatus.googleConfigured,
+    [AIProvider.DEEPSEEK]: configStatus.deepSeekConfigured,
+    [AIProvider.QWEN]: configStatus.dashScopeConfigured,
+  };
+  
+  // Find first configured provider that is not the primary one
+  for (const provider of providerOrder) {
+    if (provider !== primaryProvider && providerConfigured[provider]) {
+      return provider;
+    }
+  }
+  
+  return null;
+};
+
+/**
  * Generate article (non-streaming)
  * POST /api/v1/ai/generate
+ * 
+ * Implements automatic fallback:
+ * - Tries the requested provider first
+ * - If it fails, automatically tries other configured providers
  */
 export const generate = async (req: Request, res: Response) => {
   try {
@@ -29,12 +63,55 @@ export const generate = async (req: Request, res: Response) => {
     // Get API key from request headers or use server-side key
     const userApiKey = req.headers['x-api-key'] as string | undefined;
     
-    const result = await generateArticle(request, userApiKey);
+    let result;
+    let usedProvider = request.provider;
+    
+    try {
+      // Try primary provider
+      result = await generateArticle(request, userApiKey);
+      logger.info('Primary provider succeeded', { provider: request.provider, requestId: req.requestId });
+    } catch (primaryError) {
+      const primaryMessage = primaryError instanceof Error ? primaryError.message : 'Unknown error';
+      logger.warn('Primary provider failed, attempting fallback', { 
+        provider: request.provider, 
+        error: primaryMessage,
+        requestId: req.requestId 
+      });
+      
+      // Try fallback provider
+      const fallbackProvider = getFallbackProvider(request.provider);
+      
+      if (fallbackProvider) {
+        try {
+          const fallbackRequest = { ...request, provider: fallbackProvider };
+          result = await generateArticle(fallbackRequest, userApiKey);
+          usedProvider = fallbackProvider;
+          logger.info('Fallback provider succeeded', { 
+            fallbackProvider, 
+            originalProvider: request.provider,
+            requestId: req.requestId 
+          });
+        } catch (fallbackError) {
+          const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : 'Unknown error';
+          logger.error('Fallback provider also failed', { 
+            provider: fallbackProvider,
+            error: fallbackMessage,
+            requestId: req.requestId 
+          });
+          // Re-throw the original error if fallback also fails
+          throw primaryError;
+        }
+      } else {
+        logger.error('No fallback provider available', { requestId: req.requestId });
+        throw primaryError;
+      }
+    }
     
     // Consume quota if authenticated
     if (req.user) {
       consumeQuota(req.user.userId, 1, 'ai_generation', {
-        provider: request.provider,
+        provider: usedProvider,
+        requestedProvider: request.provider,
         blocksCount: result.blocks.length,
         title: result.title,
       }, req.requestId);
@@ -43,6 +120,7 @@ export const generate = async (req: Request, res: Response) => {
     logger.info('AI generation completed', { 
       title: result.title,
       blocksCount: result.blocks.length,
+      usedProvider,
       requestId: req.requestId 
     });
     
@@ -62,6 +140,10 @@ export const generate = async (req: Request, res: Response) => {
 /**
  * Generate article with streaming (SSE)
  * POST /api/v1/ai/chat/stream
+ * 
+ * Implements automatic fallback:
+ * - Tries the requested provider first
+ * - If it fails, automatically tries other configured providers
  */
 export const chatStream = async (req: Request, res: Response) => {
   const request = req.body as AIChatRequest;
@@ -111,8 +193,61 @@ export const chatStream = async (req: Request, res: Response) => {
       });
     }
     
-    // Generate article
-    const result = await generateArticle(request, userApiKey);
+    let result;
+    let usedProvider = request.provider;
+    
+    try {
+      // Try primary provider
+      result = await generateArticle(request, userApiKey);
+      logger.info('Primary provider succeeded (stream)', { provider: request.provider, requestId: req.requestId });
+    } catch (primaryError) {
+      const primaryMessage = primaryError instanceof Error ? primaryError.message : 'Unknown error';
+      logger.warn('Primary provider failed (stream), attempting fallback', { 
+        provider: request.provider, 
+        error: primaryMessage,
+        requestId: req.requestId 
+      });
+      
+      // Notify user about fallback
+      sendSSEEvent({
+        type: 'info',
+        data: { message: `Primary provider (${request.provider}) failed, trying fallback...` },
+        timestamp: Date.now(),
+      });
+      
+      // Try fallback provider
+      const fallbackProvider = getFallbackProvider(request.provider);
+      
+      if (fallbackProvider) {
+        try {
+          const fallbackRequest = { ...request, provider: fallbackProvider };
+          result = await generateArticle(fallbackRequest, userApiKey);
+          usedProvider = fallbackProvider;
+          logger.info('Fallback provider succeeded (stream)', { 
+            fallbackProvider, 
+            originalProvider: request.provider,
+            requestId: req.requestId 
+          });
+          
+          sendSSEEvent({
+            type: 'info',
+            data: { message: `Successfully switched to ${fallbackProvider}` },
+            timestamp: Date.now(),
+          });
+        } catch (fallbackError) {
+          const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : 'Unknown error';
+          logger.error('Fallback provider also failed (stream)', { 
+            provider: fallbackProvider,
+            error: fallbackMessage,
+            requestId: req.requestId 
+          });
+          throw primaryError;
+        }
+      } else {
+        logger.error('No fallback provider available (stream)', { requestId: req.requestId });
+        throw primaryError;
+      }
+    }
     
     // Send blocks one by one for streaming effect
     for (const block of result.blocks) {
@@ -141,7 +276,8 @@ export const chatStream = async (req: Request, res: Response) => {
     // Consume quota if authenticated
     if (req.user) {
       consumeQuota(req.user.userId, 1, 'ai_stream', {
-        provider: request.provider,
+        provider: usedProvider,
+        requestedProvider: request.provider,
         blocksCount: result.blocks.length,
         title: result.title,
       }, req.requestId);
@@ -150,6 +286,7 @@ export const chatStream = async (req: Request, res: Response) => {
     logger.info('SSE stream completed', { 
       title: result.title,
       blocksCount: result.blocks.length,
+      usedProvider,
       requestId: req.requestId 
     });
     
