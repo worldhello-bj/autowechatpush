@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 const API_BASE = '/api/v1';
 
 // Types
+type AdminTab = 'dashboard' | 'users' | 'apiconfig' | 'analytics';
+
 interface User {
   id: string;
   email: string;
@@ -206,7 +208,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'apiconfig' | 'analytics'>('dashboard');
+  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [showCreateModal, setShowCreateModal] = useState(false);
   
   // Analytics State

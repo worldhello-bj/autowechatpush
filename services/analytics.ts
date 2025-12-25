@@ -109,7 +109,23 @@ class AnalyticsService {
    * Flush on page unload
    */
   flushBeforeUnload() {
-    this.flush();
+    // Use sendBeacon if available for better reliability on page unload
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon && this.queue.length > 0) {
+      const token = localStorage.getItem('access_token') || localStorage.getItem('admin_access_token');
+      if (token) {
+        const events = [...this.queue];
+        this.queue = [];
+        
+        // Send each event via sendBeacon
+        events.forEach(event => {
+          const blob = new Blob([JSON.stringify(event)], { type: 'application/json' });
+          navigator.sendBeacon(`${API_BASE}/analytics/event`, blob);
+        });
+      }
+    } else {
+      // Fallback to synchronous flush (will be cancelled if page unloads)
+      this.flush();
+    }
   }
 }
 

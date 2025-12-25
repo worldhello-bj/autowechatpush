@@ -30,8 +30,10 @@ export const recordEvent = async (req: Request, res: Response) => {
 
     // Get user agent and IP from request
     const userAgent = req.headers['user-agent'];
-    const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() 
-      || req.socket.remoteAddress;
+    // Use the leftmost IP in x-forwarded-for (client's real IP in trusted proxy setups)
+    // Note: This can be spoofed - use with caution and validate if needed
+    const forwardedFor = req.headers['x-forwarded-for'] as string;
+    const ipAddress = forwardedFor?.split(',')[0]?.trim() || req.socket.remoteAddress;
 
     const event = trackEvent(
       userId,
