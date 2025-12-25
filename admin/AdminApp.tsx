@@ -394,10 +394,6 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
               <span className="material-icons text-sm mr-2 align-middle">bar_chart</span>
               数据分析
             </button>
-            >
-              <span className="material-icons text-sm mr-2 align-middle">api</span>
-              API设置
-            </button>
           </div>
         </div>
       </header>

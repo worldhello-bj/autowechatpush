@@ -209,6 +209,13 @@ const SettingsPage: React.FC = () => {
   const handleSaveWechatCreds = () => {
     localStorage.setItem('wechat_creds', JSON.stringify(wechatCreds));
     setIsEditingWechat(false);
+    
+    // Track settings update event
+    analytics.track('settings_update', {
+      type: 'wechat_credentials',
+      hasAppId: !!wechatCreds.appId,
+      hasAppSecret: !!wechatCreds.appSecret,
+    });
   };
 
   return (
