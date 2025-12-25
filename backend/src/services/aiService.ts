@@ -210,8 +210,9 @@ const callGoogleAPI = async (
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } };
-    throw new Error(`Google Gemini API Error: ${errorData.error?.message || response.statusText}`);
+    const errorData = await response.json().catch(() => ({})) as { error?: { message?: string; status?: { message?: string } }; message?: string };
+    const errMsg = errorData.error?.message || errorData.error?.status?.message || errorData.message || response.statusText;
+    throw new Error(`Google Gemini API Error: ${errMsg}`);
   }
 
   const data = await response.json() as {
@@ -226,7 +227,7 @@ const callGoogleAPI = async (
   const callPart = parts.find((p) => p.functionCall);
 
   if (!callPart?.functionCall) {
-    throw new Error('Google Gemini did not return structured content');
+    throw new Error('Google Gemini did not return expected layout_article function call');
   }
 
   if (callPart.functionCall.name !== 'layout_article') {
@@ -236,8 +237,10 @@ const callGoogleAPI = async (
   const args = (callPart.functionCall.args || {}) as LayoutFunctionArgs;
 
   const rawBlocks = Array.isArray(args.blocks) ? args.blocks : [];
-  const blocks = rawBlocks.map((b, index) => ({
-    id: `gg-${Date.now()}-${index}`,
+  const blocks = rawBlocks.map((b) => ({
+    id: (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function')
+      ? globalThis.crypto.randomUUID()
+      : `gg-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     ...b,
   })) as ArticleBlock[];
 
