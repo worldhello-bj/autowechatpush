@@ -23,6 +23,9 @@ let keyPool: AIKeyPoolConfig = {
 // Track usage statistics for each key
 const keyUsageMap = new Map<string, KeyUsageStats>();
 
+// Track initialization status
+let initializationError: Error | null = null;
+
 /**
  * Initialize key usage stats for a key
  */
@@ -33,6 +36,15 @@ const initKeyStats = (key: string): KeyUsageStats => {
     failedRequests: 0,
     currentConcurrent: 0,
   };
+};
+
+/**
+ * Mask an API key for security (show only first and last 4 characters)
+ */
+const maskApiKey = (key: string): string => {
+  return key.length > 8 
+    ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}`
+    : '****';
 };
 
 /**
@@ -140,6 +152,29 @@ const getAvailableKey = (provider: AIProvider): AIKeyConfig | null => {
 };
 
 /**
+ * Get fallback API key from environment variables
+ */
+const getFallbackKey = (provider: AIProvider): string => {
+  const providerConfig: Record<AIProvider, { envKey?: string; name: string }> = {
+    [AIProvider.DEEPSEEK]: { envKey: config.DEEPSEEK_API_KEY, name: 'DeepSeek' },
+    [AIProvider.QWEN]: { envKey: config.DASHSCOPE_API_KEY, name: 'Qwen' },
+  };
+  
+  const { envKey, name } = providerConfig[provider];
+  if (!envKey) {
+    throw new Error(`${name} API key not found in pool or environment`);
+  }
+  return envKey;
+};
+
+/**
+ * Check if a key is from the pool (as opposed to user-provided or environment fallback)
+ */
+const isPoolKey = (key: string): boolean => {
+  return keyUsageMap.has(key);
+};
+
+/**
  * Get an API key for the specified provider from the pool
  * Returns key from pool or falls back to environment variable
  */
@@ -171,28 +206,24 @@ export const getApiKeyFromPool = async (provider: AIProvider, userApiKey?: strin
   
   // Fall back to environment variables
   logger.debug('No keys available in pool, using environment variable', { provider });
-  
-  if (provider === AIProvider.DEEPSEEK) {
-    const envKey = config.DEEPSEEK_API_KEY;
-    if (!envKey) {
-      throw new Error('DeepSeek API key not found in pool or environment');
-    }
-    return envKey;
-  } else if (provider === AIProvider.QWEN) {
-    const envKey = config.DASHSCOPE_API_KEY;
-    if (!envKey) {
-      throw new Error('Qwen API key not found in pool or environment');
-    }
-    return envKey;
-  }
-  
-  throw new Error(`Unsupported provider: ${provider}`);
+  return getFallbackKey(provider);
 };
 
 /**
  * Release an API key after use (decrement concurrent counter)
+ * Only processes keys that are in the pool to avoid incorrect statistics
+ * 
+ * NOTE: The concurrent counter operations are not atomic. In extremely high-concurrency
+ * scenarios (thousands of requests per second), there's a theoretical race condition risk.
+ * For production use with such high load, consider using atomic operations or a
+ * distributed lock mechanism. For typical API usage patterns, this implementation is sufficient.
  */
 export const releaseApiKey = (key: string, success: boolean, error?: string): void => {
+  // Only track stats for keys that are in the pool
+  if (!isPoolKey(key)) {
+    return;
+  }
+  
   const stats = keyUsageMap.get(key);
   if (stats) {
     stats.currentConcurrent = Math.max(0, stats.currentConcurrent - 1);
@@ -217,11 +248,7 @@ export const releaseApiKey = (key: string, success: boolean, error?: string): vo
 export const getKeyPoolStats = (): Record<string, KeyUsageStats> => {
   const stats: Record<string, KeyUsageStats> = {};
   keyUsageMap.forEach((value, key) => {
-    // Mask the key for security (show only first and last 4 characters)
-    const maskedKey = key.length > 8 
-      ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}`
-      : '****';
-    stats[maskedKey] = value;
+    stats[maskApiKey(key)] = value;
   });
   return stats;
 };
@@ -234,15 +261,11 @@ export const getKeyPoolConfig = (): AIKeyPoolConfig => {
   return {
     deepseek: keyPool.deepseek.map((k) => ({
       ...k,
-      key: k.key.length > 8 
-        ? `${k.key.substring(0, 4)}...${k.key.substring(k.key.length - 4)}`
-        : '****',
+      key: maskApiKey(k.key),
     })),
     qwen: keyPool.qwen.map((k) => ({
       ...k,
-      key: k.key.length > 8 
-        ? `${k.key.substring(0, 4)}...${k.key.substring(k.key.length - 4)}`
-        : '****',
+      key: maskApiKey(k.key),
     })),
   };
 };
@@ -269,5 +292,7 @@ export const updateKeyPoolConfig = async (newConfig: AIKeyPoolConfig): Promise<v
 
 // Initialize key pool on module load
 loadKeyPool().catch((error) => {
-  logger.error('Failed to initialize key pool', { error });
+  initializationError = error instanceof Error ? error : new Error('Unknown initialization error');
+  logger.error('Failed to initialize key pool', { error: initializationError.message });
+  // Don't throw - allow module to load but operations will use fallback
 });
