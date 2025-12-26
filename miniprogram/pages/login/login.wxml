@@ -59,10 +59,11 @@
         <text>网络搜索</text>
       </view>
       
-      <!-- 双AI模式 (暂不可用) -->
-      <view class="option-chip disabled" bindtap="triggerLogin">
+      <!-- 双AI模式 -->
+      <view class="option-chip" bindtap="triggerLogin">
         <text class="option-icon">🧠</text>
-        <text>双AI模式 (暂不可用)</text>
+        <text>双AI模式</text>
+        <text class="badge-mini">两次调用</text>
       </view>
     </view>
   </view>
