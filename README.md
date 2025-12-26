@@ -776,11 +776,11 @@ MIT License
 **只需修改 `.env.production` 文件：**
 
 ```env
-# 使用 IP 地址
-VITE_API_BASE=http://49.232.11.108:3001/api/v1
-
-# 或使用域名（推荐）
+# 生产环境推荐使用 HTTPS 域名
 VITE_API_BASE=https://api.your-domain.com/api/v1
+
+# 仅开发 / 内网测试环境示例，请勿用于公网生产环境
+VITE_API_BASE=http://49.232.11.108:3001/api/v1
 ```
 
 **修改后重新构建即可！** 详细说明请参考：
