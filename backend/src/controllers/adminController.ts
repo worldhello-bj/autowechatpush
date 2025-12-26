@@ -11,6 +11,10 @@ import {
   getUserStats,
   getApiConfig,
   updateApiConfig,
+  getKeyPoolConfig,
+  getKeyPoolStats,
+  updateKeyPoolConfig,
+  reloadKeyPool,
 } from '../services/index.js';
 
 const logger = createLogger('admin');
@@ -327,5 +331,85 @@ export const patchConfig = async (req: Request, res: Response) => {
     const message = error instanceof Error ? error.message : 'Failed to update config';
     logger.error('Failed to update API config', { error: message, requestId: req.requestId });
     sendError(res, 500, 'UPDATE_CONFIG_FAILED', message);
+  }
+};
+
+/**
+ * Get AI key pool configuration (admin only)
+ * GET /api/v1/admin/keypool
+ */
+export const getKeyPool = async (req: Request, res: Response) => {
+  try {
+    logger.info('Admin fetching key pool config', { 
+      adminId: req.user?.userId,
+      requestId: req.requestId 
+    });
+    
+    const config = getKeyPoolConfig();
+    const stats = getKeyPoolStats();
+    
+    sendSuccess(res, {
+      config,
+      stats,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to get key pool';
+    logger.error('Failed to get key pool', { error: message, requestId: req.requestId });
+    sendError(res, 500, 'GET_KEYPOOL_FAILED', message);
+  }
+};
+
+/**
+ * Update AI key pool configuration (admin only)
+ * PUT /api/v1/admin/keypool
+ */
+export const updateKeyPool = async (req: Request, res: Response) => {
+  try {
+    const { deepseek, qwen } = req.body;
+    
+    if (!deepseek || !qwen) {
+      return sendError(res, 400, 'INVALID_REQUEST', 'Both deepseek and qwen key arrays are required');
+    }
+    
+    logger.info('Admin updating key pool', { 
+      adminId: req.user?.userId,
+      deepseekCount: deepseek.length,
+      qwenCount: qwen.length,
+      requestId: req.requestId 
+    });
+    
+    await updateKeyPoolConfig({ deepseek, qwen });
+    
+    const config = getKeyPoolConfig();
+    sendSuccess(res, { config });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update key pool';
+    logger.error('Failed to update key pool', { error: message, requestId: req.requestId });
+    sendError(res, 500, 'UPDATE_KEYPOOL_FAILED', message);
+  }
+};
+
+/**
+ * Reload AI key pool from file (admin only)
+ * POST /api/v1/admin/keypool/reload
+ */
+export const reloadKeyPoolConfig = async (req: Request, res: Response) => {
+  try {
+    logger.info('Admin reloading key pool from file', { 
+      adminId: req.user?.userId,
+      requestId: req.requestId 
+    });
+    
+    await reloadKeyPool();
+    
+    const config = getKeyPoolConfig();
+    sendSuccess(res, { 
+      message: 'Key pool reloaded successfully',
+      config,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to reload key pool';
+    logger.error('Failed to reload key pool', { error: message, requestId: req.requestId });
+    sendError(res, 500, 'RELOAD_KEYPOOL_FAILED', message);
   }
 };

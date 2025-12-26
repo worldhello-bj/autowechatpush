@@ -100,3 +100,30 @@ export interface AIUsage {
   cost: number;
   timestamp: Date;
 }
+
+// AI Key Pool types
+export interface AIKeyConfig {
+  key: string;
+  name?: string;
+  enabled: boolean;
+  weight?: number; // Higher weight = more likely to be selected (for weighted selection)
+  maxConcurrent?: number; // Max concurrent requests this key can handle
+  rateLimit?: {
+    requestsPerMinute?: number;
+    requestsPerDay?: number;
+  };
+}
+
+export interface AIKeyPoolConfig {
+  deepseek: AIKeyConfig[];
+  qwen: AIKeyConfig[];
+}
+
+export interface KeyUsageStats {
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  currentConcurrent: number;
+  lastUsed?: number; // timestamp
+  lastError?: string;
+}

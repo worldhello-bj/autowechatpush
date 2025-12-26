@@ -14,6 +14,9 @@ import {
   getUserAnalytics,
   getUserEventHistory,
   getAllEvents,
+  getKeyPool,
+  updateKeyPool,
+  reloadKeyPoolConfig,
 } from '../controllers/index.js';
 import { authGuard, adminOnly } from '../middleware/index.js';
 
@@ -120,5 +123,26 @@ router.get('/analytics/users/:userId', getUserAnalytics);
  * @access Admin only
  */
 router.get('/analytics/users/:userId/events', getUserEventHistory);
+
+/**
+ * @route GET /api/v1/admin/keypool
+ * @desc Get AI key pool configuration and statistics
+ * @access Admin only
+ */
+router.get('/keypool', getKeyPool);
+
+/**
+ * @route PUT /api/v1/admin/keypool
+ * @desc Update AI key pool configuration
+ * @access Admin only
+ */
+router.put('/keypool', updateKeyPool);
+
+/**
+ * @route POST /api/v1/admin/keypool/reload
+ * @desc Reload AI key pool from file
+ * @access Admin only
+ */
+router.post('/keypool/reload', reloadKeyPoolConfig);
 
 export default router;
