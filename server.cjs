@@ -65,7 +65,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// Proxy Configuration
+// Proxy Configuration for WeChat API
 const wechatProxy = createProxyMiddleware({
     target: 'https://api.weixin.qq.com',
     changeOrigin: true,
@@ -98,7 +98,7 @@ const wechatProxy = createProxyMiddleware({
     }
 });
 
-// Use Proxy for API requests
+// Use Proxy for WeChat API requests
 app.use('/api/wechat', wechatProxy);
 
 // Simple backend stitching service

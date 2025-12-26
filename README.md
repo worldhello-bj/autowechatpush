@@ -767,13 +767,37 @@ MIT License
 
 本项目支持打包为桌面应用程序，详见 [BUILD.md](./BUILD.md)。
 
+### ⚠️ 重要提示
+
+**Electron 应用需要连接到后端服务器才能正常工作。**
+
+自 v1.3.0 起，所有 AI API 调用都通过后端服务器进行。配置方法非常简单：
+
+**只需修改 `.env.production` 文件：**
+
+```env
+# 生产环境推荐使用 HTTPS 域名
+VITE_API_BASE=https://api.your-domain.com/api/v1
+
+# 仅开发 / 内网测试环境示例，请勿用于公网生产环境
+VITE_API_BASE=http://49.232.11.108:3001/api/v1
+```
+
+**修改后重新构建即可！** 详细说明请参考：
+- [BUILD.md](./BUILD.md) - 构建说明
+- [DOMAIN_CONFIG.md](./DOMAIN_CONFIG.md) - 域名配置指南
+- [ELECTRON_BACKEND_FIX.md](./ELECTRON_BACKEND_FIX.md) - 问题排查
+
 ### 快速打包
 
 ```bash
-# 安装依赖
+# 1. 配置后端地址（编辑 .env.production）
+# VITE_API_BASE=https://api.your-domain.com/api/v1
+
+# 2. 安装依赖
 npm install
 
-# 打包 Windows EXE
+# 3. 打包 Windows EXE
 npm run electron:build:win
 
 # 打包 macOS DMG
@@ -798,6 +822,35 @@ npm run electron:build:linux
 # Electron 开发模式 (热重载)
 npm run electron:dev
 ```
+
+### 配置变更
+
+**添加域名后如何更新？**
+
+1. 修改 `.env.production`：
+   ```env
+   VITE_API_BASE=https://api.your-domain.com/api/v1
+   ```
+
+2. 重新构建：
+   ```bash
+   npm run electron:build:win
+   ```
+
+3. 分发新的 EXE 文件
+
+**就这么简单！** ✨
+
+### 架构说明
+
+```
+前端 (Electron/Web) → 直接连接 → 后端服务器
+                    https://api.your-domain.com
+```
+
+- **统一配置**：Electron 和网页使用相同的后端地址
+- **简单维护**：只需修改一个文件
+- **域名支持**：推荐使用 HTTPS 域名，更安全专业
 
 ---
 
