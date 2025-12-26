@@ -65,16 +65,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// Backend API base URL - configurable via environment variable
-// For Electron app, this should point to the deployed backend server
-// IMPORTANT: Update this to your actual backend server address before building
-// Examples:
-//   - Production server: 'http://your-server-ip:3001' or 'https://your-domain.com/api/v1'
-//   - Local development: 'http://localhost:3001'
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://49.232.11.108:3001';
-
-console.log(`[Server] Backend API URL: ${BACKEND_API_URL}`);
-
 // Proxy Configuration for WeChat API
 const wechatProxy = createProxyMiddleware({
     target: 'https://api.weixin.qq.com',
@@ -108,42 +98,8 @@ const wechatProxy = createProxyMiddleware({
     }
 });
 
-// Proxy Configuration for Backend API (AI, materials, etc.)
-const backendApiProxy = createProxyMiddleware({
-    target: BACKEND_API_URL,
-    changeOrigin: true,
-    onProxyReq: (proxyReq, req, res) => {
-        // Log only method and path, not full URL to avoid exposing sensitive data
-        const path = req.url.split('?')[0]; // Remove query parameters
-        console.log(`\n[Backend Proxy] ➤ Outgoing Request: ${req.method} ${path}`);
-    },
-    onProxyRes: (proxyRes, req, res) => {
-        console.log(`[Backend Proxy] ◀ Received Response: ${proxyRes.statusCode} from ${req.url.split('?')[0]}`);
-    },
-    onError: (err, req, res) => {
-        console.error(`[Backend Proxy] 🔴 Proxy Error:`, err);
-        console.error(`[Backend Proxy] 🔴 Error Details: ${err.message}`);
-        console.error(`[Backend Proxy] 🔴 Backend API URL: ${BACKEND_API_URL}`);
-        console.error(`[Backend Proxy] 🔴 This could be caused by:`);
-        console.error(`[Backend Proxy]    1. Backend server is not running or not accessible`);
-        console.error(`[Backend Proxy]    2. Network connectivity issues`);
-        console.error(`[Backend Proxy]    3. Incorrect BACKEND_API_URL configuration`);
-        console.error(`[Backend Proxy]    4. Firewall blocking outbound connections`);
-        
-        // Ensure the response hasn't been sent yet
-        if (!res.headersSent) {
-            res.status(502).json({ 
-                error: 'Backend Connection Error', 
-                details: err.message,
-                suggestion: `Cannot connect to backend server at ${BACKEND_API_URL}. Please check if the backend is running and accessible.`
-            });
-        }
-    }
-});
-
-// Use Proxy for API requests
-app.use('/api/v1', backendApiProxy);  // Proxy backend API requests
-app.use('/api/wechat', wechatProxy);   // Proxy WeChat API requests
+// Use Proxy for WeChat API requests
+app.use('/api/wechat', wechatProxy);
 
 // Simple backend stitching service
 const sanitizeDataUrl = (value = '') => {

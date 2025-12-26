@@ -2,78 +2,36 @@
 
 本文档介绍如何将微信AI发布助手打包为桌面应用程序（EXE）。
 
+# 桌面应用程序打包说明
+
+本文档介绍如何将微信AI发布助手打包为桌面应用程序（EXE）。
+
 ## ⚠️ 重要提示：后端服务器配置
 
-**Electron 桌面应用的架构：**
+**统一架构 - 简单配置**
 
 ```
-前端 (React) → server.cjs (代理) → 后端服务器 (AI/Materials API)
+前端 (Electron/Web) → 直接连接 → 后端服务器
 ```
 
-- **前端**：使用 `/api/v1` 发送请求
-- **server.cjs**：内置的 Express 服务器，将 `/api/v1` 请求代理到真正的后端服务器
-- **后端服务器**：部署在远程服务器上，提供 AI、素材管理等 API 服务
+**核心配置：`.env.production`**
 
-**关键配置：BACKEND_API_URL**
+只需要配置一个文件，无论是 Electron 还是网页部署都使用相同配置：
 
-在打包 Electron 应用之前，**必须**在 `server.cjs` 中配置正确的后端服务器地址。
-
-### ✅ 正确配置（其他设备可访问）
-
-```javascript
-// server.cjs 第 68-75 行
-// 使用公网 IP 或域名，所有设备都能访问
-const BACKEND_API_URL = 'http://49.232.11.108:3001';
-// 或
-const BACKEND_API_URL = 'https://your-backend.com/api/v1';
+```env
+# 修改这个地址为你的后端服务器
+VITE_API_BASE=http://49.232.11.108:3001/api/v1
 ```
 
-### ❌ 错误配置（仅本机可用）
+**✅ 好处：**
+- 配置简单，只有一个地方需要修改
+- Electron 和网页使用相同的配置
+- 后端地址更新后，重新构建即可
 
-```javascript
-// ❌ 使用 localhost - 只有本机能访问，其他设备会失败
-const BACKEND_API_URL = 'http://localhost:3001';
-
-// ❌ 使用 127.0.0.1 - 同样只有本机能访问
-const BACKEND_API_URL = 'http://127.0.0.1:3001';
-```
-
-**为什么重要？**
-
-- 如果使用 `localhost` 或 `127.0.0.1`，打包出的 EXE 只能在**有本地后端服务**的电脑上运行
-- 如果使用公网 IP 或域名，打包出的 EXE 可以在**任何联网的电脑**上运行
-- 这个配置会被**硬编码**到 EXE 中，必须重新打包才能修改
-
-**配置后端服务器地址：**
-
-在打包 Electron 应用之前，需要在 `server.cjs` 中配置 `BACKEND_API_URL`：
-
-```javascript
-// server.cjs 第 68-75 行
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://49.232.11.108:3001';
-```
-
-**两种配置方式：**
-
-1. **直接修改 server.cjs**（推荐用于固定部署）
-   ```javascript
-   const BACKEND_API_URL = 'http://your-backend-server:3001';
-   ```
-
-2. **使用环境变量**（推荐用于灵活部署）
-   ```bash
-   # Windows
-   set BACKEND_API_URL=http://your-backend-server:3001 && npm run electron:build:win
-   
-   # Linux/Mac
-   export BACKEND_API_URL=http://your-backend-server:3001 && npm run electron:build:mac
-   ```
-
-**如果你的 EXE 连接的是旧的后端地址：**
-
-1. 在 `server.cjs` 中更新 `BACKEND_API_URL` 为新的后端地址
-2. 重新打包应用：`npm run electron:build:win`
-3. 删除旧的 EXE，使用新生成的版本
+**⚠️ 注意：**
+- 后端地址在构建时被写入代码，无法运行时修改
+- 如果后端地址改变，需要重新构建并分发新版本
+- 确保使用公网 IP 或域名，不要用 `localhost`
 
 ## 前提条件
 
