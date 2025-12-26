@@ -601,7 +601,8 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         const contentKey = aiProvider === AIProvider.QWEN ? dashScopeApiKey : deepSeekApiKey;
         const designKey = aiProvider === AIProvider.QWEN ? dashScopeApiKey : deepSeekApiKey;
         
-        // Allow empty keys - backend will use server-configured keys as fallback
+        // Dual AI mode requires API keys to be configured
+        // The service will validate and throw a helpful error if keys are missing
         
         console.log('[Editor] Using Dual AI Mode - Content AI + Design AI');
         

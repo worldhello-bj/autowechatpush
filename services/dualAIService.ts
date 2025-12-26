@@ -809,6 +809,17 @@ export const generateWithDualAIMultiRound = async (
   memoryUpdate: Partial<AIMemory>;
   designNotes?: string;
 }> => {
+  // Validate API keys are provided
+  if (!config.contentApiKey || config.contentApiKey.trim() === '') {
+    const providerName = config.contentProvider === 'qwen' ? 'Qwen (DashScope)' : 'DeepSeek';
+    throw new Error(`双AI模式需要配置 ${providerName} API密钥。请在设置中配置API密钥后再使用双AI模式。`);
+  }
+  
+  if (!config.designApiKey || config.designApiKey.trim() === '') {
+    const providerName = config.designProvider === 'qwen' ? 'Qwen (DashScope)' : 'DeepSeek';
+    throw new Error(`双AI模式需要配置 ${providerName} API密钥。请在设置中配置API密钥后再使用双AI模式。`);
+  }
+  
   logger.group('=== Multi-Round Dual AI Generation Starting ===', true);
   logger.info(`Topic: ${topic}`);
   logger.info(`Content Provider: ${config.contentProvider}, Design Provider: ${config.designProvider}`);
@@ -1026,6 +1037,17 @@ export const generateWithDualAI = async (
   memoryUpdate: Partial<AIMemory>;
   designNotes?: string;
 }> => {
+  // Validate API keys are provided
+  if (!config.contentApiKey || config.contentApiKey.trim() === '') {
+    const providerName = config.contentProvider === 'qwen' ? 'Qwen (DashScope)' : 'DeepSeek';
+    throw new Error(`双AI模式需要配置 ${providerName} API密钥。请在设置中配置API密钥后再使用双AI模式。`);
+  }
+  
+  if (!config.designApiKey || config.designApiKey.trim() === '') {
+    const providerName = config.designProvider === 'qwen' ? 'Qwen (DashScope)' : 'DeepSeek';
+    throw new Error(`双AI模式需要配置 ${providerName} API密钥。请在设置中配置API密钥后再使用双AI模式。`);
+  }
+  
   // Check if multi-round layout mode is enabled
   if (dualAIMultiRoundLayoutMode) {
     logger.info('🔄 Using Multi-Round Layout Mode for Dual AI');
