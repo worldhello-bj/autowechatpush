@@ -592,8 +592,11 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     try {
       let result: GenerationResult;
       
+      // DISABLED: Dual AI mode temporarily unavailable
+      // Dual AI requires direct API access, but the app now uses backend API for security
+      // TODO: Implement dual AI support in the backend API
       // Check if Dual AI mode is enabled (requires Qwen or DeepSeek)
-      if (useDualAI && !isFormattingMode) {
+      if (false && useDualAI && !isFormattingMode) {
         // Dual AI Mode: Content AI + Design AI working in parallel
         const contentProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
         const designProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
@@ -629,7 +632,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         
         // Store design notes for user reference
         if (dualResult.designNotes) {
-          setDesignNotes(dualResult.designNotes);
+          setDesignNotes(dualResult.designNotes || '');
           console.log('[Editor] Design Notes:', dualResult.designNotes);
         }
         
@@ -1491,25 +1494,21 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                 </label>
                 
                 {/* Dual AI Mode Toggle */}
-                <label className={`flex items-center gap-2 px-3 py-2 rounded-md border transition ${
-                  isFormattingMode 
-                    ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200' 
-                    : useDualAI 
-                      ? 'cursor-pointer bg-gradient-to-r from-purple-50 to-blue-50 border-purple-300' 
-                      : 'cursor-pointer hover:bg-purple-50 border-gray-200'
-                }`}>
+                {/* Note: Dual AI mode is currently disabled as it requires direct API access.
+                    All AI operations now go through the backend for security.
+                    TODO: Implement dual AI support in the backend API */}
+                <label className={`flex items-center gap-2 px-3 py-2 rounded-md border transition opacity-50 cursor-not-allowed bg-gray-50 border-gray-200`}
+                  title="双AI模式暂时不可用。所有AI操作现在通过后端API进行，以提高安全性。">
                     <input 
                         type="checkbox" 
-                        checked={useDualAI} 
-                        onChange={(e) => setUseDualAI(e.target.checked)}
-                        disabled={isFormattingMode}
+                        checked={false}
+                        disabled={true}
                         className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4"
                     />
-                    <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                        <span className="material-icons text-sm text-purple-500">psychology</span>
-                        双AI模式
+                    <span className="text-sm font-medium text-gray-500 flex items-center gap-1">
+                        <span className="material-icons text-sm text-gray-400">psychology</span>
+                        双AI模式 (暂不可用)
                     </span>
-                    {useDualAI && <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">文案+美化</span>}
                 </label>
             </div>
 
