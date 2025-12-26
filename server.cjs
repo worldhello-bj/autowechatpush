@@ -65,7 +65,11 @@ app.use((req, res, next) => {
     next();
 });
 
-// Proxy Configuration
+// Backend API base URL - configurable via environment variable
+// For Electron app, this should point to the deployed backend server
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://49.232.11.108:3001';
+
+// Proxy Configuration for WeChat API
 const wechatProxy = createProxyMiddleware({
     target: 'https://api.weixin.qq.com',
     changeOrigin: true,
@@ -98,8 +102,40 @@ const wechatProxy = createProxyMiddleware({
     }
 });
 
+// Proxy Configuration for Backend API (AI, materials, etc.)
+const backendApiProxy = createProxyMiddleware({
+    target: BACKEND_API_URL,
+    changeOrigin: true,
+    onProxyReq: (proxyReq, req, res) => {
+        console.log(`\n[Backend Proxy] ➤ Outgoing Request: ${req.method} ${req.url} -> ${BACKEND_API_URL}${req.url}`);
+    },
+    onProxyRes: (proxyRes, req, res) => {
+        console.log(`[Backend Proxy] ◀ Received Response: ${proxyRes.statusCode} from ${req.url}`);
+    },
+    onError: (err, req, res) => {
+        console.error(`[Backend Proxy] 🔴 Proxy Error:`, err);
+        console.error(`[Backend Proxy] 🔴 Error Details: ${err.message}`);
+        console.error(`[Backend Proxy] 🔴 Backend API URL: ${BACKEND_API_URL}`);
+        console.error(`[Backend Proxy] 🔴 This could be caused by:`);
+        console.error(`[Backend Proxy]    1. Backend server is not running or not accessible`);
+        console.error(`[Backend Proxy]    2. Network connectivity issues`);
+        console.error(`[Backend Proxy]    3. Incorrect BACKEND_API_URL configuration`);
+        console.error(`[Backend Proxy]    4. Firewall blocking outbound connections`);
+        
+        // Ensure the response hasn't been sent yet
+        if (!res.headersSent) {
+            res.status(502).json({ 
+                error: 'Backend Connection Error', 
+                details: err.message,
+                suggestion: `Cannot connect to backend server at ${BACKEND_API_URL}. Please check if the backend is running and accessible.`
+            });
+        }
+    }
+});
+
 // Use Proxy for API requests
-app.use('/api/wechat', wechatProxy);
+app.use('/api/v1', backendApiProxy);  // Proxy backend API requests
+app.use('/api/wechat', wechatProxy);   // Proxy WeChat API requests
 
 // Simple backend stitching service
 const sanitizeDataUrl = (value = '') => {
