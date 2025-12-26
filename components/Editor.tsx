@@ -1456,12 +1456,12 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                 {/* Note: Dual AI mode is currently disabled as it requires direct API access.
                     All AI operations now go through the backend for security.
                     TODO: Implement dual AI support in the backend API */}
-                <label className={`flex items-center gap-2 px-3 py-2 rounded-md border transition opacity-50 cursor-not-allowed bg-gray-50 border-gray-200`}
+                <label className="flex items-center gap-2 px-3 py-2 rounded-md border transition opacity-50 cursor-not-allowed bg-gray-50 border-gray-200"
                   title="双AI模式暂时不可用。所有AI操作现在通过后端API进行，以提高安全性。">
                     <input 
                         type="checkbox" 
                         checked={false}
-                        disabled={true}
+                        disabled
                         className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4"
                     />
                     <span className="text-sm font-medium text-gray-500 flex items-center gap-1">
