@@ -196,7 +196,7 @@ export const chatStream = async (req: Request, res: Response) => {
     
     try {
       // Try primary provider
-      result = await generateArticle(request, userApiKey);
+      result = await generateArticle(request);
       logger.info('Primary provider succeeded (stream)', { provider: request.provider, requestId: req.requestId });
     } catch (primaryError) {
       const primaryMessage = primaryError instanceof Error ? primaryError.message : 'Unknown error';
@@ -219,7 +219,7 @@ export const chatStream = async (req: Request, res: Response) => {
       if (fallbackProvider) {
         try {
           const fallbackRequest = { ...request, provider: fallbackProvider };
-          result = await generateArticle(fallbackRequest, userApiKey);
+          result = await generateArticle(fallbackRequest);
           usedProvider = fallbackProvider;
           logger.info('Fallback provider succeeded (stream)', { 
             fallbackProvider, 
