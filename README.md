@@ -767,13 +767,28 @@ MIT License
 
 本项目支持打包为桌面应用程序，详见 [BUILD.md](./BUILD.md)。
 
+### ⚠️ 重要提示
+
+**Electron 应用需要连接到后端服务器才能正常工作。**
+
+自 v1.3.0 起，所有 AI API 调用都通过后端服务器进行。如果你的 EXE 应用无法生成内容，请检查：
+
+1. **后端服务器配置**：在 `server.cjs` 第 68 行检查 `BACKEND_API_URL`
+2. **网络连接**：确保 EXE 可以访问后端服务器
+3. **重新打包**：如果后端地址更改，需要重新打包 EXE
+
+详细说明请参考：[ELECTRON_BACKEND_FIX.md](./ELECTRON_BACKEND_FIX.md)
+
 ### 快速打包
 
 ```bash
-# 安装依赖
+# 1. 配置后端地址（编辑 server.cjs 第 68 行）
+# const BACKEND_API_URL = 'http://your-backend-server:3001';
+
+# 2. 安装依赖
 npm install
 
-# 打包 Windows EXE
+# 3. 打包 Windows EXE
 npm run electron:build:win
 
 # 打包 macOS DMG
@@ -798,6 +813,17 @@ npm run electron:build:linux
 # Electron 开发模式 (热重载)
 npm run electron:dev
 ```
+
+### 架构说明
+
+```
+前端 (React) → server.cjs (代理) → 后端服务器 (AI/API)
+               localhost:3000       http://your-backend:3001
+```
+
+- **前端**：使用 `/api/v1` 发送请求
+- **server.cjs**：将请求代理到真正的后端服务器
+- **后端服务器**：处理 AI 生成、素材管理等业务逻辑
 
 ---
 
