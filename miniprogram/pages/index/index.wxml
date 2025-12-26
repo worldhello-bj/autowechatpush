@@ -70,25 +70,24 @@
         <text>网络搜索</text>
       </view>
       
-      <!-- 双AI模式 -->
+      <!-- 双AI模式 (暂不可用) -->
       <view 
-        class="option-chip {{useDualAI && aiProvider !== 'google' && !isFormattingMode ? 'active dual-ai' : ''}} {{aiProvider === 'google' || isFormattingMode ? 'disabled' : ''}}"
-        bindtap="toggleDualAI"
+        class="option-chip disabled"
+        data-tooltip="双AI模式暂时不可用。所有AI操作现在通过后端API进行，以提高安全性。"
       >
         <text class="option-icon">🧠</text>
-        <text>双AI模式</text>
-        <text wx:if="{{useDualAI && aiProvider !== 'google'}}" class="badge-mini">文案+美化</text>
+        <text>双AI模式 (暂不可用)</text>
       </view>
     </view>
     
-    <!-- 双AI模式说明 -->
-    <view wx:if="{{useDualAI && aiProvider !== 'google' && !isFormattingMode}}" class="dual-ai-info">
+    <!-- 双AI模式说明 (已禁用) -->
+    <!-- <view wx:if="{{useDualAI && aiProvider !== 'google' && !isFormattingMode}}" class="dual-ai-info">
       <text class="info-icon">✨</text>
       <view class="info-content">
         <text class="info-title">双并行AI模式已启用</text>
         <text class="info-desc">文案AI负责内容创作 → 美化AI负责排版设计 → 更优质的输出效果</text>
       </view>
-    </view>
+    </view> -->
   </view>
 
   <!-- 图片上传 -->
