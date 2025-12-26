@@ -788,6 +788,29 @@ Requirements:
   };
 };
 
+// --- Validation Helper ---
+
+/**
+ * Validate that API keys are provided for dual AI mode
+ * @throws Error if API keys are missing or empty
+ */
+const validateDualAIConfig = (config: {
+  contentProvider: 'deepseek' | 'qwen';
+  designProvider: 'deepseek' | 'qwen';
+  contentApiKey: string;
+  designApiKey: string;
+}): void => {
+  if (!config.contentApiKey || config.contentApiKey.trim() === '') {
+    const providerName = config.contentProvider === 'qwen' ? 'Qwen (DashScope)' : 'DeepSeek';
+    throw new Error(`双AI模式需要配置 ${providerName} API密钥。请在设置中配置API密钥后再使用双AI模式。`);
+  }
+  
+  if (!config.designApiKey || config.designApiKey.trim() === '') {
+    const providerName = config.designProvider === 'qwen' ? 'Qwen (DashScope)' : 'DeepSeek';
+    throw new Error(`双AI模式需要配置 ${providerName} API密钥。请在设置中配置API密钥后再使用双AI模式。`);
+  }
+};
+
 // --- Multi-Round Layout Dual AI Pipeline ---
 
 /**
@@ -809,6 +832,9 @@ export const generateWithDualAIMultiRound = async (
   memoryUpdate: Partial<AIMemory>;
   designNotes?: string;
 }> => {
+  // Validate API keys are provided
+  validateDualAIConfig(config);
+  
   logger.group('=== Multi-Round Dual AI Generation Starting ===', true);
   logger.info(`Topic: ${topic}`);
   logger.info(`Content Provider: ${config.contentProvider}, Design Provider: ${config.designProvider}`);
@@ -1026,6 +1052,9 @@ export const generateWithDualAI = async (
   memoryUpdate: Partial<AIMemory>;
   designNotes?: string;
 }> => {
+  // Validate API keys are provided
+  validateDualAIConfig(config);
+  
   // Check if multi-round layout mode is enabled
   if (dualAIMultiRoundLayoutMode) {
     logger.info('🔄 Using Multi-Round Layout Mode for Dual AI');

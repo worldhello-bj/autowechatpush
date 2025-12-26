@@ -74,10 +74,11 @@
       <view 
         class="option-chip {{useDualAI && aiProvider !== 'google' && !isFormattingMode ? 'active dual-ai' : ''}} {{aiProvider === 'google' || isFormattingMode ? 'disabled' : ''}}"
         bindtap="toggleDualAI"
+        data-tooltip="双AI模式：分两次调用，先生成内容后美化设计"
       >
         <text class="option-icon">🧠</text>
         <text>双AI模式</text>
-        <text wx:if="{{useDualAI && aiProvider !== 'google'}}" class="badge-mini">文案+美化</text>
+        <text wx:if="{{useDualAI && aiProvider !== 'google'}}" class="badge-mini">两次调用</text>
       </view>
     </view>
     
@@ -85,8 +86,8 @@
     <view wx:if="{{useDualAI && aiProvider !== 'google' && !isFormattingMode}}" class="dual-ai-info">
       <text class="info-icon">✨</text>
       <view class="info-content">
-        <text class="info-title">双并行AI模式已启用</text>
-        <text class="info-desc">文案AI负责内容创作 → 美化AI负责排版设计 → 更优质的输出效果</text>
+        <text class="info-title">双AI模式已启用（两次调用）</text>
+        <text class="info-desc">第一次：内容AI专注创作 → 第二次：设计AI优化排版 → 节省上下文，更加专精</text>
       </view>
     </view>
   </view>

@@ -63,6 +63,7 @@
       <view class="option-chip" bindtap="triggerLogin">
         <text class="option-icon">🧠</text>
         <text>双AI模式</text>
+        <text class="badge-mini">两次调用</text>
       </view>
     </view>
   </view>
