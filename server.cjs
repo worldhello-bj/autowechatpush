@@ -67,7 +67,13 @@ app.use((req, res, next) => {
 
 // Backend API base URL - configurable via environment variable
 // For Electron app, this should point to the deployed backend server
+// IMPORTANT: Update this to your actual backend server address before building
+// Examples:
+//   - Production server: 'http://your-server-ip:3001' or 'https://your-domain.com/api/v1'
+//   - Local development: 'http://localhost:3001'
 const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://49.232.11.108:3001';
+
+console.log(`[Server] Backend API URL: ${BACKEND_API_URL}`);
 
 // Proxy Configuration for WeChat API
 const wechatProxy = createProxyMiddleware({
@@ -107,10 +113,12 @@ const backendApiProxy = createProxyMiddleware({
     target: BACKEND_API_URL,
     changeOrigin: true,
     onProxyReq: (proxyReq, req, res) => {
-        console.log(`\n[Backend Proxy] ➤ Outgoing Request: ${req.method} ${req.url} -> ${BACKEND_API_URL}${req.url}`);
+        // Log only method and path, not full URL to avoid exposing sensitive data
+        const path = req.url.split('?')[0]; // Remove query parameters
+        console.log(`\n[Backend Proxy] ➤ Outgoing Request: ${req.method} ${path}`);
     },
     onProxyRes: (proxyRes, req, res) => {
-        console.log(`[Backend Proxy] ◀ Received Response: ${proxyRes.statusCode} from ${req.url}`);
+        console.log(`[Backend Proxy] ◀ Received Response: ${proxyRes.statusCode} from ${req.url.split('?')[0]}`);
     },
     onError: (err, req, res) => {
         console.error(`[Backend Proxy] 🔴 Proxy Error:`, err);

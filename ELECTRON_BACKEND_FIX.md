@@ -50,6 +50,7 @@
 
 ```javascript
 // Backend API base URL - configurable via environment variable
+// IMPORTANT: For multi-device access, use public IP or domain name, NOT localhost
 const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://49.232.11.108:3001';
 
 // Proxy Configuration for Backend API
@@ -65,6 +66,19 @@ const backendApiProxy = createProxyMiddleware({
 // Use Proxy
 app.use('/api/v1', backendApiProxy);
 ```
+
+**⚠️ 重要：多设备访问配置**
+
+- ✅ **正确**：`http://49.232.11.108:3001` - 使用公网 IP，所有设备都能访问
+- ✅ **正确**：`https://your-backend.com` - 使用域名，所有设备都能访问
+- ❌ **错误**：`http://localhost:3001` - 只有本机能访问，其他设备会失败
+- ❌ **错误**：`http://127.0.0.1:3001` - 同样只有本机能访问
+
+**为什么这很重要？**
+
+- 如果使用 `localhost` 或 `127.0.0.1`，打包的 EXE 只能在安装了后端服务的电脑上运行
+- 如果使用公网 IP 或域名，EXE 可以分发给任何用户，在任何地方使用
+- 这个地址会被硬编码到 EXE 中，必须重新打包才能修改
 
 ### 2. 更新 .env.production
 
@@ -158,6 +172,51 @@ grep -o '"/api/v1"' dist/assets/*.js
 - 如果失败，检查控制台错误信息
 
 ## 常见问题
+
+### Q: 其他设备上的 app 能正常连接到服务器吗？
+
+A: **取决于 `BACKEND_API_URL` 的配置：**
+
+**✅ 可以连接（推荐配置）：**
+```javascript
+// 使用公网 IP
+const BACKEND_API_URL = 'http://49.232.11.108:3001';
+
+// 或使用域名
+const BACKEND_API_URL = 'https://api.your-domain.com';
+```
+
+**❌ 无法连接（仅限本机）：**
+```javascript
+// 使用 localhost
+const BACKEND_API_URL = 'http://localhost:3001';
+
+// 使用 127.0.0.1
+const BACKEND_API_URL = 'http://127.0.0.1:3001';
+```
+
+**最佳实践：**
+
+1. **公网部署**：使用公网 IP 或域名，所有用户都能访问
+   ```javascript
+   const BACKEND_API_URL = 'https://your-backend.com';
+   ```
+
+2. **内网部署**：使用局域网 IP，同网络用户能访问
+   ```javascript
+   const BACKEND_API_URL = 'http://192.168.1.100:3001';
+   ```
+
+3. **本地开发**：使用 localhost，仅用于本机测试
+   ```javascript
+   const BACKEND_API_URL = 'http://localhost:3001';
+   ```
+
+**验证方法：**
+
+在其他设备上打开 app，按 F12 查看控制台：
+- 如果看到 `[Backend Proxy] ➤ POST /api/v1/...`，说明配置正确
+- 如果看到连接错误，检查 `BACKEND_API_URL` 是否使用了 localhost
 
 ### Q: 为什么之前可以，现在不行了？
 

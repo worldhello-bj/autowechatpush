@@ -14,12 +14,42 @@
 - **server.cjs**：内置的 Express 服务器，将 `/api/v1` 请求代理到真正的后端服务器
 - **后端服务器**：部署在远程服务器上，提供 AI、素材管理等 API 服务
 
+**关键配置：BACKEND_API_URL**
+
+在打包 Electron 应用之前，**必须**在 `server.cjs` 中配置正确的后端服务器地址。
+
+### ✅ 正确配置（其他设备可访问）
+
+```javascript
+// server.cjs 第 68-75 行
+// 使用公网 IP 或域名，所有设备都能访问
+const BACKEND_API_URL = 'http://49.232.11.108:3001';
+// 或
+const BACKEND_API_URL = 'https://your-backend.com/api/v1';
+```
+
+### ❌ 错误配置（仅本机可用）
+
+```javascript
+// ❌ 使用 localhost - 只有本机能访问，其他设备会失败
+const BACKEND_API_URL = 'http://localhost:3001';
+
+// ❌ 使用 127.0.0.1 - 同样只有本机能访问
+const BACKEND_API_URL = 'http://127.0.0.1:3001';
+```
+
+**为什么重要？**
+
+- 如果使用 `localhost` 或 `127.0.0.1`，打包出的 EXE 只能在**有本地后端服务**的电脑上运行
+- 如果使用公网 IP 或域名，打包出的 EXE 可以在**任何联网的电脑**上运行
+- 这个配置会被**硬编码**到 EXE 中，必须重新打包才能修改
+
 **配置后端服务器地址：**
 
 在打包 Electron 应用之前，需要在 `server.cjs` 中配置 `BACKEND_API_URL`：
 
 ```javascript
-// server.cjs 第 68 行
+// server.cjs 第 68-75 行
 const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://49.232.11.108:3001';
 ```
 
@@ -244,6 +274,34 @@ release/
 ```
 
 ## 常见问题
+
+### Q: 其他设备上的 app 能正常连接到服务器吗？
+
+A: **取决于你的 `BACKEND_API_URL` 配置：**
+
+| 配置 | 本机访问 | 其他设备访问 | 适用场景 |
+|------|---------|-------------|---------|
+| `http://49.232.11.108:3001` | ✅ | ✅ | **生产环境（推荐）** |
+| `https://api.your-domain.com` | ✅ | ✅ | **生产环境（推荐）** |
+| `http://192.168.1.100:3001` | ✅ | ⚠️ 仅同局域网 | 内网部署 |
+| `http://localhost:3001` | ✅ | ❌ | 仅本地开发 |
+| `http://127.0.0.1:3001` | ✅ | ❌ | 仅本地开发 |
+
+**验证方法：**
+
+1. 在其他设备上安装并运行 EXE
+2. 按 F12 打开开发者工具
+3. 查看 Console 标签，应该看到：
+   ```
+   [Server] Backend API URL: http://49.232.11.108:3001
+   ```
+4. 尝试生成 AI 内容，检查 Network 标签的请求
+
+**如果其他设备无法连接：**
+
+1. 检查 `server.cjs` 中的 `BACKEND_API_URL` 是否使用了 `localhost`
+2. 改为公网 IP 或域名
+3. 重新打包：`npm run electron:build:win`
 
 ### Q: EXE 应用连接的是旧的后端地址，怎么办？
 
