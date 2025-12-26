@@ -225,15 +225,9 @@ export interface GenerationResult {
 }
 
 export const aiApi = {
-  generate: async (genRequest: GenerationRequest, apiKey?: string): Promise<ApiResponse<GenerationResult>> => {
-    const headers: Record<string, string> = {};
-    if (apiKey) {
-      headers['X-API-Key'] = apiKey;
-    }
-    
+  generate: async (genRequest: GenerationRequest): Promise<ApiResponse<GenerationResult>> => {
     return request<GenerationResult>('/ai/generate', {
       method: 'POST',
-      headers,
       body: JSON.stringify(genRequest),
     });
   },
@@ -263,8 +257,7 @@ export interface SSECallbacks {
 
 export const streamGeneration = async (
   genRequest: GenerationRequest,
-  callbacks: SSECallbacks,
-  apiKey?: string
+  callbacks: SSECallbacks
 ): Promise<void> => {
   const accessToken = getAccessToken();
   
@@ -274,10 +267,6 @@ export const streamGeneration = async (
   
   if (accessToken) {
     (headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken}`;
-  }
-  
-  if (apiKey) {
-    (headers as Record<string, string>)['X-API-Key'] = apiKey;
   }
   
   try {

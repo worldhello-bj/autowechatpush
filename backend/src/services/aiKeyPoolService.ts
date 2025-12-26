@@ -177,14 +177,9 @@ const isPoolKey = (key: string): boolean => {
 /**
  * Get an API key for the specified provider from the pool
  * Returns key from pool or falls back to environment variable
+ * All API keys are now managed exclusively by the backend pool
  */
-export const getApiKeyFromPool = async (provider: AIProvider, userApiKey?: string): Promise<string> => {
-  // If user provides their own key, use it
-  if (userApiKey) {
-    logger.debug('Using user-provided API key', { provider });
-    return userApiKey;
-  }
-  
+export const getApiKeyFromPool = async (provider: AIProvider): Promise<string> => {
   // Try to get key from pool
   const keyConfig = getAvailableKey(provider);
   

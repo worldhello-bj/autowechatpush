@@ -40,6 +40,7 @@
     
     <view class="setting-item">
       <text class="setting-label">AI 提供商</text>
+      <text class="setting-hint">API密钥由后端服务器统一管理</text>
     </view>
     
     <view class="provider-list">
@@ -79,80 +80,18 @@
         </view>
       </view>
     </view>
-  </view>
-
-  <!-- API 密钥设置 -->
-  <view class="section-card card">
-    <view class="section-header">
-      <text class="section-icon">🔑</text>
-      <text class="section-title">API 密钥</text>
-    </view>
     
-    <!-- Google API Key -->
-    <view wx:if="{{aiProvider === 'google'}}" class="key-input-group">
-      <text class="key-label">Google Gemini API Key</text>
-      <view class="key-input-wrapper">
-        <input 
-          class="key-input" 
-          type="{{showGoogleKey ? 'text' : 'password'}}"
-          placeholder="AIza..."
-          value="{{googleKey}}"
-          bindinput="onGoogleKeyInput"
-        />
-        <view class="key-toggle" bindtap="toggleGoogleKey">
-          <text>{{showGoogleKey ? '🙈' : '👁'}}</text>
-        </view>
+    <!-- DeepSeek 思考模式开关 -->
+    <view wx:if="{{aiProvider === 'deepseek'}}" class="toggle-setting">
+      <view class="toggle-info">
+        <text class="toggle-name">思考模式 (Thinking Mode)</text>
+        <text class="toggle-desc">启用后，AI将进行深度思考</text>
       </view>
-      <text class="key-hint">从 Google AI Studio 获取</text>
-    </view>
-    
-    <!-- DeepSeek API Key -->
-    <view wx:if="{{aiProvider === 'deepseek'}}" class="key-input-group">
-      <text class="key-label">DeepSeek API Key</text>
-      <view class="key-input-wrapper">
-        <input 
-          class="key-input" 
-          type="{{showDeepSeekKey ? 'text' : 'password'}}"
-          placeholder="sk-..."
-          value="{{deepSeekKey}}"
-          bindinput="onDeepSeekKeyInput"
-        />
-        <view class="key-toggle" bindtap="toggleDeepSeekKey">
-          <text>{{showDeepSeekKey ? '🙈' : '👁'}}</text>
-        </view>
-      </view>
-      <text class="key-hint">从 DeepSeek 平台获取</text>
-      
-      <!-- 思考模式开关 -->
-      <view class="toggle-setting">
-        <view class="toggle-info">
-          <text class="toggle-name">思考模式 (Thinking Mode)</text>
-          <text class="toggle-desc">启用后，AI将进行深度思考</text>
-        </view>
-        <switch 
-          checked="{{deepSeekThinkingMode}}" 
-          bindchange="toggleThinkingMode"
-          color="#3498db"
-        />
-      </view>
-    </view>
-    
-    <!-- DashScope API Key -->
-    <view wx:if="{{aiProvider === 'qwen'}}" class="key-input-group">
-      <text class="key-label">DashScope API Key</text>
-      <view class="key-input-wrapper">
-        <input 
-          class="key-input" 
-          type="{{showDashScopeKey ? 'text' : 'password'}}"
-          placeholder="sk-..."
-          value="{{dashScopeKey}}"
-          bindinput="onDashScopeKeyInput"
-        />
-        <view class="key-toggle" bindtap="toggleDashScopeKey">
-          <text>{{showDashScopeKey ? '🙈' : '👁'}}</text>
-        </view>
-      </view>
-      <text class="key-hint">从阿里云 DashScope 获取</text>
+      <switch 
+        checked="{{deepSeekThinkingMode}}" 
+        bindchange="toggleThinkingMode"
+        color="#3498db"
+      />
     </view>
     
     <button class="save-btn" bindtap="saveSettings">保存设置</button>

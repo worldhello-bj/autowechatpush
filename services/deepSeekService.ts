@@ -405,7 +405,7 @@ export const generateArticleStructureDeepSeek = async (
   useReasonerMode?: boolean
 ): Promise<GenerationResult> => {
   if (!apiKey) {
-    throw new Error("DeepSeek API Key is required.");
+    throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
   }
 
   // Check if multi-round layout mode is enabled
@@ -642,9 +642,9 @@ const callDeepSeekAPI = async (
 export const generateTitleSuggestionsDeepSeek = async (
   content: string,
   count: number = 5,
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string[]> => {
-  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   try {
     const text = await callDeepSeekAPI(apiKey, [
@@ -684,9 +684,9 @@ export const generateTitleSuggestionsDeepSeek = async (
 export const generateSummaryDeepSeek = async (
   content: string,
   maxLength: number = 120,
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   try {
     const text = await callDeepSeekAPI(apiKey, [
@@ -723,9 +723,9 @@ export const generateSummaryDeepSeek = async (
 export const expandContentDeepSeek = async (
   content: string,
   style: 'detailed' | 'examples' | 'storytelling' = 'detailed',
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   const stylePrompts = {
     detailed: 'Add more detailed explanations, facts, and depth to the content.',
@@ -769,9 +769,9 @@ export const expandContentDeepSeek = async (
 export const polishContentDeepSeek = async (
   content: string,
   tone: 'professional' | 'casual' | 'formal' | 'creative' = 'professional',
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   const toneDescriptions = {
     professional: 'professional, clear, and authoritative',
@@ -815,9 +815,9 @@ export const polishContentDeepSeek = async (
 export const extractKeywordsDeepSeek = async (
   content: string,
   count: number = 10,
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string[]> => {
-  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   try {
     const text = await callDeepSeekAPI(apiKey, [
@@ -857,9 +857,9 @@ export const extractKeywordsDeepSeek = async (
 export const translateContentDeepSeek = async (
   content: string,
   targetLanguage: 'zh' | 'en',
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   const targetLangName = targetLanguage === 'zh' ? 'Chinese (Simplified)' : 'English';
 
@@ -903,9 +903,9 @@ export interface StyleSuggestion {
 
 export const suggestStylesDeepSeek = async (
   content: string,
-  apiKey: string
+  apiKey: string = ''
 ): Promise<StyleSuggestion[]> => {
-  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   try {
     const text = await callDeepSeekAPI(apiKey, [
@@ -948,9 +948,9 @@ export const suggestStylesDeepSeek = async (
 export const generateHookDeepSeek = async (
   topic: string,
   style: 'question' | 'story' | 'statistic' | 'quote' | 'surprising' = 'question',
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   const styleDescriptions = {
     question: 'Start with a thought-provoking question that engages the reader',
@@ -991,9 +991,9 @@ export const generateHookDeepSeek = async (
 export const generateCTADeepSeek = async (
   articleContext: string,
   ctaType: 'subscribe' | 'share' | 'comment' | 'action' | 'reflection' = 'share',
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   const ctaDescriptions = {
     subscribe: 'Encourage readers to follow/subscribe to the account',
@@ -1037,9 +1037,9 @@ export const generateCTADeepSeek = async (
 export const rewriteContentDeepSeek = async (
   content: string,
   newStyle: 'humorous' | 'serious' | 'inspirational' | 'educational' | 'conversational',
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("DeepSeek API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   const styleDescriptions = {
     humorous: 'witty, playful, with appropriate humor and light-hearted tone',

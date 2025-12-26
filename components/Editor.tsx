@@ -528,8 +528,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
 
   // AI Provider Config (managed by admin via backend)
   const [aiProvider, setAiProvider] = useState<AIProvider>(AIProvider.DEEPSEEK);
-  const [deepSeekApiKey, setDeepSeekApiKey] = useState('');
-  const [dashScopeApiKey, setDashScopeApiKey] = useState('');
 
   // Dual AI Memory State
   const [aiMemory, setAiMemory] = useState<AIMemory>(() => loadMemory());
@@ -784,8 +782,8 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
         setAnalyzingImage(true);
         try {
           let analysis = "";
-          // Allow empty key - backend will use server-configured key as fallback
-          analysis = await analyzeImageQwen(base64String, mimeType, dashScopeApiKey || '');
+          // Backend will use server-configured key from pool
+          analysis = await analyzeImageQwen(base64String, mimeType);
           setImageContext(analysis);
         } catch (err: any) {
           onError("Failed to analyze image: " + err.message);
@@ -863,8 +861,8 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
       setIsPlaying(true);
       
       let audioBufferData: ArrayBuffer;
-      // Allow empty key - backend will use server-configured key as fallback
-      audioBufferData = await generateSpeechQwen(textToRead.slice(0, 500), dashScopeApiKey || '');
+      // Backend will use server-configured key from pool
+      audioBufferData = await generateSpeechQwen(textToRead.slice(0, 500));
       
       if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -996,9 +994,9 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     try {
       let titles: string[] = [];
       if (aiProvider === AIProvider.DEEPSEEK) {
-        titles = await generateTitleSuggestionsDeepSeek(content, 5, deepSeekApiKey);
+        titles = await generateTitleSuggestionsDeepSeek(content, 5);
       } else if (aiProvider === AIProvider.QWEN) {
-        titles = await generateTitleSuggestionsQwen(content, 5, dashScopeApiKey);
+        titles = await generateTitleSuggestionsQwen(content, 5);
       }
       setTitleSuggestions(titles);
     } catch (e: any) {
@@ -1018,9 +1016,9 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     try {
       let summary: string = "";
       if (aiProvider === AIProvider.DEEPSEEK) {
-        summary = await generateSummaryDeepSeek(content, 120, deepSeekApiKey);
+        summary = await generateSummaryDeepSeek(content, 120);
       } else if (aiProvider === AIProvider.QWEN) {
-        summary = await generateSummaryQwen(content, 120, dashScopeApiKey);
+        summary = await generateSummaryQwen(content, 120);
       }
       setArticleDigest(summary);
     } catch (e: any) {
@@ -1040,9 +1038,9 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     try {
       let kws: string[] = [];
       if (aiProvider === AIProvider.DEEPSEEK) {
-        kws = await extractKeywordsDeepSeek(content, 10, deepSeekApiKey);
+        kws = await extractKeywordsDeepSeek(content, 10);
       } else if (aiProvider === AIProvider.QWEN) {
-        kws = await extractKeywordsQwen(content, 10, dashScopeApiKey);
+        kws = await extractKeywordsQwen(content, 10);
       }
       setKeywords(kws);
     } catch (e: any) {
@@ -1062,9 +1060,9 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     try {
       let styles: StyleSuggestion[] = [];
       if (aiProvider === AIProvider.DEEPSEEK) {
-        styles = await suggestStylesDeepSeek(content, deepSeekApiKey);
+        styles = await suggestStylesDeepSeek(content);
       } else if (aiProvider === AIProvider.QWEN) {
-        styles = await suggestStylesQwen(content, dashScopeApiKey);
+        styles = await suggestStylesQwen(content);
       }
       setStyleSuggestions(styles);
     } catch (e: any) {
@@ -1083,9 +1081,9 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     try {
       let hook: string = "";
       if (aiProvider === AIProvider.DEEPSEEK) {
-        hook = await generateHookDeepSeek(topic, style, deepSeekApiKey);
+        hook = await generateHookDeepSeek(topic, style);
       } else if (aiProvider === AIProvider.QWEN) {
-        hook = await generateHookQwen(topic, style, dashScopeApiKey);
+        hook = await generateHookQwen(topic, style);
       }
       setGeneratedHook(hook);
     } catch (e: any) {
@@ -1105,9 +1103,9 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     try {
       let cta: string = "";
       if (aiProvider === AIProvider.DEEPSEEK) {
-        cta = await generateCTADeepSeek(content, ctaType, deepSeekApiKey);
+        cta = await generateCTADeepSeek(content, ctaType);
       } else if (aiProvider === AIProvider.QWEN) {
-        cta = await generateCTAQwen(content, ctaType, dashScopeApiKey);
+        cta = await generateCTAQwen(content, ctaType);
       }
       setGeneratedCTA(cta);
     } catch (e: any) {
@@ -1127,9 +1125,9 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     try {
       let polished: string = "";
       if (aiProvider === AIProvider.DEEPSEEK) {
-        polished = await polishContentDeepSeek(content, tone, deepSeekApiKey);
+        polished = await polishContentDeepSeek(content, tone);
       } else if (aiProvider === AIProvider.QWEN) {
-        polished = await polishContentQwen(content, tone, dashScopeApiKey);
+        polished = await polishContentQwen(content, tone);
       }
       // Convert polished text back to safe HTML
       setHtmlContent(textToSafeHtml(polished));
@@ -1150,9 +1148,9 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     try {
       let rewritten: string = "";
       if (aiProvider === AIProvider.DEEPSEEK) {
-        rewritten = await rewriteContentDeepSeek(content, style, deepSeekApiKey);
+        rewritten = await rewriteContentDeepSeek(content, style);
       } else if (aiProvider === AIProvider.QWEN) {
-        rewritten = await rewriteContentQwen(content, style, dashScopeApiKey);
+        rewritten = await rewriteContentQwen(content, style);
       }
       setHtmlContent(textToSafeHtml(rewritten));
     } catch (e: any) {
@@ -1172,9 +1170,9 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     try {
       let translated: string = "";
       if (aiProvider === AIProvider.DEEPSEEK) {
-        translated = await translateContentDeepSeek(content, targetLang, deepSeekApiKey);
+        translated = await translateContentDeepSeek(content, targetLang);
       } else if (aiProvider === AIProvider.QWEN) {
-        translated = await translateContentQwen(content, targetLang, dashScopeApiKey);
+        translated = await translateContentQwen(content, targetLang);
       }
       setHtmlContent(textToSafeHtml(translated));
     } catch (e: any) {
@@ -1194,9 +1192,9 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     try {
       let expanded: string = "";
       if (aiProvider === AIProvider.DEEPSEEK) {
-        expanded = await expandContentDeepSeek(content, style, deepSeekApiKey);
+        expanded = await expandContentDeepSeek(content, style);
       } else if (aiProvider === AIProvider.QWEN) {
-        expanded = await expandContentQwen(content, style, dashScopeApiKey);
+        expanded = await expandContentQwen(content, style);
       }
       setHtmlContent(textToSafeHtml(expanded));
     } catch (e: any) {
