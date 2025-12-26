@@ -595,72 +595,31 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       // DISABLED: Dual AI mode temporarily unavailable
       // Dual AI requires direct API access, but the app now uses backend API for security
       // TODO: Implement dual AI support in the backend API
-      // Check if Dual AI mode is enabled (requires Qwen or DeepSeek)
-      if (false && useDualAI && !isFormattingMode) {
-        // Dual AI Mode: Content AI + Design AI working in parallel
-        const contentProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
-        const designProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
-        
-        const contentKey = aiProvider === AIProvider.QWEN ? dashScopeApiKey : deepSeekApiKey;
-        const designKey = aiProvider === AIProvider.QWEN ? dashScopeApiKey : deepSeekApiKey;
-        
-        // Dual AI mode requires API keys to be configured
-        // The service will validate and throw a helpful error if keys are missing
-        
-        console.log('[Editor] Using Dual AI Mode - Content AI + Design AI');
-        
-        const dualResult = await generateWithDualAI(
-          topic,
-          {
-            contentProvider,
-            designProvider,
-            contentApiKey: contentKey,
-            designApiKey: designKey
-          },
-          aiMemory,
-          imageContext
-        );
-        
-        result = dualResult.result;
-        
-        // Update memory with the new interaction
-        if (dualResult.memoryUpdate) {
-          const newMemory = { ...aiMemory, ...dualResult.memoryUpdate };
-          setAiMemory(newMemory);
-          saveMemory(newMemory);
-        }
-        
-        // Store design notes for user reference
-        if (dualResult.designNotes) {
-          setDesignNotes(dualResult.designNotes || '');
-          console.log('[Editor] Design Notes:', dualResult.designNotes);
-        }
-        
-      } else {
-        // Use backend API with automatic fallback support
-        console.log('[Editor] Using Backend AI API with provider:', aiProvider);
-        
-        const response = await aiApi.generate({
-          message: topic,
-          provider: aiProvider,
-          useSearch: useSearch,
-          imageContext: imageContext || undefined,
-          isFormattingMode: isFormattingMode,
-        });
-        
-        if (!response.success || !response.data) {
-          throw new Error(response.error?.message || 'Failed to generate article');
-        }
-        
-        // Convert API response to GenerationResult type
-        result = {
-          title: response.data.title,
-          digest: response.data.digest,
-          blocks: response.data.blocks as any as ArticleBlock[],
-          sources: response.data.sources,
-        };
-        console.log('[Editor] Backend API generated article successfully');
+      // The dual AI code has been removed. See git history to restore if needed.
+      
+      // Use backend API with automatic fallback support
+      console.log('[Editor] Using Backend AI API with provider:', aiProvider);
+      
+      const response = await aiApi.generate({
+        message: topic,
+        provider: aiProvider,
+        useSearch: useSearch,
+        imageContext: imageContext || undefined,
+        isFormattingMode: isFormattingMode,
+      });
+      
+      if (!response.success || !response.data) {
+        throw new Error(response.error?.message || 'Failed to generate article');
       }
+      
+      // Convert API response to GenerationResult type
+      result = {
+        title: response.data.title,
+        digest: response.data.digest,
+        blocks: response.data.blocks as any as ArticleBlock[],
+        sources: response.data.sources,
+      };
+      console.log('[Editor] Backend API generated article successfully');
 
       setArticleTitle(result.title);
       setArticleDigest(result.digest);
