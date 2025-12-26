@@ -23,18 +23,9 @@ Page({
     // 用户信息
     userInfo: null,
     
-    // AI设置
+    // AI设置 (API keys now managed by backend pool)
     aiProvider: 'deepseek',
-    googleKey: '',
-    deepSeekKey: '',
-    dashScopeKey: '',
     deepSeekThinkingMode: false,
-    
-    // 密钥显示控制
-    showGoogleKey: false,
-    showDeepSeekKey: false,
-    showDashScopeKey: false,
-    showAppSecret: false,
     
     // 后端设置
     apiBaseUrl: '',
@@ -47,6 +38,9 @@ Page({
     // 微信公众号设置（手动配置）
     wechatAppId: '',
     wechatAppSecret: '',
+    
+    // 密钥显示控制
+    showAppSecret: false,
     
     // 通用设置
     autoSave: true
@@ -70,11 +64,8 @@ Page({
     try {
       const app = getApp();
       
-      // AI设置
+      // AI设置 (API keys now managed by backend pool)
       const aiProvider = wx.getStorageSync('ai_provider') || 'deepseek';
-      const googleKey = wx.getStorageSync('google_api_key') || '';
-      const deepSeekKey = wx.getStorageSync('deepseek_key') || '';
-      const dashScopeKey = wx.getStorageSync('dashscope_key') || '';
       
       // 解析布尔值（兼容字符串和布尔类型）
       const thinkingModeValue = wx.getStorageSync('deepseek_thinking_mode');
@@ -104,9 +95,6 @@ Page({
       this.setData({
         userInfo,
         aiProvider,
-        googleKey,
-        deepSeekKey,
-        dashScopeKey,
         deepSeekThinkingMode,
         apiBaseUrl,
         wechatAppId,
@@ -131,39 +119,14 @@ Page({
     this.setData({ aiProvider: provider });
   },
 
-  // 密钥输入处理
-  onGoogleKeyInput(e) {
-    this.setData({ googleKey: e.detail.value });
-  },
-
-  onDeepSeekKeyInput(e) {
-    this.setData({ deepSeekKey: e.detail.value });
-  },
-
-  onDashScopeKeyInput(e) {
-    this.setData({ dashScopeKey: e.detail.value });
-  },
-
-  // 密钥显示切换
-  toggleGoogleKey() {
-    this.setData({ showGoogleKey: !this.data.showGoogleKey });
-  },
-
-  toggleDeepSeekKey() {
-    this.setData({ showDeepSeekKey: !this.data.showDeepSeekKey });
-  },
-
-  toggleDashScopeKey() {
-    this.setData({ showDashScopeKey: !this.data.showDashScopeKey });
-  },
-
-  toggleAppSecret() {
-    this.setData({ showAppSecret: !this.data.showAppSecret });
-  },
-
   // 思考模式切换
   toggleThinkingMode(e) {
     this.setData({ deepSeekThinkingMode: e.detail.value });
+  },
+
+  // WeChat AppSecret显示切换
+  toggleAppSecret() {
+    this.setData({ showAppSecret: !this.data.showAppSecret });
   },
 
   // 保存设置
@@ -171,11 +134,8 @@ Page({
     try {
       const app = getApp();
       
-      // 保存AI设置
+      // 保存AI设置 (API keys now managed by backend pool)
       wx.setStorageSync('ai_provider', this.data.aiProvider);
-      wx.setStorageSync('google_api_key', this.data.googleKey);
-      wx.setStorageSync('deepseek_key', this.data.deepSeekKey);
-      wx.setStorageSync('dashscope_key', this.data.dashScopeKey);
       wx.setStorageSync('deepseek_thinking_mode', String(this.data.deepSeekThinkingMode));
       
       // 更新全局状态

@@ -252,16 +252,11 @@ const authApi = {
 const aiApi = {
   /**
    * 生成文章
+   * API keys are now managed exclusively by the backend pool
    */
-  generate: async (genRequest, apiKey) => {
-    const header = {};
-    if (apiKey) {
-      header['X-API-Key'] = apiKey;
-    }
-    
+  generate: async (genRequest) => {
     return request('/ai/generate', {
       method: 'POST',
-      header,
       data: genRequest,
       timeout: 60000 // AI请求可能需要较长时间
     });
@@ -278,17 +273,10 @@ const aiApi = {
    * 生成标题建议
    * @param {string} content - 文章内容
    * @param {number} count - 建议数量
-   * @param {string} apiKey - API密钥（可选）
    */
-  generateTitles: async (content, count = 5, apiKey) => {
-    const header = {};
-    if (apiKey) {
-      header['X-API-Key'] = apiKey;
-    }
-    
+  generateTitles: async (content, count = 5) => {
     return request('/ai/titles', {
       method: 'POST',
-      header,
       data: { content, count },
       timeout: 30000
     });
@@ -298,17 +286,10 @@ const aiApi = {
    * 生成文章摘要
    * @param {string} content - 文章内容
    * @param {number} maxLength - 摘要最大长度
-   * @param {string} apiKey - API密钥（可选）
    */
-  generateSummary: async (content, maxLength = 120, apiKey) => {
-    const header = {};
-    if (apiKey) {
-      header['X-API-Key'] = apiKey;
-    }
-    
+  generateSummary: async (content, maxLength = 120) => {
     return request('/ai/summary', {
       method: 'POST',
-      header,
       data: { content, maxLength },
       timeout: 30000
     });
@@ -318,17 +299,10 @@ const aiApi = {
    * 提取关键词
    * @param {string} content - 文章内容
    * @param {number} count - 关键词数量
-   * @param {string} apiKey - API密钥（可选）
    */
-  extractKeywords: async (content, count = 10, apiKey) => {
-    const header = {};
-    if (apiKey) {
-      header['X-API-Key'] = apiKey;
-    }
-    
+  extractKeywords: async (content, count = 10) => {
     return request('/ai/keywords', {
       method: 'POST',
-      header,
       data: { content, count },
       timeout: 30000
     });
@@ -338,17 +312,10 @@ const aiApi = {
    * 内容润色
    * @param {string} content - 原文内容
    * @param {string} style - 润色风格: 'formal', 'casual', 'professional', 'creative'
-   * @param {string} apiKey - API密钥（可选）
    */
-  polishContent: async (content, style = 'professional', apiKey) => {
-    const header = {};
-    if (apiKey) {
-      header['X-API-Key'] = apiKey;
-    }
-    
+  polishContent: async (content, style = 'professional') => {
     return request('/ai/polish', {
       method: 'POST',
-      header,
       data: { content, style },
       timeout: 60000
     });
@@ -358,17 +325,10 @@ const aiApi = {
    * 翻译内容
    * @param {string} content - 原文内容
    * @param {string} targetLang - 目标语言: 'en', 'zh', 'ja', etc.
-   * @param {string} apiKey - API密钥（可选）
    */
-  translateContent: async (content, targetLang = 'en', apiKey) => {
-    const header = {};
-    if (apiKey) {
-      header['X-API-Key'] = apiKey;
-    }
-    
+  translateContent: async (content, targetLang = 'en') => {
     return request('/ai/translate', {
       method: 'POST',
-      header,
       data: { content, targetLang },
       timeout: 60000
     });
@@ -378,17 +338,10 @@ const aiApi = {
    * 内容扩写
    * @param {string} content - 原文内容
    * @param {number} targetLength - 目标字数（大概）
-   * @param {string} apiKey - API密钥（可选）
    */
-  expandContent: async (content, targetLength = 1000, apiKey) => {
-    const header = {};
-    if (apiKey) {
-      header['X-API-Key'] = apiKey;
-    }
-    
+  expandContent: async (content, targetLength = 1000) => {
     return request('/ai/expand', {
       method: 'POST',
-      header,
       data: { content, targetLength },
       timeout: 90000
     });

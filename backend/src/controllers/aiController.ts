@@ -58,15 +58,15 @@ export const generate = async (req: Request, res: Response) => {
       }
     }
     
-    // Get API key from request headers or use server-side key
-    const userApiKey = req.headers['x-api-key'] as string | undefined;
+    // API keys are now managed exclusively by the backend pool
+    // User-provided API keys are no longer accepted for security reasons
     
     let result;
     let usedProvider = request.provider;
     
     try {
-      // Try primary provider
-      result = await generateArticle(request, userApiKey);
+      // Try primary provider (using backend pool only)
+      result = await generateArticle(request);
       logger.info('Primary provider succeeded', { provider: request.provider, requestId: req.requestId });
     } catch (primaryError) {
       const primaryMessage = primaryError instanceof Error ? primaryError.message : 'Unknown error';
@@ -82,7 +82,7 @@ export const generate = async (req: Request, res: Response) => {
       if (fallbackProvider) {
         try {
           const fallbackRequest = { ...request, provider: fallbackProvider };
-          result = await generateArticle(fallbackRequest, userApiKey);
+          result = await generateArticle(fallbackRequest);
           usedProvider = fallbackProvider;
           logger.info('Fallback provider succeeded', { 
             fallbackProvider, 
