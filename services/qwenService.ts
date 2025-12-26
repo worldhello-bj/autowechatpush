@@ -195,8 +195,8 @@ export const generateArticleStructureQwen = async (
   }
 };
 
-export const analyzeImageQwen = async (base64Image: string, mimeType: string, apiKey: string): Promise<string> => {
-    if (!apiKey) throw new Error("DashScope API Key is required.");
+export const analyzeImageQwen = async (base64Image: string, mimeType: string, apiKey: string = ''): Promise<string> => {
+    if (!apiKey) throw new Error("Image analysis feature requires backend support. API keys are no longer accepted from frontend.");
 
     try {
         const response = await fetch(BASE_URL, {
@@ -233,8 +233,8 @@ export const analyzeImageQwen = async (base64Image: string, mimeType: string, ap
     }
 };
 
-export const generateSpeechQwen = async (text: string, apiKey: string): Promise<ArrayBuffer> => {
-    if (!apiKey) throw new Error("DashScope API Key is required.");
+export const generateSpeechQwen = async (text: string, apiKey: string = ''): Promise<ArrayBuffer> => {
+    if (!apiKey) throw new Error("Text-to-speech feature requires backend support. API keys are no longer accepted from frontend.");
 
     // Using Sambert-zh-v1 via DashScope REST API
     try {
@@ -304,9 +304,9 @@ const callQwenAPI = async (apiKey: string, messages: any[], temperature: number 
 export const generateTitleSuggestionsQwen = async (
   content: string,
   count: number = 5,
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string[]> => {
-  if (!apiKey) throw new Error("DashScope API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   try {
     const text = await callQwenAPI(apiKey, [
@@ -346,9 +346,9 @@ export const generateTitleSuggestionsQwen = async (
 export const generateSummaryQwen = async (
   content: string,
   maxLength: number = 120,
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("DashScope API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   try {
     const text = await callQwenAPI(apiKey, [
@@ -384,9 +384,9 @@ export const generateSummaryQwen = async (
 export const expandContentQwen = async (
   content: string,
   style: 'detailed' | 'examples' | 'storytelling' = 'detailed',
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("DashScope API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   const stylePrompts = {
     detailed: '添加更多详细的解释、事实和深度内容。',
@@ -430,9 +430,9 @@ export const expandContentQwen = async (
 export const polishContentQwen = async (
   content: string,
   tone: 'professional' | 'casual' | 'formal' | 'creative' = 'professional',
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("DashScope API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   const toneDescriptions = {
     professional: '专业、清晰、权威',
@@ -476,9 +476,9 @@ export const polishContentQwen = async (
 export const extractKeywordsQwen = async (
   content: string,
   count: number = 10,
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string[]> => {
-  if (!apiKey) throw new Error("DashScope API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   try {
     const text = await callQwenAPI(apiKey, [
@@ -518,9 +518,9 @@ export const extractKeywordsQwen = async (
 export const translateContentQwen = async (
   content: string,
   targetLanguage: 'zh' | 'en',
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("DashScope API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   const targetLangName = targetLanguage === 'zh' ? '简体中文' : '英文';
 
@@ -564,9 +564,9 @@ export interface StyleSuggestion {
 
 export const suggestStylesQwen = async (
   content: string,
-  apiKey: string
+  apiKey: string = ''
 ): Promise<StyleSuggestion[]> => {
-  if (!apiKey) throw new Error("DashScope API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   try {
     const text = await callQwenAPI(apiKey, [
@@ -609,9 +609,9 @@ export const suggestStylesQwen = async (
 export const generateHookQwen = async (
   topic: string,
   style: 'question' | 'story' | 'statistic' | 'quote' | 'surprising' = 'question',
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("DashScope API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   const styleDescriptions = {
     question: '以一个发人深省的问题开头，吸引读者的注意',
@@ -652,9 +652,9 @@ export const generateHookQwen = async (
 export const generateCTAQwen = async (
   articleContext: string,
   ctaType: 'subscribe' | 'share' | 'comment' | 'action' | 'reflection' = 'share',
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("DashScope API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   const ctaDescriptions = {
     subscribe: '鼓励读者关注/订阅账号',
@@ -698,9 +698,9 @@ export const generateCTAQwen = async (
 export const rewriteContentQwen = async (
   content: string,
   newStyle: 'humorous' | 'serious' | 'inspirational' | 'educational' | 'conversational',
-  apiKey: string
+  apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("DashScope API Key is required.");
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   const styleDescriptions = {
     humorous: '诙谐、有趣，带有适当的幽默和轻松的语调',
