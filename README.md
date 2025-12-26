@@ -771,19 +771,28 @@ MIT License
 
 **Electron 应用需要连接到后端服务器才能正常工作。**
 
-自 v1.3.0 起，所有 AI API 调用都通过后端服务器进行。如果你的 EXE 应用无法生成内容，请检查：
+自 v1.3.0 起，所有 AI API 调用都通过后端服务器进行。配置方法非常简单：
 
-1. **后端服务器配置**：在 `server.cjs` 第 68 行检查 `BACKEND_API_URL`
-2. **网络连接**：确保 EXE 可以访问后端服务器
-3. **重新打包**：如果后端地址更改，需要重新打包 EXE
+**只需修改 `.env.production` 文件：**
 
-详细说明请参考：[ELECTRON_BACKEND_FIX.md](./ELECTRON_BACKEND_FIX.md)
+```env
+# 使用 IP 地址
+VITE_API_BASE=http://49.232.11.108:3001/api/v1
+
+# 或使用域名（推荐）
+VITE_API_BASE=https://api.your-domain.com/api/v1
+```
+
+**修改后重新构建即可！** 详细说明请参考：
+- [BUILD.md](./BUILD.md) - 构建说明
+- [DOMAIN_CONFIG.md](./DOMAIN_CONFIG.md) - 域名配置指南
+- [ELECTRON_BACKEND_FIX.md](./ELECTRON_BACKEND_FIX.md) - 问题排查
 
 ### 快速打包
 
 ```bash
-# 1. 配置后端地址（编辑 server.cjs 第 68 行）
-# const BACKEND_API_URL = 'http://your-backend-server:3001';
+# 1. 配置后端地址（编辑 .env.production）
+# VITE_API_BASE=https://api.your-domain.com/api/v1
 
 # 2. 安装依赖
 npm install
@@ -814,16 +823,34 @@ npm run electron:build:linux
 npm run electron:dev
 ```
 
+### 配置变更
+
+**添加域名后如何更新？**
+
+1. 修改 `.env.production`：
+   ```env
+   VITE_API_BASE=https://api.your-domain.com/api/v1
+   ```
+
+2. 重新构建：
+   ```bash
+   npm run electron:build:win
+   ```
+
+3. 分发新的 EXE 文件
+
+**就这么简单！** ✨
+
 ### 架构说明
 
 ```
-前端 (React) → server.cjs (代理) → 后端服务器 (AI/API)
-               localhost:3000       http://your-backend:3001
+前端 (Electron/Web) → 直接连接 → 后端服务器
+                    https://api.your-domain.com
 ```
 
-- **前端**：使用 `/api/v1` 发送请求
-- **server.cjs**：将请求代理到真正的后端服务器
-- **后端服务器**：处理 AI 生成、素材管理等业务逻辑
+- **统一配置**：Electron 和网页使用相同的后端地址
+- **简单维护**：只需修改一个文件
+- **域名支持**：推荐使用 HTTPS 域名，更安全专业
 
 ---
 
