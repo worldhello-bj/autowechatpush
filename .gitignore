@@ -46,3 +46,5 @@ release/
 backend/dist
 backend/node_modules
 backend/data
+backend/src/config/aikeys.json
+backend/test-keypool.js

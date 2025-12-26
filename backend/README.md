@@ -41,8 +41,19 @@ Key environment variables:
 | `PORT` | Server port | `3001` |
 | `JWT_SECRET` | Secret for JWT signing (min 32 chars) | - |
 | `CORS_ORIGINS` | Allowed CORS origins (comma-separated) | `http://localhost:5173` |
-| `DEEPSEEK_API_KEY` | DeepSeek API key (optional) | - |
-| `DASHSCOPE_API_KEY` | Qwen API key (optional) | - |
+| `DEEPSEEK_API_KEY` | DeepSeek API key (fallback if key pool not configured) | - |
+| `DASHSCOPE_API_KEY` | Qwen API key (fallback if key pool not configured) | - |
+
+### AI Key Pool (for High Concurrency)
+
+For production deployments with high traffic, you can configure an AI key pool to distribute load across multiple API keys. See [AI_KEY_POOL.md](./AI_KEY_POOL.md) for detailed setup instructions.
+
+Quick setup:
+```bash
+cd src/config
+cp aikeys.example.json aikeys.json
+# Edit aikeys.json with your API keys
+```
 
 ### Development
 
