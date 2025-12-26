@@ -1,6 +1,7 @@
 import { config } from '../config/index.js';
 import { createLogger } from '../utils/index.js';
 import { AIProvider, AIChatRequest, GenerationResult, BlockType, ArticleBlock } from '../types/index.js';
+import { getApiKeyFromPool, releaseApiKey } from './aiKeyPoolService.js';
 
 const logger = createLogger('ai-service');
 
@@ -92,44 +93,56 @@ const callDeepSeekAPI = async (
     requestBody.thinking = { type: 'enabled' };
   }
 
-  const response = await fetch(DEEPSEEK_BASE_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(requestBody),
-  });
+  let success = false;
+  let errorMessage: string | undefined;
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } };
-    throw new Error(`DeepSeek API Error: ${errorData.error?.message || response.statusText}`);
+  try {
+    const response = await fetch(DEEPSEEK_BASE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } };
+      errorMessage = `DeepSeek API Error: ${errorData.error?.message || response.statusText}`;
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json() as { choices?: Array<{ message?: { tool_calls?: Array<{ function: { name: string; arguments: string } }> } }> };
+    const message = data.choices?.[0]?.message;
+
+    if (!message?.tool_calls?.[0]) {
+      errorMessage = 'DeepSeek did not return structured content';
+      throw new Error(errorMessage);
+    }
+
+    const toolCall = message.tool_calls[0];
+    if (toolCall.function.name !== 'layout_article') {
+      errorMessage = 'Unexpected function call from DeepSeek';
+      throw new Error(errorMessage);
+    }
+
+    const args = JSON.parse(toolCall.function.arguments);
+    const blocks = (args.blocks || []).map((b: Record<string, unknown>, index: number) => ({
+      id: `ds-${Date.now()}-${index}`,
+      ...b,
+    }));
+
+    success = true;
+    return {
+      title: args.title || 'Untitled Article',
+      digest: args.digest || 'No summary available.',
+      blocks,
+      sources: [],
+    };
+  } finally {
+    // Release the API key back to the pool
+    releaseApiKey(apiKey, success, errorMessage);
   }
-
-  const data = await response.json() as { choices?: Array<{ message?: { tool_calls?: Array<{ function: { name: string; arguments: string } }> } }> };
-  const message = data.choices?.[0]?.message;
-
-  if (!message?.tool_calls?.[0]) {
-    throw new Error('DeepSeek did not return structured content');
-  }
-
-  const toolCall = message.tool_calls[0];
-  if (toolCall.function.name !== 'layout_article') {
-    throw new Error('Unexpected function call from DeepSeek');
-  }
-
-  const args = JSON.parse(toolCall.function.arguments);
-  const blocks = (args.blocks || []).map((b: Record<string, unknown>, index: number) => ({
-    id: `ds-${Date.now()}-${index}`,
-    ...b,
-  }));
-
-  return {
-    title: args.title || 'Untitled Article',
-    digest: args.digest || 'No summary available.',
-    blocks,
-    sources: [],
-  };
 };
 
 /**
@@ -141,49 +154,61 @@ const callQwenAPI = async (
 ): Promise<GenerationResult> => {
   logger.info('Calling Qwen API');
 
-  const response = await fetch(QWEN_BASE_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'qwen-plus',
-      messages,
-      tools: [layoutArticleFunction],
-      tool_choice: 'auto',
-    }),
-  });
+  let success = false;
+  let errorMessage: string | undefined;
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } };
-    throw new Error(`Qwen API Error: ${errorData.error?.message || response.statusText}`);
+  try {
+    const response = await fetch(QWEN_BASE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'qwen-plus',
+        messages,
+        tools: [layoutArticleFunction],
+        tool_choice: 'auto',
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } };
+      errorMessage = `Qwen API Error: ${errorData.error?.message || response.statusText}`;
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json() as { choices?: Array<{ message?: { tool_calls?: Array<{ function: { name: string; arguments: string } }> } }> };
+    const message = data.choices?.[0]?.message;
+
+    if (!message?.tool_calls?.[0]) {
+      errorMessage = 'Qwen did not return structured content';
+      throw new Error(errorMessage);
+    }
+
+    const toolCall = message.tool_calls[0];
+    if (toolCall.function.name !== 'layout_article') {
+      errorMessage = 'Unexpected function call from Qwen';
+      throw new Error(errorMessage);
+    }
+
+    const args = JSON.parse(toolCall.function.arguments);
+    const blocks = (args.blocks || []).map((b: Record<string, unknown>, index: number) => ({
+      id: `qw-${Date.now()}-${index}`,
+      ...b,
+    }));
+
+    success = true;
+    return {
+      title: args.title || 'Untitled Article',
+      digest: args.digest || 'No summary available.',
+      blocks,
+      sources: [],
+    };
+  } finally {
+    // Release the API key back to the pool
+    releaseApiKey(apiKey, success, errorMessage);
   }
-
-  const data = await response.json() as { choices?: Array<{ message?: { tool_calls?: Array<{ function: { name: string; arguments: string } }> } }> };
-  const message = data.choices?.[0]?.message;
-
-  if (!message?.tool_calls?.[0]) {
-    throw new Error('Qwen did not return structured content');
-  }
-
-  const toolCall = message.tool_calls[0];
-  if (toolCall.function.name !== 'layout_article') {
-    throw new Error('Unexpected function call from Qwen');
-  }
-
-  const args = JSON.parse(toolCall.function.arguments);
-  const blocks = (args.blocks || []).map((b: Record<string, unknown>, index: number) => ({
-    id: `qw-${Date.now()}-${index}`,
-    ...b,
-  }));
-
-  return {
-    title: args.title || 'Untitled Article',
-    digest: args.digest || 'No summary available.',
-    blocks,
-    sources: [],
-  };
 };
 
 /**
@@ -249,17 +274,11 @@ export const generateArticle = async (
 
   switch (request.provider) {
     case AIProvider.DEEPSEEK: {
-      const apiKey = userApiKey || config.DEEPSEEK_API_KEY;
-      if (!apiKey) {
-        throw new Error('DeepSeek API key is required');
-      }
+      const apiKey = await getApiKeyFromPool(AIProvider.DEEPSEEK, userApiKey);
       return callDeepSeekAPI(apiKey, messages, request.thinkingMode);
     }
     case AIProvider.QWEN: {
-      const apiKey = userApiKey || config.DASHSCOPE_API_KEY;
-      if (!apiKey) {
-        throw new Error('Qwen API key is required');
-      }
+      const apiKey = await getApiKeyFromPool(AIProvider.QWEN, userApiKey);
       return callQwenAPI(apiKey, messages);
     }
     default:

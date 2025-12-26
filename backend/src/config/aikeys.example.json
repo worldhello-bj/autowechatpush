@@ -1,0 +1,50 @@
+{
+  "deepseek": [
+    {
+      "key": "sk-your-deepseek-key-1",
+      "name": "DeepSeek Primary",
+      "enabled": true,
+      "weight": 100,
+      "maxConcurrent": 10,
+      "rateLimit": {
+        "requestsPerMinute": 60,
+        "requestsPerDay": 10000
+      }
+    },
+    {
+      "key": "sk-your-deepseek-key-2",
+      "name": "DeepSeek Secondary",
+      "enabled": true,
+      "weight": 80,
+      "maxConcurrent": 10,
+      "rateLimit": {
+        "requestsPerMinute": 60,
+        "requestsPerDay": 10000
+      }
+    }
+  ],
+  "qwen": [
+    {
+      "key": "sk-your-qwen-key-1",
+      "name": "Qwen Primary",
+      "enabled": true,
+      "weight": 100,
+      "maxConcurrent": 10,
+      "rateLimit": {
+        "requestsPerMinute": 60,
+        "requestsPerDay": 10000
+      }
+    },
+    {
+      "key": "sk-your-qwen-key-2",
+      "name": "Qwen Secondary",
+      "enabled": true,
+      "weight": 80,
+      "maxConcurrent": 10,
+      "rateLimit": {
+        "requestsPerMinute": 60,
+        "requestsPerDay": 10000
+      }
+    }
+  ]
+}
