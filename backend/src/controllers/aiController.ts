@@ -328,3 +328,182 @@ export const getQuota = async (req: Request, res: Response) => {
     message: status.remainingQuota > 0 ? 'Quota available' : 'Quota exceeded',
   });
 };
+
+/**
+ * AI Helper Functions
+ * POST /api/v1/ai/helper
+ * 
+ * Generic endpoint for AI helper functions like:
+ * - generateTitles: Generate title suggestions
+ * - generateSummary: Generate content summary
+ * - extractKeywords: Extract keywords from content
+ * - expandContent: Expand/elaborate on content
+ * - polishContent: Polish/refine content
+ * - translateContent: Translate content
+ * - suggestStyles: Suggest writing styles
+ * - generateHook: Generate article hooks
+ * - generateCTA: Generate call-to-action
+ * - rewriteContent: Rewrite content in different style
+ */
+export const aiHelper = async (req: Request, res: Response) => {
+  try {
+    const { action, content, provider, options } = req.body;
+    
+    if (!action || !content) {
+      return sendError(res, 400, 'INVALID_REQUEST', 'Action and content are required');
+    }
+    
+    logger.info('AI helper request', { 
+      action, 
+      provider: provider || 'deepseek',
+      contentLength: content.length,
+      requestId: req.requestId 
+    });
+    
+    // Check user quota if authenticated (helpers use less quota)
+    if (req.user) {
+      const quotaCheck = checkQuota(req.user.userId, 0.1); // Helpers cost 0.1 credits
+      if (!quotaCheck.allowed) {
+        return sendError(res, 402, 'QUOTA_EXCEEDED', quotaCheck.reason || 'Insufficient quota.');
+      }
+    }
+    
+    const selectedProvider = provider || AIProvider.DEEPSEEK;
+    let prompt = '';
+    
+    // Build prompt based on action type
+    switch (action) {
+      case 'generateTitles':
+        const count = options?.count || 5;
+        prompt = `请为以下内容生成${count}个吸引人的标题建议。要求标题简洁有力、吸引眼球。\n\n内容：\n${content}\n\n请以JSON数组格式返回，例如：["标题1", "标题2", "标题3"]`;
+        break;
+        
+      case 'generateSummary':
+        const maxLength = options?.maxLength || 120;
+        prompt = `请为以下内容生成一个简洁的摘要，不超过${maxLength}个字。\n\n内容：\n${content}`;
+        break;
+        
+      case 'extractKeywords':
+        const keywordCount = options?.count || 10;
+        prompt = `请从以下内容中提取${keywordCount}个关键词。以JSON数组格式返回，例如：["关键词1", "关键词2"]。\n\n内容：\n${content}`;
+        break;
+        
+      case 'expandContent':
+        prompt = `请扩展以下内容，使其更加详细和丰富。保持原意，但增加更多细节、例子和解释。\n\n原内容：\n${content}`;
+        break;
+        
+      case 'polishContent':
+        prompt = `请润色以下内容，使其更加流畅、优雅、专业。保持原意，但提升表达质量。\n\n原内容：\n${content}`;
+        break;
+        
+      case 'translateContent':
+        const targetLang = options?.targetLanguage || 'en';
+        const langMap: Record<string, string> = {
+          'en': '英文',
+          'zh': '中文',
+          'ja': '日文',
+          'ko': '韩文',
+          'fr': '法文',
+          'de': '德文',
+          'es': '西班牙文'
+        };
+        prompt = `请将以下内容翻译成${langMap[targetLang] || targetLang}：\n\n${content}`;
+        break;
+        
+      case 'suggestStyles':
+        prompt = `请为以下内容推荐3-5种不同的写作风格变体（如正式、轻松、幽默、专业、文艺等）。以JSON格式返回，包含style（风格名）和preview（预览文本）。\n\n内容：\n${content}`;
+        break;
+        
+      case 'generateHook':
+        const hookStyle = options?.style || 'question';
+        const styleDesc: Record<string, string> = {
+          'question': '疑问式',
+          'story': '故事式',
+          'statistic': '数据式',
+          'quote': '引用式',
+          'surprising': '惊讶式'
+        };
+        prompt = `请为以下主题生成一个${styleDesc[hookStyle] || '吸引人的'}开场白/引子（Hook），要求能够立即抓住读者注意力。\n\n主题：${content}`;
+        break;
+        
+      case 'generateCTA':
+        const ctaType = options?.type || 'subscribe';
+        const ctaDesc: Record<string, string> = {
+          'subscribe': '关注订阅',
+          'share': '分享转发',
+          'comment': '评论互动',
+          'action': '行动号召',
+          'reflection': '思考总结'
+        };
+        prompt = `请为以下内容生成一个${ctaDesc[ctaType] || '有效的'}行动号召（CTA），鼓励读者采取行动。\n\n内容主题：${content}`;
+        break;
+        
+      case 'rewriteContent':
+        const rewriteStyle = options?.style || 'casual';
+        prompt = `请用${rewriteStyle}风格重写以下内容，保持核心信息但改变表达方式。\n\n原内容：\n${content}`;
+        break;
+        
+      default:
+        return sendError(res, 400, 'INVALID_ACTION', `Unknown action: ${action}`);
+    }
+    
+    // Call AI service with the constructed prompt
+    const result = await generateArticle({
+      message: prompt,
+      provider: selectedProvider,
+      useSearch: false,
+      isFormattingMode: false,
+      thinkingMode: false,
+      multiRoundMode: false,
+    });
+    
+    // Consume quota if authenticated
+    if (req.user) {
+      consumeQuota(req.user.userId, 0.1, 'ai_generation' as any, {
+        action,
+        provider: selectedProvider,
+        contentLength: content.length,
+      }, req.requestId);
+    }
+    
+    // Extract result based on action type
+    let responseData: unknown;
+    if (action === 'generateTitles' || action === 'extractKeywords' || action === 'suggestStyles') {
+      // Try to parse JSON from the AI response
+      try {
+        const textContent = result.blocks.map(b => b.content).join('\n');
+        // Look for JSON array in the response
+        const jsonMatch = textContent.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          responseData = JSON.parse(jsonMatch[0]);
+        } else {
+          // Fallback: split by newlines
+          responseData = textContent.split('\n').filter(line => line.trim());
+        }
+      } catch {
+        responseData = result.blocks.map(b => b.content).filter(c => c.trim());
+      }
+    } else {
+      // Return the full text content
+      responseData = result.blocks.map(b => b.content).join('\n\n');
+    }
+    
+    logger.info('AI helper completed', { action, requestId: req.requestId });
+    
+    sendSuccess(res, {
+      action,
+      result: responseData,
+      provider: selectedProvider,
+    });
+    
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'AI helper failed';
+    logger.error('AI helper failed', { error: message, requestId: req.requestId });
+    
+    if (message.includes('API key')) {
+      return sendError(res, 401, 'MISSING_API_KEY', message);
+    }
+    
+    sendError(res, 500, 'AI_ERROR', message);
+  }
+};

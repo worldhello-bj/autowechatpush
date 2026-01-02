@@ -6,35 +6,10 @@ import analytics from '../services/analytics';
 import { 
   GenerationResult
 } from '../services/geminiService';
-// TODO: These helper functions still use frontend APIs temporarily
-// They need backend endpoints to be fully migrated to backend key management
+// StyleSuggestion type still needed for component state
 import { 
-  generateTitleSuggestionsDeepSeek,
-  generateSummaryDeepSeek,
-  expandContentDeepSeek,
-  polishContentDeepSeek,
-  extractKeywordsDeepSeek,
-  translateContentDeepSeek,
-  suggestStylesDeepSeek,
-  generateHookDeepSeek,
-  generateCTADeepSeek,
-  rewriteContentDeepSeek,
   StyleSuggestion
 } from '../services/deepSeekService';
-import { 
-  analyzeImageQwen, 
-  generateSpeechQwen,
-  generateTitleSuggestionsQwen,
-  generateSummaryQwen,
-  expandContentQwen,
-  polishContentQwen,
-  extractKeywordsQwen,
-  translateContentQwen,
-  suggestStylesQwen,
-  generateHookQwen,
-  generateCTAQwen,
-  rewriteContentQwen
-} from '../services/qwenService';
 import {
   loadMemory,
   saveMemory,
@@ -780,10 +755,14 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
       if (aiProvider === AIProvider.QWEN) {
         setAnalyzingImage(true);
         try {
-          let analysis = "";
-          // Backend will use server-configured key from pool
-          analysis = await analyzeImageQwen(base64String, mimeType);
-          setImageContext(analysis);
+          // TODO: Image analysis needs backend endpoint that supports file upload
+          // Temporarily disabled - will be implemented in future update
+          onError("Image analysis is temporarily disabled. Backend endpoint is being developed.");
+          setAnalyzingImage(false);
+          return;
+          // let analysis = "";
+          // analysis = await analyzeImageQwen(base64String, mimeType);
+          // setImageContext(analysis);
         } catch (err: any) {
           onError("Failed to analyze image: " + err.message);
         } finally {
@@ -859,8 +838,14 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     try {
       setIsPlaying(true);
       
+      // TODO: TTS needs backend endpoint that supports audio generation
+      // Temporarily disabled - will be implemented in future update
+      onError("Text-to-speech is temporarily disabled. Backend endpoint is being developed.");
+      setIsPlaying(false);
+      return;
+      
+      /*
       let audioBufferData: ArrayBuffer;
-      // Backend will use server-configured key from pool
       audioBufferData = await generateSpeechQwen(textToRead.slice(0, 500));
       
       if (!audioContextRef.current) {
@@ -875,6 +860,7 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
       source.onended = () => setIsPlaying(false);
       source.start(0);
       audioSourceRef.current = source;
+      */
     } catch (err: any) {
       onError("Failed to generate speech: " + err.message);
       setIsPlaying(false);
@@ -991,13 +977,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let titles: string[] = [];
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        titles = await generateTitleSuggestionsDeepSeek(content, 5);
-      } else if (aiProvider === AIProvider.QWEN) {
-        titles = await generateTitleSuggestionsQwen(content, 5);
+      const response = await aiApi.helper('generateTitles', content, aiProvider, { count: 5 });
+      if (response.success && response.data) {
+        const titles = Array.isArray(response.data.result) ? response.data.result as string[] : [];
+        setTitleSuggestions(titles);
+      } else {
+        throw new Error(response.error?.message || 'Failed to generate titles');
       }
-      setTitleSuggestions(titles);
     } catch (e: any) {
       onError(e.message || "Failed to generate titles");
     } finally {
@@ -1013,13 +999,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let summary: string = "";
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        summary = await generateSummaryDeepSeek(content, 120);
-      } else if (aiProvider === AIProvider.QWEN) {
-        summary = await generateSummaryQwen(content, 120);
+      const response = await aiApi.helper('generateSummary', content, aiProvider, { maxLength: 120 });
+      if (response.success && response.data) {
+        const summary = typeof response.data.result === 'string' ? response.data.result : '';
+        setArticleDigest(summary);
+      } else {
+        throw new Error(response.error?.message || 'Failed to generate summary');
       }
-      setArticleDigest(summary);
     } catch (e: any) {
       onError(e.message || "Failed to generate summary");
     } finally {
@@ -1035,13 +1021,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let kws: string[] = [];
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        kws = await extractKeywordsDeepSeek(content, 10);
-      } else if (aiProvider === AIProvider.QWEN) {
-        kws = await extractKeywordsQwen(content, 10);
+      const response = await aiApi.helper('extractKeywords', content, aiProvider, { count: 10 });
+      if (response.success && response.data) {
+        const kws = Array.isArray(response.data.result) ? response.data.result as string[] : [];
+        setKeywords(kws);
+      } else {
+        throw new Error(response.error?.message || 'Failed to extract keywords');
       }
-      setKeywords(kws);
     } catch (e: any) {
       onError(e.message || "Failed to extract keywords");
     } finally {
@@ -1057,13 +1043,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let styles: StyleSuggestion[] = [];
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        styles = await suggestStylesDeepSeek(content);
-      } else if (aiProvider === AIProvider.QWEN) {
-        styles = await suggestStylesQwen(content);
+      const response = await aiApi.helper('suggestStyles', content, aiProvider);
+      if (response.success && response.data) {
+        const styles = Array.isArray(response.data.result) ? response.data.result as StyleSuggestion[] : [];
+        setStyleSuggestions(styles);
+      } else {
+        throw new Error(response.error?.message || 'Failed to suggest styles');
       }
-      setStyleSuggestions(styles);
     } catch (e: any) {
       onError(e.message || "Failed to suggest styles");
     } finally {
@@ -1078,13 +1064,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let hook: string = "";
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        hook = await generateHookDeepSeek(topic, style);
-      } else if (aiProvider === AIProvider.QWEN) {
-        hook = await generateHookQwen(topic, style);
+      const response = await aiApi.helper('generateHook', topic, aiProvider, { style });
+      if (response.success && response.data) {
+        const hook = typeof response.data.result === 'string' ? response.data.result : '';
+        setGeneratedHook(hook);
+      } else {
+        throw new Error(response.error?.message || 'Failed to generate hook');
       }
-      setGeneratedHook(hook);
     } catch (e: any) {
       onError(e.message || "Failed to generate hook");
     } finally {
@@ -1100,13 +1086,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let cta: string = "";
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        cta = await generateCTADeepSeek(content, ctaType);
-      } else if (aiProvider === AIProvider.QWEN) {
-        cta = await generateCTAQwen(content, ctaType);
+      const response = await aiApi.helper('generateCTA', content, aiProvider, { type: ctaType });
+      if (response.success && response.data) {
+        const cta = typeof response.data.result === 'string' ? response.data.result : '';
+        setGeneratedCTA(cta);
+      } else {
+        throw new Error(response.error?.message || 'Failed to generate CTA');
       }
-      setGeneratedCTA(cta);
     } catch (e: any) {
       onError(e.message || "Failed to generate CTA");
     } finally {
@@ -1122,14 +1108,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let polished: string = "";
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        polished = await polishContentDeepSeek(content, tone);
-      } else if (aiProvider === AIProvider.QWEN) {
-        polished = await polishContentQwen(content, tone);
+      const response = await aiApi.helper('polishContent', content, aiProvider, { tone });
+      if (response.success && response.data) {
+        const polished = typeof response.data.result === 'string' ? response.data.result : '';
+        setHtmlContent(textToSafeHtml(polished));
+      } else {
+        throw new Error(response.error?.message || 'Failed to polish content');
       }
-      // Convert polished text back to safe HTML
-      setHtmlContent(textToSafeHtml(polished));
     } catch (e: any) {
       onError(e.message || "Failed to polish content");
     } finally {
@@ -1145,13 +1130,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let rewritten: string = "";
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        rewritten = await rewriteContentDeepSeek(content, style);
-      } else if (aiProvider === AIProvider.QWEN) {
-        rewritten = await rewriteContentQwen(content, style);
+      const response = await aiApi.helper('rewriteContent', content, aiProvider, { style });
+      if (response.success && response.data) {
+        const rewritten = typeof response.data.result === 'string' ? response.data.result : '';
+        setHtmlContent(textToSafeHtml(rewritten));
+      } else {
+        throw new Error(response.error?.message || 'Failed to rewrite content');
       }
-      setHtmlContent(textToSafeHtml(rewritten));
     } catch (e: any) {
       onError(e.message || "Failed to rewrite content");
     } finally {
@@ -1167,13 +1152,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let translated: string = "";
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        translated = await translateContentDeepSeek(content, targetLang);
-      } else if (aiProvider === AIProvider.QWEN) {
-        translated = await translateContentQwen(content, targetLang);
+      const response = await aiApi.helper('translateContent', content, aiProvider, { targetLanguage: targetLang });
+      if (response.success && response.data) {
+        const translated = typeof response.data.result === 'string' ? response.data.result : '';
+        setHtmlContent(textToSafeHtml(translated));
+      } else {
+        throw new Error(response.error?.message || 'Failed to translate content');
       }
-      setHtmlContent(textToSafeHtml(translated));
     } catch (e: any) {
       onError(e.message || "Failed to translate content");
     } finally {
@@ -1189,13 +1174,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let expanded: string = "";
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        expanded = await expandContentDeepSeek(content, style);
-      } else if (aiProvider === AIProvider.QWEN) {
-        expanded = await expandContentQwen(content, style);
+      const response = await aiApi.helper('expandContent', content, aiProvider, { style });
+      if (response.success && response.data) {
+        const expanded = typeof response.data.result === 'string' ? response.data.result : '';
+        setHtmlContent(textToSafeHtml(expanded));
+      } else {
+        throw new Error(response.error?.message || 'Failed to expand content');
       }
-      setHtmlContent(textToSafeHtml(expanded));
     } catch (e: any) {
       onError(e.message || "Failed to expand content");
     } finally {
