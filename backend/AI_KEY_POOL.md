@@ -307,7 +307,7 @@ curl -X POST http://localhost:3001/api/v1/admin/keypool/reload \
 ```
 
 **关键设计**：
-- 用户请求中**不接受** `X-API-Key` header
+- 用户请求中的 `X-API-Key` header 会被忽略（即使存在）
 - 所有请求都通过 `getApiKeyFromPool()` 获取密钥
 - 密钥选择基于并发数和权重的智能负载均衡
 - 请求完成后自动释放密钥并更新统计

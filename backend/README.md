@@ -99,8 +99,8 @@ npm start
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/v1/ai/generate` | Generate article (uses backend key pool) |
-| POST | `/api/v1/ai/chat/stream` | SSE streaming generation (uses backend key pool) |
+| POST | `/api/v1/ai/generate` | Generate article |
+| POST | `/api/v1/ai/chat/stream` | SSE streaming generation |
 | GET | `/api/v1/ai/quota` | Get user quota |
 
 ## Architecture
