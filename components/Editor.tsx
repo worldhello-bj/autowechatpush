@@ -10,6 +10,11 @@ import {
 import { 
   StyleSuggestion
 } from '../services/deepSeekService';
+// Image analysis and TTS functions from qwenService (optional features with user-provided key)
+import {
+  analyzeImageQwen,
+  generateSpeechQwen
+} from '../services/qwenService';
 import {
   loadMemory,
   saveMemory,
@@ -755,14 +760,19 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
       if (aiProvider === AIProvider.QWEN) {
         setAnalyzingImage(true);
         try {
-          // TODO: Image analysis needs backend endpoint that supports file upload
-          // Temporarily disabled - will be implemented in future update
-          onError("Image analysis is temporarily disabled. Backend endpoint is being developed.");
-          setAnalyzingImage(false);
-          return;
-          // let analysis = "";
-          // analysis = await analyzeImageQwen(base64String, mimeType);
-          // setImageContext(analysis);
+          // Try to get optional Qwen API key from localStorage
+          const qwenApiKey = localStorage.getItem('qwen_api_key') || '';
+          
+          if (!qwenApiKey) {
+            // No key configured - show friendly message
+            onError("图片分析需要配置 Qwen API 密钥。请在设置中添加您的 Qwen API Key 以使用此功能。");
+            setAnalyzingImage(false);
+            return;
+          }
+          
+          let analysis = "";
+          analysis = await analyzeImageQwen(base64String, mimeType, qwenApiKey);
+          setImageContext(analysis);
         } catch (err: any) {
           onError("Failed to analyze image: " + err.message);
         } finally {
@@ -838,15 +848,18 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     try {
       setIsPlaying(true);
       
-      // TODO: TTS needs backend endpoint that supports audio generation
-      // Temporarily disabled - will be implemented in future update
-      onError("Text-to-speech is temporarily disabled. Backend endpoint is being developed.");
-      setIsPlaying(false);
-      return;
+      // Try to get optional Qwen API key from localStorage
+      const qwenApiKey = localStorage.getItem('qwen_api_key') || '';
       
-      /*
+      if (!qwenApiKey) {
+        // No key configured - show friendly message
+        onError("文字转语音需要配置 Qwen API 密钥。请在设置中添加您的 Qwen API Key 以使用此功能。");
+        setIsPlaying(false);
+        return;
+      }
+      
       let audioBufferData: ArrayBuffer;
-      audioBufferData = await generateSpeechQwen(textToRead.slice(0, 500));
+      audioBufferData = await generateSpeechQwen(textToRead.slice(0, 500), qwenApiKey);
       
       if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -860,7 +873,6 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
       source.onended = () => setIsPlaying(false);
       source.start(0);
       audioSourceRef.current = source;
-      */
     } catch (err: any) {
       onError("Failed to generate speech: " + err.message);
       setIsPlaying(false);
