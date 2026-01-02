@@ -179,9 +179,6 @@ export const chatStream = async (req: Request, res: Response) => {
   }, 15000);
   
   try {
-    // Get API key from request headers or use server-side key
-    const userApiKey = req.headers['x-api-key'] as string | undefined;
-    
     // Send thinking event if thinking mode is enabled
     if (request.thinkingMode) {
       sendSSEEvent({
