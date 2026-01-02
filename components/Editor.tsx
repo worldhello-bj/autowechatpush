@@ -977,7 +977,9 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      const response = await aiApi.helper('generateTitles', content, aiProvider, { count: 5 });
+      // Only use DeepSeek or Qwen for helper functions
+      const helperProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
+      const response = await aiApi.helper('generateTitles', content, helperProvider, { count: 5 });
       if (response.success && response.data) {
         const titles = Array.isArray(response.data.result) ? response.data.result as string[] : [];
         setTitleSuggestions(titles);
@@ -999,7 +1001,8 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      const response = await aiApi.helper('generateSummary', content, aiProvider, { maxLength: 120 });
+      const helperProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
+      const response = await aiApi.helper('generateSummary', content, helperProvider, { maxLength: 120 });
       if (response.success && response.data) {
         const summary = typeof response.data.result === 'string' ? response.data.result : '';
         setArticleDigest(summary);
@@ -1021,7 +1024,8 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      const response = await aiApi.helper('extractKeywords', content, aiProvider, { count: 10 });
+      const helperProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
+      const response = await aiApi.helper('extractKeywords', content, helperProvider, { count: 10 });
       if (response.success && response.data) {
         const kws = Array.isArray(response.data.result) ? response.data.result as string[] : [];
         setKeywords(kws);
@@ -1043,9 +1047,19 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      const response = await aiApi.helper('suggestStyles', content, aiProvider);
+      const helperProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
+      const response = await aiApi.helper('suggestStyles', content, helperProvider);
       if (response.success && response.data) {
-        const styles = Array.isArray(response.data.result) ? response.data.result as StyleSuggestion[] : [];
+        // Backend returns simplified style suggestions, adapt to UI format
+        const styles = Array.isArray(response.data.result) 
+          ? (response.data.result as Array<{style: string; preview: string}>).map(s => ({
+              style: s.style,
+              preview: s.preview,
+              reason: '',
+              colorScheme: [] as string[],
+              mood: s.style
+            } as StyleSuggestion))
+          : [];
         setStyleSuggestions(styles);
       } else {
         throw new Error(response.error?.message || 'Failed to suggest styles');
@@ -1064,7 +1078,8 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      const response = await aiApi.helper('generateHook', topic, aiProvider, { style });
+      const helperProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
+      const response = await aiApi.helper('generateHook', topic, helperProvider, { style });
       if (response.success && response.data) {
         const hook = typeof response.data.result === 'string' ? response.data.result : '';
         setGeneratedHook(hook);
@@ -1086,7 +1101,7 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      const response = await aiApi.helper('generateCTA', content, aiProvider, { type: ctaType });
+      const response = await aiApi.helper('generateCTA', content, aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek', { type: ctaType });
       if (response.success && response.data) {
         const cta = typeof response.data.result === 'string' ? response.data.result : '';
         setGeneratedCTA(cta);
@@ -1108,7 +1123,7 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      const response = await aiApi.helper('polishContent', content, aiProvider, { tone });
+      const response = await aiApi.helper('polishContent', content, aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek', { tone });
       if (response.success && response.data) {
         const polished = typeof response.data.result === 'string' ? response.data.result : '';
         setHtmlContent(textToSafeHtml(polished));
@@ -1130,7 +1145,7 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      const response = await aiApi.helper('rewriteContent', content, aiProvider, { style });
+      const response = await aiApi.helper('rewriteContent', content, aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek', { style });
       if (response.success && response.data) {
         const rewritten = typeof response.data.result === 'string' ? response.data.result : '';
         setHtmlContent(textToSafeHtml(rewritten));
@@ -1152,7 +1167,7 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      const response = await aiApi.helper('translateContent', content, aiProvider, { targetLanguage: targetLang });
+      const response = await aiApi.helper('translateContent', content, aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek', { targetLanguage: targetLang });
       if (response.success && response.data) {
         const translated = typeof response.data.result === 'string' ? response.data.result : '';
         setHtmlContent(textToSafeHtml(translated));
@@ -1174,7 +1189,7 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      const response = await aiApi.helper('expandContent', content, aiProvider, { style });
+      const response = await aiApi.helper('expandContent', content, aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek', { style });
       if (response.success && response.data) {
         const expanded = typeof response.data.result === 'string' ? response.data.result : '';
         setHtmlContent(textToSafeHtml(expanded));
