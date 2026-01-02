@@ -258,12 +258,9 @@ const buildPrompt = (request: AIChatRequest): string => {
 
 /**
  * Generate article with the specified AI provider
- * @param request - The AI chat request
- * @param userApiKey - Optional user-provided API key (bypasses pool)
  */
 export const generateArticle = async (
-  request: AIChatRequest,
-  userApiKey?: string
+  request: AIChatRequest
 ): Promise<GenerationResult> => {
   const systemPrompt =
     'You are a creative WeChat editor. Use bright colors (blue, red, gold, purple) in your layouts.';
@@ -276,25 +273,11 @@ export const generateArticle = async (
 
   switch (request.provider) {
     case AIProvider.DEEPSEEK: {
-      // Use user-provided key if available, otherwise get from pool
-      const apiKey = userApiKey || await getApiKeyFromPool(AIProvider.DEEPSEEK);
-      if (userApiKey) {
-        logger.info('Using user-provided API key for DeepSeek');
-      }
-      // Note: callDeepSeekAPI will call releaseApiKey() in finally block
-      // User-provided keys are safe because releaseApiKey() checks isPoolKey()
-      // and only updates stats for keys that are actually in the pool
+      const apiKey = await getApiKeyFromPool(AIProvider.DEEPSEEK);
       return callDeepSeekAPI(apiKey, messages, request.thinkingMode);
     }
     case AIProvider.QWEN: {
-      // Use user-provided key if available, otherwise get from pool
-      const apiKey = userApiKey || await getApiKeyFromPool(AIProvider.QWEN);
-      if (userApiKey) {
-        logger.info('Using user-provided API key for Qwen');
-      }
-      // Note: callQwenAPI will call releaseApiKey() in finally block
-      // User-provided keys are safe because releaseApiKey() checks isPoolKey()
-      // and only updates stats for keys that are actually in the pool
+      const apiKey = await getApiKeyFromPool(AIProvider.QWEN);
       return callQwenAPI(apiKey, messages);
     }
     default:
@@ -305,12 +288,9 @@ export const generateArticle = async (
 /**
  * Parallel AI generation with race strategy
  * Uses Promise.race to return the first successful response
- * @param request - The AI chat request
- * @param userApiKey - Optional user-provided API key (bypasses pool)
  */
 export const generateArticleParallel = async (
-  request: AIChatRequest,
-  userApiKey?: string
+  request: AIChatRequest
 ): Promise<GenerationResult> => {
   logger.info('Starting parallel AI generation');
 
@@ -322,7 +302,7 @@ export const generateArticleParallel = async (
 
   // Primary provider
   promises.push(
-    generateArticle(request, userApiKey).catch((err) => {
+    generateArticle(request).catch((err) => {
       logger.warn(`Primary provider ${primaryProvider} failed`, { error: err.message });
       throw err;
     })
@@ -331,7 +311,7 @@ export const generateArticleParallel = async (
   // Fallback provider
   const fallbackRequest = { ...request, provider: fallbackProvider };
   promises.push(
-    generateArticle(fallbackRequest, userApiKey).catch((err) => {
+    generateArticle(fallbackRequest).catch((err) => {
       logger.warn(`Fallback provider ${fallbackProvider} failed`, { error: err.message });
       throw err;
     })
