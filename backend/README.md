@@ -48,6 +48,11 @@ Key environment variables:
 
 For production deployments with high traffic, you can configure an AI key pool to distribute load across multiple API keys. See [AI_KEY_POOL.md](./AI_KEY_POOL.md) for detailed setup instructions.
 
+**Important**: All API keys are managed by the backend. Users cannot and do not need to provide their own API keys. This ensures:
+- 🔒 **Security**: Centralized key management prevents key leakage
+- 🚀 **Simplicity**: Users focus on content creation, not API configuration
+- 📊 **Control**: Administrators monitor and control API usage costs
+
 Quick setup:
 ```bash
 cd src/config
@@ -90,10 +95,12 @@ npm start
 
 ### AI Generation
 
+**🔒 Note**: All API keys are managed by the backend. Users cannot provide their own API keys for security reasons.
+
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/v1/ai/generate` | Generate article |
-| POST | `/api/v1/ai/chat/stream` | SSE streaming generation |
+| POST | `/api/v1/ai/generate` | Generate article (uses backend key pool) |
+| POST | `/api/v1/ai/chat/stream` | SSE streaming generation (uses backend key pool) |
 | GET | `/api/v1/ai/quota` | Get user quota |
 
 ## Architecture
