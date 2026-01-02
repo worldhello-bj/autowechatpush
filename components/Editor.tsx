@@ -6,8 +6,9 @@ import analytics from '../services/analytics';
 import { 
   GenerationResult
 } from '../services/geminiService';
+// TODO: These helper functions still use frontend APIs temporarily
+// They need backend endpoints to be fully migrated to backend key management
 import { 
-  generateArticleStructureDeepSeek,
   generateTitleSuggestionsDeepSeek,
   generateSummaryDeepSeek,
   expandContentDeepSeek,
@@ -21,7 +22,6 @@ import {
   StyleSuggestion
 } from '../services/deepSeekService';
 import { 
-  generateArticleStructureQwen, 
   analyzeImageQwen, 
   generateSpeechQwen,
   generateTitleSuggestionsQwen,
@@ -36,7 +36,6 @@ import {
   rewriteContentQwen
 } from '../services/qwenService';
 import {
-  generateWithDualAI,
   loadMemory,
   saveMemory,
   AIMemory
