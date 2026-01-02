@@ -281,6 +281,9 @@ export const generateArticle = async (
       if (userApiKey) {
         logger.info('Using user-provided API key for DeepSeek');
       }
+      // Note: callDeepSeekAPI will call releaseApiKey() in finally block
+      // User-provided keys are safe because releaseApiKey() checks isPoolKey()
+      // and only updates stats for keys that are actually in the pool
       return callDeepSeekAPI(apiKey, messages, request.thinkingMode);
     }
     case AIProvider.QWEN: {
@@ -289,6 +292,9 @@ export const generateArticle = async (
       if (userApiKey) {
         logger.info('Using user-provided API key for Qwen');
       }
+      // Note: callQwenAPI will call releaseApiKey() in finally block
+      // User-provided keys are safe because releaseApiKey() checks isPoolKey()
+      // and only updates stats for keys that are actually in the pool
       return callQwenAPI(apiKey, messages);
     }
     default:
