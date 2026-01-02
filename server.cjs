@@ -101,6 +101,44 @@ const wechatProxy = createProxyMiddleware({
 // Use Proxy for WeChat API requests
 app.use('/api/wechat', wechatProxy);
 
+// Backend API base URL - configurable via environment variable
+// IMPORTANT: For Electron apps to work across multiple devices, use public IP or domain name
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://49.232.11.108:3001';
+
+// Proxy Configuration for Backend API
+const backendApiProxy = createProxyMiddleware({
+    target: BACKEND_API_URL,
+    changeOrigin: true,
+    onProxyReq: (proxyReq, req, res) => {
+        console.log(`[Backend Proxy] ➤ ${req.method} ${req.url} -> ${BACKEND_API_URL}${req.url}`);
+    },
+    onProxyRes: (proxyRes, req, res) => {
+        console.log(`[Backend Proxy] ◀ ${proxyRes.statusCode} from ${req.url}`);
+    },
+    onError: (err, req, res) => {
+        console.error(`[Backend Proxy] 🔴 Error:`, err.message);
+        console.error(`[Backend Proxy] 🔴 Failed to connect to backend at ${BACKEND_API_URL}`);
+        console.error(`[Backend Proxy] 🔴 This could be caused by:`);
+        console.error(`[Backend Proxy]    1. Backend server is not running`);
+        console.error(`[Backend Proxy]    2. Incorrect BACKEND_API_URL configuration`);
+        console.error(`[Backend Proxy]    3. Network connectivity issues`);
+        console.error(`[Backend Proxy]    4. Firewall blocking the connection`);
+        
+        if (!res.headersSent) {
+            res.status(502).json({ 
+                error: 'Backend API Unavailable', 
+                details: err.message,
+                suggestion: `Cannot connect to backend server at ${BACKEND_API_URL}. Please check the server is running and accessible.`
+            });
+        }
+    }
+});
+
+// Use Proxy for Backend API requests
+app.use('/api/v1', backendApiProxy);
+
+console.log(`[Server] 📡 Backend API proxy configured: /api/v1/* -> ${BACKEND_API_URL}`);
+
 // Simple backend stitching service
 const sanitizeDataUrl = (value = '') => {
     const trimmed = value.trim();
