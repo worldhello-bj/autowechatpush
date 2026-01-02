@@ -224,6 +224,13 @@ export interface GenerationResult {
   sources: Array<{ title: string; uri: string }>;
 }
 
+// AI Helper response types
+export interface AIHelperResponse {
+  action: string;
+  result: string | string[] | Array<{style: string; preview: string}>;
+  provider: string;
+}
+
 export const aiApi = {
   generate: async (genRequest: GenerationRequest): Promise<ApiResponse<GenerationResult>> => {
     return request<GenerationResult>('/ai/generate', {
@@ -232,12 +239,8 @@ export const aiApi = {
     });
   },
   
-  helper: async (action: string, content: string, provider?: 'deepseek' | 'qwen', options?: Record<string, unknown>): Promise<ApiResponse<{
-    action: string;
-    result: unknown;
-    provider: string;
-  }>> => {
-    return request('/ai/helper', {
+  helper: async (action: string, content: string, provider?: 'deepseek' | 'qwen', options?: Record<string, unknown>): Promise<ApiResponse<AIHelperResponse>> => {
+    return request<AIHelperResponse>('/ai/helper', {
       method: 'POST',
       body: JSON.stringify({ action, content, provider, options }),
     });

@@ -329,6 +329,33 @@ export const getQuota = async (req: Request, res: Response) => {
   });
 };
 
+// Constants for AI helper mappings
+const LANGUAGE_MAP: Record<string, string> = {
+  'en': '英文',
+  'zh': '中文',
+  'ja': '日文',
+  'ko': '韩文',
+  'fr': '法文',
+  'de': '德文',
+  'es': '西班牙文'
+};
+
+const HOOK_STYLE_DESC: Record<string, string> = {
+  'question': '疑问式',
+  'story': '故事式',
+  'statistic': '数据式',
+  'quote': '引用式',
+  'surprising': '惊讶式'
+};
+
+const CTA_TYPE_DESC: Record<string, string> = {
+  'subscribe': '关注订阅',
+  'share': '分享转发',
+  'comment': '评论互动',
+  'action': '行动号召',
+  'reflection': '思考总结'
+};
+
 /**
  * AI Helper Functions
  * POST /api/v1/ai/helper
@@ -398,16 +425,7 @@ export const aiHelper = async (req: Request, res: Response) => {
         
       case 'translateContent':
         const targetLang = options?.targetLanguage || 'en';
-        const langMap: Record<string, string> = {
-          'en': '英文',
-          'zh': '中文',
-          'ja': '日文',
-          'ko': '韩文',
-          'fr': '法文',
-          'de': '德文',
-          'es': '西班牙文'
-        };
-        prompt = `请将以下内容翻译成${langMap[targetLang] || targetLang}：\n\n${content}`;
+        prompt = `请将以下内容翻译成${LANGUAGE_MAP[targetLang] || targetLang}：\n\n${content}`;
         break;
         
       case 'suggestStyles':
@@ -416,26 +434,12 @@ export const aiHelper = async (req: Request, res: Response) => {
         
       case 'generateHook':
         const hookStyle = options?.style || 'question';
-        const styleDesc: Record<string, string> = {
-          'question': '疑问式',
-          'story': '故事式',
-          'statistic': '数据式',
-          'quote': '引用式',
-          'surprising': '惊讶式'
-        };
-        prompt = `请为以下主题生成一个${styleDesc[hookStyle] || '吸引人的'}开场白/引子（Hook），要求能够立即抓住读者注意力。\n\n主题：${content}`;
+        prompt = `请为以下主题生成一个${HOOK_STYLE_DESC[hookStyle] || '吸引人的'}开场白/引子（Hook），要求能够立即抓住读者注意力。\n\n主题：${content}`;
         break;
         
       case 'generateCTA':
         const ctaType = options?.type || 'subscribe';
-        const ctaDesc: Record<string, string> = {
-          'subscribe': '关注订阅',
-          'share': '分享转发',
-          'comment': '评论互动',
-          'action': '行动号召',
-          'reflection': '思考总结'
-        };
-        prompt = `请为以下内容生成一个${ctaDesc[ctaType] || '有效的'}行动号召（CTA），鼓励读者采取行动。\n\n内容主题：${content}`;
+        prompt = `请为以下内容生成一个${CTA_TYPE_DESC[ctaType] || '有效的'}行动号召（CTA），鼓励读者采取行动。\n\n内容主题：${content}`;
         break;
         
       case 'rewriteContent':
@@ -459,7 +463,7 @@ export const aiHelper = async (req: Request, res: Response) => {
     
     // Consume quota if authenticated
     if (req.user) {
-      consumeQuota(req.user.userId, 0.1, 'ai_generation' as any, {
+      consumeQuota(req.user.userId, 0.1, 'ai_generation', {
         action,
         provider: selectedProvider,
         contentLength: content.length,
@@ -472,8 +476,8 @@ export const aiHelper = async (req: Request, res: Response) => {
       // Try to parse JSON from the AI response
       try {
         const textContent = result.blocks.map(b => b.content).join('\n');
-        // Look for JSON array in the response
-        const jsonMatch = textContent.match(/\[[\s\S]*\]/);
+        // Look for JSON array in the response (non-greedy match)
+        const jsonMatch = textContent.match(/\[[\s\S]*?\]/);
         if (jsonMatch) {
           responseData = JSON.parse(jsonMatch[0]);
         } else {
