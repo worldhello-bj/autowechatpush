@@ -58,15 +58,19 @@ export const generate = async (req: Request, res: Response) => {
       }
     }
     
-    // API keys are now managed exclusively by the backend pool
-    // User-provided API keys are no longer accepted for security reasons
+    // Get user-provided API key from headers (optional)
+    // If provided, it will bypass the backend pool
+    const userApiKey = req.headers['x-api-key'] as string | undefined;
+    if (userApiKey) {
+      logger.info('User-provided API key detected, bypassing pool', { requestId: req.requestId });
+    }
     
     let result;
     let usedProvider = request.provider;
     
     try {
-      // Try primary provider (using backend pool only)
-      result = await generateArticle(request);
+      // Try primary provider (using user key if provided, otherwise pool)
+      result = await generateArticle(request, userApiKey);
       logger.info('Primary provider succeeded', { provider: request.provider, requestId: req.requestId });
     } catch (primaryError) {
       const primaryMessage = primaryError instanceof Error ? primaryError.message : 'Unknown error';
@@ -82,7 +86,7 @@ export const generate = async (req: Request, res: Response) => {
       if (fallbackProvider) {
         try {
           const fallbackRequest = { ...request, provider: fallbackProvider };
-          result = await generateArticle(fallbackRequest);
+          result = await generateArticle(fallbackRequest, userApiKey);
           usedProvider = fallbackProvider;
           logger.info('Fallback provider succeeded', { 
             fallbackProvider, 
@@ -179,8 +183,12 @@ export const chatStream = async (req: Request, res: Response) => {
   }, 15000);
   
   try {
-    // Get API key from request headers or use server-side key
+    // Get user-provided API key from headers (optional)
+    // If provided, it will bypass the backend pool
     const userApiKey = req.headers['x-api-key'] as string | undefined;
+    if (userApiKey) {
+      logger.info('User-provided API key detected, bypassing pool', { requestId: req.requestId });
+    }
     
     // Send thinking event if thinking mode is enabled
     if (request.thinkingMode) {
@@ -195,8 +203,8 @@ export const chatStream = async (req: Request, res: Response) => {
     let usedProvider = request.provider;
     
     try {
-      // Try primary provider
-      result = await generateArticle(request);
+      // Try primary provider (using user key if provided, otherwise pool)
+      result = await generateArticle(request, userApiKey);
       logger.info('Primary provider succeeded (stream)', { provider: request.provider, requestId: req.requestId });
     } catch (primaryError) {
       const primaryMessage = primaryError instanceof Error ? primaryError.message : 'Unknown error';
@@ -219,7 +227,7 @@ export const chatStream = async (req: Request, res: Response) => {
       if (fallbackProvider) {
         try {
           const fallbackRequest = { ...request, provider: fallbackProvider };
-          result = await generateArticle(fallbackRequest);
+          result = await generateArticle(fallbackRequest, userApiKey);
           usedProvider = fallbackProvider;
           logger.info('Fallback provider succeeded (stream)', { 
             fallbackProvider, 

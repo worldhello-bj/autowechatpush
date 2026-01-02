@@ -258,9 +258,12 @@ const buildPrompt = (request: AIChatRequest): string => {
 
 /**
  * Generate article with the specified AI provider
+ * @param request - The AI chat request
+ * @param userApiKey - Optional user-provided API key (bypasses pool)
  */
 export const generateArticle = async (
-  request: AIChatRequest
+  request: AIChatRequest,
+  userApiKey?: string
 ): Promise<GenerationResult> => {
   const systemPrompt =
     'You are a creative WeChat editor. Use bright colors (blue, red, gold, purple) in your layouts.';
@@ -273,11 +276,19 @@ export const generateArticle = async (
 
   switch (request.provider) {
     case AIProvider.DEEPSEEK: {
-      const apiKey = await getApiKeyFromPool(AIProvider.DEEPSEEK);
+      // Use user-provided key if available, otherwise get from pool
+      const apiKey = userApiKey || await getApiKeyFromPool(AIProvider.DEEPSEEK);
+      if (userApiKey) {
+        logger.info('Using user-provided API key for DeepSeek');
+      }
       return callDeepSeekAPI(apiKey, messages, request.thinkingMode);
     }
     case AIProvider.QWEN: {
-      const apiKey = await getApiKeyFromPool(AIProvider.QWEN);
+      // Use user-provided key if available, otherwise get from pool
+      const apiKey = userApiKey || await getApiKeyFromPool(AIProvider.QWEN);
+      if (userApiKey) {
+        logger.info('Using user-provided API key for Qwen');
+      }
       return callQwenAPI(apiKey, messages);
     }
     default:
@@ -288,9 +299,12 @@ export const generateArticle = async (
 /**
  * Parallel AI generation with race strategy
  * Uses Promise.race to return the first successful response
+ * @param request - The AI chat request
+ * @param userApiKey - Optional user-provided API key (bypasses pool)
  */
 export const generateArticleParallel = async (
-  request: AIChatRequest
+  request: AIChatRequest,
+  userApiKey?: string
 ): Promise<GenerationResult> => {
   logger.info('Starting parallel AI generation');
 
@@ -302,7 +316,7 @@ export const generateArticleParallel = async (
 
   // Primary provider
   promises.push(
-    generateArticle(request).catch((err) => {
+    generateArticle(request, userApiKey).catch((err) => {
       logger.warn(`Primary provider ${primaryProvider} failed`, { error: err.message });
       throw err;
     })
@@ -311,7 +325,7 @@ export const generateArticleParallel = async (
   // Fallback provider
   const fallbackRequest = { ...request, provider: fallbackProvider };
   promises.push(
-    generateArticle(fallbackRequest).catch((err) => {
+    generateArticle(fallbackRequest, userApiKey).catch((err) => {
       logger.warn(`Fallback provider ${fallbackProvider} failed`, { error: err.message });
       throw err;
     })
