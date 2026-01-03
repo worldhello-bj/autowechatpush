@@ -757,16 +757,14 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
       const mimeType = file.type;
       setUploadedImagePreview(reader.result as string);
 
-      // Analyze if Qwen and feature is available
+      // Image analysis - feature is only available if backend has Qwen configured
+      // UI elements that trigger this are only shown when featuresAvailable.imageAnalysis is true
       if (aiProvider === AIProvider.QWEN && featuresAvailable.imageAnalysis) {
         setAnalyzingImage(true);
         try {
-          // Image analysis now uses backend Qwen keys
-          // TODO: Implement backend endpoint for image analysis
-          // For now, skip analysis as backend endpoint doesn't exist yet
-          onError("图片分析功能暂未实现后端接口。");
-          setAnalyzingImage(false);
-          return;
+          // TODO: Implement backend endpoint for image analysis that uses backend Qwen keys
+          // Backend endpoint should accept base64 image and return analysis
+          onError("图片分析功能暂未实现后端接口，请联系管理员。");
         } catch (err: any) {
           onError("Failed to analyze image: " + err.message);
         } finally {
@@ -839,21 +837,17 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
         return;
     }
 
-    // Check if TTS feature is available
-    if (!featuresAvailable.textToSpeech) {
-      onError("文字转语音功能未配置。请联系管理员配置 Qwen API 密钥。");
-      return;
-    }
-
+    // TTS feature is only available if backend has Qwen configured
+    // This function should only be called when featuresAvailable.textToSpeech is true
+    // (The TTS button is conditionally rendered based on this check)
+    
     try {
       setIsPlaying(true);
       
-      // TTS now uses backend Qwen keys
-      // TODO: Implement backend endpoint for TTS
-      // For now, show error as backend endpoint doesn't exist yet
-      onError("文字转语音功能暂未实现后端接口。");
+      // TODO: Implement backend endpoint for TTS that uses backend Qwen keys
+      // Backend endpoint should accept text and return audio buffer
+      onError("文字转语音功能暂未实现后端接口，请联系管理员。");
       setIsPlaying(false);
-      return;
     } catch (err: any) {
       onError("Failed to generate speech: " + err.message);
       setIsPlaying(false);
