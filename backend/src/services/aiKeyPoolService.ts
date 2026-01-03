@@ -276,7 +276,7 @@ export const isQwenAvailable = (): boolean => {
   }
   
   // Check if there's a fallback environment variable
-  const envKey = config.ai.qwenApiKey || process.env.QWEN_API_KEY;
+  const envKey = config.DASHSCOPE_API_KEY || process.env.DASHSCOPE_API_KEY;
   return !!envKey;
 };
 

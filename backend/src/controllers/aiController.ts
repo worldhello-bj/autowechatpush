@@ -524,8 +524,10 @@ export const getFeaturesAvailability = (req: Request, res: Response): void => {
     sendSuccess(res, {
       features: {
         articleGeneration: configStatus.deepSeekConfigured || configStatus.dashScopeConfigured,
-        imageAnalysis: qwenAvailable,
-        textToSpeech: qwenAvailable,
+        // Image analysis and TTS backend endpoints are not yet implemented
+        // Once implemented, these should check qwenAvailable
+        imageAnalysis: false, // TODO: Implement backend image analysis endpoint
+        textToSpeech: false,  // TODO: Implement backend TTS endpoint
       },
       providers: {
         deepseek: configStatus.deepSeekConfigured,

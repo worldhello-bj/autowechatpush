@@ -103,7 +103,49 @@ app.use('/api/wechat', wechatProxy);
 
 // Backend API base URL - configurable via environment variable
 // IMPORTANT: For Electron apps to work across multiple devices, use public IP or domain name
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://49.232.11.108:3001';
+const NODE_ENV = process.env.NODE_ENV || 'development';
+
+function isLocalhostUrl(urlString) {
+    try {
+        const parsed = new URL(urlString);
+        const hostname = parsed.hostname;
+        return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+    } catch (e) {
+        return false;
+    }
+}
+
+let BACKEND_API_URL = process.env.BACKEND_API_URL;
+
+if (!BACKEND_API_URL) {
+    if (NODE_ENV !== 'production') {
+        // In non-production, default to local backend over HTTP
+        BACKEND_API_URL = 'http://127.0.0.1:3001';
+        console.warn('[Backend Proxy] ⚠ BACKEND_API_URL is not set. Using default local development backend at http://127.0.0.1:3001');
+    } else {
+        // In production, default to the configured backend but warn about security
+        BACKEND_API_URL = 'http://49.232.11.108:3001';
+        console.warn('[Backend Proxy] ⚠ BACKEND_API_URL is not set. Using default backend. For security, please configure HTTPS endpoint.');
+    }
+}
+
+// Security check: Warn if using HTTP in production for non-localhost backends
+if (NODE_ENV === 'production' && /^http:\/\//i.test(BACKEND_API_URL) && !isLocalhostUrl(BACKEND_API_URL)) {
+    console.warn('');
+    console.warn('┌─────────────────────────────────────────────────────────────┐');
+    console.warn('│ ⚠️  SECURITY WARNING                                        │');
+    console.warn('│─────────────────────────────────────────────────────────────│');
+    console.warn('│ Backend API URL uses HTTP (not HTTPS) in production mode   │');
+    console.warn(`│ URL: ${BACKEND_API_URL.padEnd(47)} │`);
+    console.warn('│                                                             │');
+    console.warn('│ This exposes sensitive data (tokens, AI requests) to        │');
+    console.warn('│ network interception and tampering.                         │');
+    console.warn('│                                                             │');
+    console.warn('│ RECOMMENDED: Use HTTPS for production backends              │');
+    console.warn('│ Set BACKEND_API_URL=https://your-backend-domain.com         │');
+    console.warn('└─────────────────────────────────────────────────────────────┘');
+    console.warn('');
+}
 
 // Proxy Configuration for Backend API
 const backendApiProxy = createProxyMiddleware({

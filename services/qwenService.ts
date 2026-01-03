@@ -197,7 +197,7 @@ export const generateArticleStructureQwen = async (
 
 export const analyzeImageQwen = async (base64Image: string, mimeType: string, apiKey: string = ''): Promise<string> => {
     if (!apiKey) {
-        throw new Error("Qwen API key is required for image analysis");
+        throw new Error("Image analysis requires Qwen to be configured on the backend. Please contact your administrator.");
     }
 
     try {
@@ -237,7 +237,7 @@ export const analyzeImageQwen = async (base64Image: string, mimeType: string, ap
 
 export const generateSpeechQwen = async (text: string, apiKey: string = ''): Promise<ArrayBuffer> => {
     if (!apiKey) {
-        throw new Error("Qwen API key is required for text-to-speech");
+        throw new Error("Text-to-speech requires Qwen to be configured on the backend. Please contact your administrator.");
     }
 
     // Using Sambert-zh-v1 via DashScope REST API
