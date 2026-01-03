@@ -14,6 +14,7 @@ import {
   getFeedbackStats,
   updateFeedbackStatus,
   deleteFeedback,
+  getUserById,
 } from '../services/index.js';
 
 const logger = createLogger('feedback');
@@ -31,12 +32,15 @@ export const submitFeedback = async (req: Request, res: Response) => {
     }
 
     const userId = req.user?.userId;
-    const userName = req.user?.email?.split('@')[0] || 'Anonymous';
     const userEmail = req.user?.email || '';
 
     if (!userId) {
       return sendError(res, 401, 'UNAUTHORIZED', 'User not authenticated');
     }
+
+    // Get user's actual name from database
+    const user = getUserById(userId);
+    const userName = user?.name || userEmail.split('@')[0] || 'Anonymous';
 
     logger.info('User submitting feedback', { 
       userId,

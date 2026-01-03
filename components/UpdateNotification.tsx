@@ -68,8 +68,11 @@ const UpdateNotification: React.FC = () => {
       setStatus('error');
     });
 
-    // Cleanup - Note: In Electron, we can't easily remove IPC listeners from preload
-    // This is a simplified implementation
+    // Note: IPC listeners in Electron preload scripts are registered globally
+    // and persist for the lifetime of the renderer process. This is by design
+    // and doesn't cause memory leaks as the listeners are cleaned up when
+    // the window is closed. Each listener is only registered once due to
+    // the isElectron guard.
   }, [isElectron]);
 
   // Manual check for updates

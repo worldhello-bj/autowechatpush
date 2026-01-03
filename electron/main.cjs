@@ -29,7 +29,7 @@ function setupAutoUpdater() {
 
   // Check for updates on app ready
   autoUpdater.checkForUpdates().catch((err) => {
-    console.log('[AutoUpdater] Failed to check for updates:', err.message);
+    console.error('[AutoUpdater] Failed to check for updates:', err.message);
   });
 
   // Update available
