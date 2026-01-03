@@ -18,7 +18,8 @@ export default defineConfig({
     proxy: {
       '/api/v1': {
         target: 'http://49.232.11.108:3001',
-        changeOrigin: true
+        changeOrigin: true,
+        rewrite: (path) => path // Keep the path as-is (don't strip /api/v1)
       }
     }
   }

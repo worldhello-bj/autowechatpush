@@ -155,6 +155,9 @@ if (NODE_ENV === 'production' && /^http:\/\//i.test(BACKEND_API_URL) && !isLocal
 const backendApiProxy = createProxyMiddleware({
     target: BACKEND_API_URL,
     changeOrigin: true,
+    pathRewrite: {
+        '^/api/v1': '/api/v1', // Keep the path as-is (don't strip /api/v1)
+    },
     onProxyReq: (proxyReq, req, res) => {
         console.log(`[Backend Proxy] ➤ ${req.method} ${req.url} -> ${BACKEND_API_URL}${req.url}`);
     },
