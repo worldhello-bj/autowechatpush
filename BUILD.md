@@ -185,10 +185,8 @@ npm run build
       "dist/**/*",
       "electron/**/*",
       "server.cjs",
-      "package.json"
-    ],
-    "asarUnpack": [
-      "node_modules/electron-updater/**/*"
+      "package.json",
+      "node_modules/**/*"
     ],
     "win": {
       "target": ["nsis", "portable"]
@@ -202,12 +200,9 @@ npm run build
 - `electron/` - Electron 主进程文件
 - `server.cjs` - 内置代理服务器
 - `package.json` - 应用元数据
-- `node_modules/electron-updater` - 自动更新模块（从 asar 中解包）
+- `node_modules/` - 应用依赖（包括 electron-updater 等运行时所需模块）
 
-**关于 asarUnpack：**
-- `electron-updater` 模块包含原生代码和运行时依赖，不能直接在 asar 归档中运行
-- `asarUnpack` 配置确保该模块在打包时从 asar 中解包到单独的目录
-- 这是解决 "Cannot find module 'electron-updater'" 错误的标准方案
+**注意：** `files` 数组必须包含 `node_modules/**/*`，否则 electron-builder 不会打包运行时依赖，导致 "Cannot find module" 错误。
 
 ## 应用图标
 
@@ -330,30 +325,39 @@ A: 可以。需要做以下修改：
 
 A: 确保 Electron 文件使用 `.cjs` 扩展名。本项目使用 ES modules (`"type": "module"`)，但 Electron 主进程需要 CommonJS。
 
-### Q: 出现 "Cannot find module 'electron-updater'" 错误？
+### Q: 出现 "Cannot find module 'electron-updater'" 或其他模块未找到错误？
 
-A: 这个错误表示 `electron-updater` 模块在打包后的应用中找不到。解决方案：
+A: 这通常是因为 `package.json` 的 `build.files` 配置没有包含 `node_modules`，导致打包时依赖模块没有被包含进去。
 
-1. **确认依赖已安装：**
-   ```bash
-   npm list electron-updater
-   ```
-   应该显示 `electron-updater@6.x.x`
+**解决方案：**
 
-2. **确认 package.json 配置正确：**
-   - `electron-updater` 必须在 `dependencies` 中（不是 `devDependencies`）
-   - `build.asarUnpack` 中必须包含 `"node_modules/electron-updater/**/*"`
+确保 `package.json` 的 `build.files` 数组包含 `"node_modules/**/*"`：
 
-3. **重新安装并打包：**
-   ```bash
-   npm install
-   npm run electron:build:win
-   ```
+```json
+{
+  "build": {
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "server.cjs",
+      "package.json",
+      "node_modules/**/*"  // 必须包含这一行
+    ]
+  }
+}
+```
+
+**重新打包：**
+```bash
+npm install
+npm run electron:build:win
+```
 
 **技术说明：**
-- `electron-updater` 包含原生模块，不能直接在 asar 归档中运行
-- `asarUnpack` 配置让 electron-builder 将该模块解包到单独目录
-- 这样应用运行时就能正确加载该模块
+- electron-builder 默认会自动包含 `package.json` 中的依赖
+- 但当你显式配置 `files` 数组时，必须手动包含 `node_modules`
+- 大多数 npm 模块（包括 electron-updater）都是纯 JavaScript，可以正常在 asar 归档中运行
+- 只有极少数包含原生扩展（如 sqlite3）的模块才需要使用 `asarUnpack` 配置
 
 ### Q: 打包时出现 "Electron Builder" 错误？
 

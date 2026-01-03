@@ -60,10 +60,8 @@
       "dist/**/*",
       "electron/**/*",
       "server.cjs",
-      "package.json"
-    ],
-    "asarUnpack": [
-      "node_modules/electron-updater/**/*"
+      "package.json",
+      "node_modules/**/*"
     ],
     "extraResources": [
       {
