@@ -55,6 +55,11 @@ export const submitFeedback = async (req: Request, res: Response) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to submit feedback';
     logger.error('Failed to submit feedback', { error: message, requestId: req.requestId });
+    
+    // Return appropriate status codes based on error type
+    if (message.includes('validation') || message.includes('invalid')) {
+      return sendError(res, 400, 'VALIDATION_ERROR', message);
+    }
     sendError(res, 500, 'SUBMIT_FEEDBACK_FAILED', message);
   }
 };
@@ -78,6 +83,14 @@ export const getMyFeedbacks = async (req: Request, res: Response) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to get feedbacks';
     logger.error('Failed to get user feedbacks', { error: message, requestId: req.requestId });
+    
+    // Return appropriate status codes based on error type
+    if (message.includes('not found')) {
+      return sendError(res, 404, 'NOT_FOUND', message);
+    }
+    if (message.includes('validation') || message.includes('invalid')) {
+      return sendError(res, 400, 'VALIDATION_ERROR', message);
+    }
     sendError(res, 500, 'GET_FEEDBACKS_FAILED', message);
   }
 };
@@ -107,6 +120,14 @@ export const getFeedback = async (req: Request, res: Response) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to get feedback';
     logger.error('Failed to get feedback', { error: message, requestId: req.requestId });
+    
+    // Return appropriate status codes based on error type
+    if (message.includes('not found')) {
+      return sendError(res, 404, 'FEEDBACK_NOT_FOUND', message);
+    }
+    if (message.includes('validation') || message.includes('invalid')) {
+      return sendError(res, 400, 'VALIDATION_ERROR', message);
+    }
     sendError(res, 500, 'GET_FEEDBACK_FAILED', message);
   }
 };
@@ -136,6 +157,11 @@ export const listAllFeedbacks = async (req: Request, res: Response) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to list feedbacks';
     logger.error('Failed to list feedbacks', { error: message, requestId: req.requestId });
+    
+    // Return appropriate status codes based on error type
+    if (message.includes('validation') || message.includes('invalid')) {
+      return sendError(res, 400, 'VALIDATION_ERROR', message);
+    }
     sendError(res, 500, 'LIST_FEEDBACKS_FAILED', message);
   }
 };
@@ -187,6 +213,14 @@ export const updateFeedback = async (req: Request, res: Response) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to update feedback';
     logger.error('Failed to update feedback', { error: message, requestId: req.requestId });
+    
+    // Return appropriate status codes based on error type
+    if (message.includes('not found')) {
+      return sendError(res, 404, 'FEEDBACK_NOT_FOUND', message);
+    }
+    if (message.includes('validation') || message.includes('invalid')) {
+      return sendError(res, 400, 'VALIDATION_ERROR', message);
+    }
     sendError(res, 500, 'UPDATE_FEEDBACK_FAILED', message);
   }
 };
@@ -215,6 +249,14 @@ export const removeFeedback = async (req: Request, res: Response) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to delete feedback';
     logger.error('Failed to delete feedback', { error: message, requestId: req.requestId });
+    
+    // Return appropriate status codes based on error type
+    if (message.includes('not found')) {
+      return sendError(res, 404, 'FEEDBACK_NOT_FOUND', message);
+    }
+    if (message.includes('validation') || message.includes('invalid')) {
+      return sendError(res, 400, 'VALIDATION_ERROR', message);
+    }
     sendError(res, 500, 'DELETE_FEEDBACK_FAILED', message);
   }
 };
