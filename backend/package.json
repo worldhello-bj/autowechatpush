@@ -6,7 +6,8 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && npm run copy-config",
+    "copy-config": "node scripts/copy-config.cjs",
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts"
   },

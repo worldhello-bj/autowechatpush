@@ -10,8 +10,16 @@ const logger = createLogger('ai-key-pool');
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Path to the key pool configuration file
-const KEY_POOL_PATH = path.join(__dirname, '../config/aikeys.json');
+// Paths to check for the key pool configuration file (in priority order)
+// 1. Source config directory (for development: src/config/aikeys.json)
+// 2. Project root config (for deployment: ../config/aikeys.json relative to backend)
+// 3. Dist config directory (for compiled code: dist/config/aikeys.json)
+const KEY_POOL_PATHS = [
+  path.join(process.cwd(), 'src', 'config', 'aikeys.json'),
+  path.join(__dirname, '../../config/aikeys.json'),
+  path.join(__dirname, '../config/aikeys.json'),
+];
+
 const KEY_POOL_EXAMPLE_PATH = path.join(__dirname, '../config/aikeys.example.json');
 
 // In-memory key pool and usage statistics
@@ -48,12 +56,43 @@ const maskApiKey = (key: string): string => {
 };
 
 /**
+ * Find and return the first existing key pool file path
+ */
+const findKeyPoolPath = async (): Promise<string | null> => {
+  for (const filePath of KEY_POOL_PATHS) {
+    try {
+      await fs.access(filePath);
+      logger.info('Found key pool file', { path: filePath });
+      return filePath;
+    } catch {
+      // File doesn't exist, try next path
+    }
+  }
+  return null;
+};
+
+/**
  * Load key pool from JSON file
  */
 export const loadKeyPool = async (): Promise<void> => {
   try {
+    // Find the key pool file from multiple possible locations
+    const keyPoolPath = await findKeyPoolPath();
+    
+    if (!keyPoolPath) {
+      logger.warn('Key pool file not found in any location, using environment variables as fallback', {
+        searchedPaths: KEY_POOL_PATHS,
+      });
+      // Create empty pool, will fall back to environment variables
+      keyPool = {
+        deepseek: [],
+        qwen: [],
+      };
+      return;
+    }
+    
     // Try to load the actual key pool file
-    const data = await fs.readFile(KEY_POOL_PATH, 'utf-8');
+    const data = await fs.readFile(keyPoolPath, 'utf-8');
     keyPool = JSON.parse(data) as AIKeyPoolConfig;
     
     // Initialize usage stats for all keys
@@ -64,21 +103,17 @@ export const loadKeyPool = async (): Promise<void> => {
     });
     
     logger.info('Key pool loaded successfully', {
+      path: keyPoolPath,
       deepseekKeys: keyPool.deepseek.length,
       qwenKeys: keyPool.qwen.length,
     });
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      logger.warn('Key pool file not found, using environment variables as fallback');
-      // Create empty pool, will fall back to environment variables
-      keyPool = {
-        deepseek: [],
-        qwen: [],
-      };
-    } else {
-      logger.error('Failed to load key pool', { error });
-      throw error;
-    }
+    logger.error('Failed to load key pool', { error });
+    // Don't throw, fall back to environment variables
+    keyPool = {
+      deepseek: [],
+      qwen: [],
+    };
   }
 };
 
@@ -87,13 +122,20 @@ export const loadKeyPool = async (): Promise<void> => {
  */
 export const saveKeyPool = async (): Promise<void> => {
   try {
+    // Find existing key pool path or use the first priority path
+    let savePath = await findKeyPoolPath();
+    if (!savePath) {
+      // If no existing file, save to backend/src/config/aikeys.json (first priority)
+      savePath = KEY_POOL_PATHS[0];
+    }
+    
     // Ensure config directory exists
-    const configDir = path.dirname(KEY_POOL_PATH);
+    const configDir = path.dirname(savePath);
     await fs.mkdir(configDir, { recursive: true });
     
     // Write the key pool to file
-    await fs.writeFile(KEY_POOL_PATH, JSON.stringify(keyPool, null, 2), 'utf-8');
-    logger.info('Key pool saved successfully');
+    await fs.writeFile(savePath, JSON.stringify(keyPool, null, 2), 'utf-8');
+    logger.info('Key pool saved successfully', { path: savePath });
   } catch (error) {
     logger.error('Failed to save key pool', { error });
     throw error;

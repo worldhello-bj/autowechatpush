@@ -172,10 +172,19 @@ DASHSCOPE_API_KEY=您的通义千问密钥
 对于需要支持高并发的生产环境，可以配置多个 API 密钥实现负载均衡：
 
 ```bash
-cd backend/src/config
+# 在后端源码目录创建配置文件
+cd /opt/wechat-ai-publisher/backend/src/config
 cp aikeys.example.json aikeys.json
+
 # 编辑 aikeys.json，添加多个密钥
+nano aikeys.json
 ```
+
+**重要说明**：
+- 配置文件在 `backend/src/config/aikeys.json`
+- 构建时会自动复制到 `dist/config/` 目录
+- 运行时优先从源码目录加载，保证配置可随时更新
+- 如果不配置密钥池，系统会回退使用环境变量中的密钥
 
 详见 [backend/AI_KEY_POOL.md](./backend/AI_KEY_POOL.md)。
 
