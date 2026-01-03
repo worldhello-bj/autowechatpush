@@ -225,6 +225,7 @@ export const loggers = {
   deepseek: createLogger('DeepSeek'),
   qwen: createLogger('Qwen'),
   dualAI: createLogger('DualAI'),
+  backendAI: createLogger('BackendAI'),
   editor: createLogger('Editor'),
   material: createLogger('Material'),
   design: createLogger('Design'),

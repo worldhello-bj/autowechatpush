@@ -4,6 +4,7 @@ import { GenerationResult } from "./geminiService";
 import { loggers } from './logger';
 import { safeParseJSON } from './jsonParser';
 import { loadPrompts, interpolatePrompt } from './promptConfig';
+import { generateArticleViaBackend, callAIHelper } from './backendAIClient';
 
 const logger = loggers.deepseek;
 
@@ -404,177 +405,39 @@ export const generateArticleStructureDeepSeek = async (
   isFormattingMode: boolean = false,
   useReasonerMode?: boolean
 ): Promise<GenerationResult> => {
-  if (!apiKey) {
-    throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
+  // API keys are no longer accepted from frontend for security reasons
+  // All AI requests are now proxied through the backend
+  if (apiKey && apiKey.trim() !== '') {
+    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
   }
-
-  // Check if multi-round layout mode is enabled
-  if (multiRoundLayoutModeEnabled) {
-    return await generateArticleMultiRoundLayout(input, apiKey, isFormattingMode, useReasonerMode);
-  }
-
+  
+  // Import backend client dynamically to avoid circular dependencies
+  const { generateArticleViaBackend } = await import('./backendAIClient.js');
+  
   // Determine whether to use thinking mode
   const useThinking = useReasonerMode !== undefined ? useReasonerMode : thinkingModeEnabled;
   
-  logger.info(`Using DeepSeek with thinking mode: ${useThinking}`);
-
-  // Load custom prompts
-  const prompts = loadPrompts();
-
-  let prompt = "";
-  let systemPrompt = prompts.systemPrompt;
-  
-  if (isFormattingMode) {
-    prompt = interpolatePrompt(prompts.formattingPrompt, { input });
-
-  } else {
-    prompt = interpolatePrompt(prompts.generationPrompt, { topic: input });
-  }
+  logger.info(`Using DeepSeek via backend with thinking mode: ${useThinking}`, { multiRound: multiRoundLayoutModeEnabled });
 
   try {
-    // Initialize messages array
-    const messages: any[] = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: prompt }
-    ];
-
-    let subTurn = 1;
-    const maxSubTurns = 10; // Fixed limit for tool calling iterations
+    // Call backend AI service instead of direct API
+    const result = await generateArticleViaBackend({
+      message: input,
+      provider: 'deepseek',
+      useSearch: false,
+      isFormattingMode,
+      thinkingMode: useThinking,
+      multiRoundMode: multiRoundLayoutModeEnabled,
+    });
     
-    while (subTurn <= maxSubTurns) {
-      logger.info(`DeepSeek API call - Sub-turn ${subTurn}/${maxSubTurns}`);
-      
-      const data = await makeDeepSeekRequest(apiKey, messages, useThinking);
-      
-      // Log the raw API response
-      logger.group(`DeepSeek API Response (Sub-turn ${subTurn})`, true);
-      logger.debug('Raw response:', data);
-      logger.groupEnd();
-      
-      const choice = data.choices?.[0];
-      const message = choice?.message;
-      
-      if (!message) {
-        throw new Error("No message in API response");
-      }
-
-      // Log reasoning content if available (specific to thinking mode)
-      if (message.reasoning_content) {
-        logger.group('DeepSeek Reasoning', true);
-        logger.debug('Reasoning content:', message.reasoning_content);
-        logger.groupEnd();
-      }
-
-      // Append the assistant message to maintain conversation context
-      // This includes reasoning_content which needs to be passed back in thinking mode
-      messages.push(message);
-
-      const toolCalls = message.tool_calls;
-      
-      // If there are no tool calls, the model has given a final answer
-      if (!toolCalls || toolCalls.length === 0) {
-        // Check if we got the layout_article function call in any previous turn
-        // In this case, the final message might just be content without tool calls
-        logger.info('No more tool calls, processing final response');
-        
-        // Look for the layout_article tool call in the conversation
-        for (let i = messages.length - 1; i >= 0; i--) {
-          const msg = messages[i];
-          if (msg.role === 'assistant' && msg.tool_calls) {
-            for (const tc of msg.tool_calls) {
-              if (tc.function?.name === 'layout_article') {
-                // Found it! Parse and return
-                let args;
-                try {
-                  args = safeParseJSON(tc.function.arguments, logger);
-                } catch (parseError) {
-                  logger.error('Failed to parse AI response JSON:', parseError);
-                  logger.error('Raw arguments:', tc.function.arguments);
-                  throw new Error(`Failed to parse AI response: ${parseError}`);
-                }
-                
-                logger.group('Generated Article', true);
-                logger.info('Title:', args.title);
-                logger.info('Digest:', args.digest);
-                logger.info('Blocks count:', args.blocks?.length || 0);
-                logger.debug('Blocks detail:', args.blocks);
-                logger.groupEnd();
-                
-                const blocks = (args.blocks || []).map((b: any, index: number) => ({
-                  id: `ds-${Date.now()}-${index}`,
-                  ...b
-                }));
-
-                return {
-                  title: args.title || "Untitled Article",
-                  digest: args.digest || "No summary available.",
-                  blocks,
-                  sources: []
-                };
-              }
-            }
-          }
-        }
-        
-        // If we reach here without finding layout_article, the generation failed
-        throw new Error("DeepSeek failed to generate structured content. Please try again.");
-      }
-
-      // Process tool calls
-      for (const toolCall of toolCalls) {
-        const functionName = toolCall.function?.name;
-        const functionArgs = toolCall.function?.arguments;
-        
-        logger.info(`Tool call: ${functionName}`);
-        
-        if (functionName === 'layout_article') {
-          // This is our target function - parse and return the result
-          let args;
-          try {
-            args = safeParseJSON(functionArgs, logger);
-          } catch (parseError) {
-            logger.error('Failed to parse AI response JSON:', parseError);
-            logger.error('Raw arguments:', functionArgs);
-            throw new Error(`Failed to parse AI response: ${parseError}`);
-          }
-          
-          // Log generated content
-          logger.group('Generated Article', true);
-          logger.info('Title:', args.title);
-          logger.info('Digest:', args.digest);
-          logger.info('Blocks count:', args.blocks?.length || 0);
-          logger.debug('Blocks detail:', args.blocks);
-          logger.groupEnd();
-          
-          const blocks = (args.blocks || []).map((b: any, index: number) => ({
-            id: `ds-${Date.now()}-${index}`,
-            ...b
-          }));
-
-          return {
-            title: args.title || "Untitled Article",
-            digest: args.digest || "No summary available.",
-            blocks,
-            sources: []
-          };
-        } else {
-          // For other tool calls, provide a helpful response to guide the AI back to the main task
-          logger.warn(`Unexpected tool call: ${functionName}, guiding AI back to main task`);
-          messages.push({
-            role: "tool",
-            tool_call_id: toolCall.id,
-            content: `This tool (${functionName}) is not available. Please use the 'layout_article' function to generate the article structure directly.`
-          });
-        }
-      }
-      
-      subTurn++;
-    }
-
-    throw new Error("DeepSeek exceeded maximum sub-turns without generating content.");
-
+    logger.info('Backend AI service completed', {
+      title: result.title,
+      blocksCount: result.blocks?.length || 0
+    });
+    
+    return result;
   } catch (error) {
-    logger.error("DeepSeek generation failed:", error);
+    logger.error("DeepSeek generation via backend failed:", error);
     throw error;
   }
 };
@@ -644,36 +507,23 @@ export const generateTitleSuggestionsDeepSeek = async (
   count: number = 5,
   apiKey: string = ''
 ): Promise<string[]> => {
-  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
+  // API keys are no longer accepted from frontend
+  if (apiKey && apiKey.trim() !== '') {
+    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
+  }
 
   try {
-    const text = await callDeepSeekAPI(apiKey, [
-      { role: "system", content: "You are a creative content writer specializing in catchy headlines." },
-      { role: "user", content: `
-        Based on the following article content, generate ${count} attractive and engaging title suggestions suitable for a WeChat Official Account article.
-        
-        Requirements:
-        - Each title should be unique and capture different angles of the content
-        - Titles should be catchy, clickable, and suitable for Chinese social media
-        - Include a mix of styles: informative, emotional, question-based, and surprising
-        - Keep titles concise (preferably under 30 characters)
-        
-        Article Content:
-        """
-        ${content.slice(0, 2000)}
-        """
-        
-        Return ONLY a JSON array of title strings, like: ["Title 1", "Title 2", ...]
-      ` }
-    ], 0.8);
-
-    const match = text.match(/\[[\s\S]*\]/);
-    if (match) {
-      return JSON.parse(match[0]);
-    }
-    return [];
+    const result = await callAIHelper({
+      action: 'generateTitles',
+      content,
+      provider: 'deepseek',
+      options: { count }
+    });
+    
+    // Result should be an array of strings
+    return Array.isArray(result) ? result : [];
   } catch (error) {
-    console.error("DeepSeek title generation failed:", error);
+    logger.error("DeepSeek title generation via backend failed:", error);
     throw error;
   }
 };
@@ -686,33 +536,22 @@ export const generateSummaryDeepSeek = async (
   maxLength: number = 120,
   apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
+  // API keys are no longer accepted from frontend
+  if (apiKey && apiKey.trim() !== '') {
+    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
+  }
 
   try {
-    const text = await callDeepSeekAPI(apiKey, [
-      { role: "system", content: "You are an expert at creating concise, compelling article summaries." },
-      { role: "user", content: `
-        Generate a concise and engaging summary for the following article content.
-        The summary should be suitable as a WeChat article digest/description.
-        
-        Requirements:
-        - Maximum ${maxLength} characters
-        - Capture the main essence of the article
-        - Make it compelling to encourage readers to click
-        - Write in the same language as the content
-        
-        Article Content:
-        """
-        ${content.slice(0, 3000)}
-        """
-        
-        Return ONLY the summary text, nothing else.
-      ` }
-    ], 0.5);
-
-    return text.trim();
+    const result = await callAIHelper({
+      action: 'generateSummary',
+      content,
+      provider: 'deepseek',
+      options: { maxLength }
+    });
+    
+    return typeof result === 'string' ? result : '';
   } catch (error) {
-    console.error("DeepSeek summary generation failed:", error);
+    logger.error("DeepSeek summary generation via backend failed:", error);
     throw error;
   }
 };
@@ -725,40 +564,22 @@ export const expandContentDeepSeek = async (
   style: 'detailed' | 'examples' | 'storytelling' = 'detailed',
   apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
-
-  const stylePrompts = {
-    detailed: 'Add more detailed explanations, facts, and depth to the content.',
-    examples: 'Expand with concrete examples, case studies, and practical applications.',
-    storytelling: 'Expand using storytelling techniques, anecdotes, and narrative elements.'
-  };
+  // API keys are no longer accepted from frontend
+  if (apiKey && apiKey.trim() !== '') {
+    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
+  }
 
   try {
-    const text = await callDeepSeekAPI(apiKey, [
-      { role: "system", content: "You are a skilled content writer who excels at expanding ideas." },
-      { role: "user", content: `
-        Expand the following content while maintaining its core message and tone.
-        
-        Expansion Style: ${stylePrompts[style]}
-        
-        Original Content:
-        """
-        ${content}
-        """
-        
-        Requirements:
-        - Expand to approximately 2-3x the original length
-        - Maintain the original voice and style
-        - Add valuable information, not just filler
-        - Keep it suitable for a WeChat article
-        
-        Return ONLY the expanded content, nothing else.
-      ` }
-    ], 0.7);
-
-    return text.trim() || content;
+    const result = await callAIHelper({
+      action: 'expandContent',
+      content,
+      provider: 'deepseek',
+      options: { style }
+    });
+    
+    return typeof result === 'string' ? result : content;
   } catch (error) {
-    console.error("DeepSeek content expansion failed:", error);
+    logger.error("DeepSeek content expansion via backend failed:", error);
     throw error;
   }
 };
@@ -771,40 +592,22 @@ export const polishContentDeepSeek = async (
   tone: 'professional' | 'casual' | 'formal' | 'creative' = 'professional',
   apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
-
-  const toneDescriptions = {
-    professional: 'professional, clear, and authoritative',
-    casual: 'friendly, conversational, and approachable',
-    formal: 'formal, academic, and scholarly',
-    creative: 'creative, vivid, and engaging with literary flair'
-  };
+  // API keys are no longer accepted from frontend
+  if (apiKey && apiKey.trim() !== '') {
+    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
+  }
 
   try {
-    const text = await callDeepSeekAPI(apiKey, [
-      { role: "system", content: "You are an expert editor skilled at polishing and improving content." },
-      { role: "user", content: `
-        Polish and improve the following content while making it sound more ${toneDescriptions[tone]}.
-        
-        Original Content:
-        """
-        ${content}
-        """
-        
-        Requirements:
-        - Fix any grammar or spelling errors
-        - Improve sentence structure and flow
-        - Enhance word choice for better impact
-        - Maintain the original meaning
-        - Keep approximately the same length
-        
-        Return ONLY the polished content, nothing else.
-      ` }
-    ], 0.5);
-
-    return text.trim() || content;
+    const result = await callAIHelper({
+      action: 'polishContent',
+      content,
+      provider: 'deepseek',
+      options: { tone }
+    });
+    
+    return typeof result === 'string' ? result : content;
   } catch (error) {
-    console.error("DeepSeek content polish failed:", error);
+    logger.error("DeepSeek content polish via backend failed:", error);
     throw error;
   }
 };
@@ -817,36 +620,22 @@ export const extractKeywordsDeepSeek = async (
   count: number = 10,
   apiKey: string = ''
 ): Promise<string[]> => {
-  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
+  // API keys are no longer accepted from frontend
+  if (apiKey && apiKey.trim() !== '') {
+    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
+  }
 
   try {
-    const text = await callDeepSeekAPI(apiKey, [
-      { role: "system", content: "You are an SEO expert skilled at identifying key terms and phrases." },
-      { role: "user", content: `
-        Extract the ${count} most important keywords or key phrases from the following content.
-        These keywords should be useful for SEO and content tagging.
-        
-        Content:
-        """
-        ${content.slice(0, 3000)}
-        """
-        
-        Requirements:
-        - Include both single words and short phrases
-        - Focus on topics, themes, and important concepts
-        - Prioritize by relevance and search potential
-        
-        Return ONLY a JSON array of keyword strings, like: ["keyword1", "keyword2", ...]
-      ` }
-    ], 0.3);
-
-    const match = text.match(/\[[\s\S]*\]/);
-    if (match) {
-      return JSON.parse(match[0]);
-    }
-    return [];
+    const result = await callAIHelper({
+      action: 'extractKeywords',
+      content,
+      provider: 'deepseek',
+      options: { count }
+    });
+    
+    return Array.isArray(result) ? result : [];
   } catch (error) {
-    console.error("DeepSeek keyword extraction failed:", error);
+    logger.error("DeepSeek keyword extraction via backend failed:", error);
     throw error;
   }
 };
@@ -859,34 +648,22 @@ export const translateContentDeepSeek = async (
   targetLanguage: 'zh' | 'en',
   apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
-
-  const targetLangName = targetLanguage === 'zh' ? 'Chinese (Simplified)' : 'English';
+  // API keys are no longer accepted from frontend
+  if (apiKey && apiKey.trim() !== '') {
+    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
+  }
 
   try {
-    const text = await callDeepSeekAPI(apiKey, [
-      { role: "system", content: "You are an expert translator fluent in both Chinese and English." },
-      { role: "user", content: `
-        Translate the following content to ${targetLangName}.
-        
-        Content:
-        """
-        ${content}
-        """
-        
-        Requirements:
-        - Provide a natural, fluent translation
-        - Maintain the original tone and style
-        - Preserve any formatting markers if present
-        - Adapt idioms and expressions appropriately
-        
-        Return ONLY the translated content, nothing else.
-      ` }
-    ], 0.3);
-
-    return text.trim() || content;
+    const result = await callAIHelper({
+      action: 'translateContent',
+      content,
+      provider: 'deepseek',
+      options: { targetLanguage }
+    });
+    
+    return typeof result === 'string' ? result : content;
   } catch (error) {
-    console.error("DeepSeek translation failed:", error);
+    logger.error("DeepSeek translation via backend failed:", error);
     throw error;
   }
 };
@@ -905,39 +682,21 @@ export const suggestStylesDeepSeek = async (
   content: string,
   apiKey: string = ''
 ): Promise<StyleSuggestion[]> => {
-  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
+  // API keys are no longer accepted from frontend
+  if (apiKey && apiKey.trim() !== '') {
+    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
+  }
 
   try {
-    const text = await callDeepSeekAPI(apiKey, [
-      { role: "system", content: "You are a design expert skilled at visual styling for articles." },
-      { role: "user", content: `
-        Analyze the following article content and suggest appropriate visual styles for a WeChat article.
-        
-        Content:
-        """
-        ${content.slice(0, 2000)}
-        """
-        
-        Return a JSON array with 3 style suggestions. Each suggestion should have:
-        - style: The main style name (e.g., "professional", "playful", "elegant", "tech", "nature")
-        - reason: Brief explanation of why this style fits
-        - colorScheme: Array of 3-4 recommended colors (use names like "blue", "red", "gold", etc.)
-        - mood: The overall mood this style conveys
-        
-        Available colors: red, blue, purple, orange, gold, green, pink, cyan, gradient
-        
-        Return ONLY a valid JSON array like:
-        [{"style": "...", "reason": "...", "colorScheme": ["...", "..."], "mood": "..."}, ...]
-      ` }
-    ], 0.6);
-
-    const match = text.match(/\[[\s\S]*\]/);
-    if (match) {
-      return JSON.parse(match[0]);
-    }
-    return [];
+    const result = await callAIHelper({
+      action: 'suggestStyles',
+      content,
+      provider: 'deepseek'
+    });
+    
+    return Array.isArray(result) ? result : [];
   } catch (error) {
-    console.error("DeepSeek style suggestion failed:", error);
+    logger.error("DeepSeek style suggestion via backend failed:", error);
     throw error;
   }
 };
@@ -950,37 +709,22 @@ export const generateHookDeepSeek = async (
   style: 'question' | 'story' | 'statistic' | 'quote' | 'surprising' = 'question',
   apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
-
-  const styleDescriptions = {
-    question: 'Start with a thought-provoking question that engages the reader',
-    story: 'Begin with a short, compelling anecdote or mini-story',
-    statistic: 'Open with a surprising or impactful statistic or fact',
-    quote: 'Start with an inspiring or relevant quote',
-    surprising: 'Begin with a surprising or counterintuitive statement'
-  };
+  // API keys are no longer accepted from frontend
+  if (apiKey && apiKey.trim() !== '') {
+    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
+  }
 
   try {
-    const text = await callDeepSeekAPI(apiKey, [
-      { role: "system", content: "You are a creative writer skilled at writing engaging article openings." },
-      { role: "user", content: `
-        Generate an engaging article opening/hook for an article about: "${topic}"
-        
-        Style: ${styleDescriptions[style]}
-        
-        Requirements:
-        - Keep it concise (2-4 sentences)
-        - Make it immediately captivating
-        - Create curiosity to continue reading
-        - Suitable for WeChat article audience
-        
-        Return ONLY the opening paragraph, nothing else.
-      ` }
-    ], 0.8);
-
-    return text.trim();
+    const result = await callAIHelper({
+      action: 'generateHook',
+      content: topic,
+      provider: 'deepseek',
+      options: { style }
+    });
+    
+    return typeof result === 'string' ? result : '';
   } catch (error) {
-    console.error("DeepSeek hook generation failed:", error);
+    logger.error("DeepSeek hook generation via backend failed:", error);
     throw error;
   }
 };
@@ -993,40 +737,22 @@ export const generateCTADeepSeek = async (
   ctaType: 'subscribe' | 'share' | 'comment' | 'action' | 'reflection' = 'share',
   apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
-
-  const ctaDescriptions = {
-    subscribe: 'Encourage readers to follow/subscribe to the account',
-    share: 'Encourage readers to share the article with others',
-    comment: 'Encourage readers to leave comments and engage in discussion',
-    action: 'Encourage readers to take a specific action related to the content',
-    reflection: 'End with a reflective thought or question for the reader to ponder'
-  };
+  // API keys are no longer accepted from frontend
+  if (apiKey && apiKey.trim() !== '') {
+    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
+  }
 
   try {
-    const text = await callDeepSeekAPI(apiKey, [
-      { role: "system", content: "You are a marketing expert skilled at writing compelling calls-to-action." },
-      { role: "user", content: `
-        Generate a compelling call-to-action ending for an article with this context:
-        """
-        ${articleContext.slice(0, 1000)}
-        """
-        
-        CTA Type: ${ctaDescriptions[ctaType]}
-        
-        Requirements:
-        - Keep it natural and not too salesy
-        - Make it relevant to the article content
-        - Be warm and engaging
-        - 2-3 sentences maximum
-        
-        Return ONLY the CTA text, nothing else.
-      ` }
-    ], 0.7);
-
-    return text.trim();
+    const result = await callAIHelper({
+      action: 'generateCTA',
+      content: articleContext,
+      provider: 'deepseek',
+      options: { type: ctaType }
+    });
+    
+    return typeof result === 'string' ? result : '';
   } catch (error) {
-    console.error("DeepSeek CTA generation failed:", error);
+    logger.error("DeepSeek CTA generation via backend failed:", error);
     throw error;
   }
 };
@@ -1039,40 +765,22 @@ export const rewriteContentDeepSeek = async (
   newStyle: 'humorous' | 'serious' | 'inspirational' | 'educational' | 'conversational',
   apiKey: string = ''
 ): Promise<string> => {
-  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
-
-  const styleDescriptions = {
-    humorous: 'witty, playful, with appropriate humor and light-hearted tone',
-    serious: 'serious, thoughtful, with gravitas and depth',
-    inspirational: 'uplifting, motivational, with emotional resonance',
-    educational: 'informative, clear, with structured explanations',
-    conversational: 'friendly, casual, as if talking to a friend'
-  };
+  // API keys are no longer accepted from frontend
+  if (apiKey && apiKey.trim() !== '') {
+    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
+  }
 
   try {
-    const text = await callDeepSeekAPI(apiKey, [
-      { role: "system", content: "You are a versatile writer skilled at adapting content to different styles." },
-      { role: "user", content: `
-        Rewrite the following content in a ${styleDescriptions[newStyle]} style.
-        
-        Original Content:
-        """
-        ${content}
-        """
-        
-        Requirements:
-        - Completely transform the tone and style
-        - Keep the core message and facts intact
-        - Maintain approximately the same length
-        - Make it suitable for WeChat article format
-        
-        Return ONLY the rewritten content, nothing else.
-      ` }
-    ], 0.8);
-
-    return text.trim() || content;
+    const result = await callAIHelper({
+      action: 'rewriteContent',
+      content,
+      provider: 'deepseek',
+      options: { style: newStyle }
+    });
+    
+    return typeof result === 'string' ? result : content;
   } catch (error) {
-    console.error("DeepSeek content rewrite failed:", error);
+    logger.error("DeepSeek content rewrite via backend failed:", error);
     throw error;
   }
 };
