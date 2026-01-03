@@ -6,6 +6,9 @@ import { safeParseJSON } from './jsonParser';
 import { loadPrompts, interpolatePrompt } from './promptConfig';
 import { generateArticleViaBackend, callAIHelper, type StyleSuggestion } from './backendAIClient';
 
+// Re-export StyleSuggestion for use in other modules
+export type { StyleSuggestion } from './backendAIClient';
+
 const logger = loggers.deepseek;
 
 const BASE_URL = "https://api.deepseek.com/chat/completions";
@@ -518,7 +521,7 @@ export const generateTitleSuggestionsDeepSeek = async (
     });
     
     // Result should be an array of strings
-    return Array.isArray(result) ? result : [];
+    return Array.isArray(result) ? result as string[] : [];
   } catch (error) {
     logger.error("DeepSeek title generation via backend failed:", error);
     throw error;
@@ -630,7 +633,7 @@ export const extractKeywordsDeepSeek = async (
       options: { count }
     });
     
-    return Array.isArray(result) ? result : [];
+    return Array.isArray(result) ? result as string[] : [];
   } catch (error) {
     logger.error("DeepSeek keyword extraction via backend failed:", error);
     throw error;
@@ -684,7 +687,7 @@ export const suggestStylesDeepSeek = async (
       provider: 'deepseek'
     });
     
-    return Array.isArray(result) ? result : [];
+    return Array.isArray(result) ? result as StyleSuggestion[] : [];
   } catch (error) {
     logger.error("DeepSeek style suggestion via backend failed:", error);
     throw error;
