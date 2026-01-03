@@ -187,6 +187,9 @@ npm run build
       "server.cjs",
       "package.json"
     ],
+    "asarUnpack": [
+      "node_modules/electron-updater/**/*"
+    ],
     "win": {
       "target": ["nsis", "portable"]
     }
@@ -199,6 +202,12 @@ npm run build
 - `electron/` - Electron 主进程文件
 - `server.cjs` - 内置代理服务器
 - `package.json` - 应用元数据
+- `node_modules/electron-updater` - 自动更新模块（从 asar 中解包）
+
+**关于 asarUnpack：**
+- `electron-updater` 模块包含原生代码和运行时依赖，不能直接在 asar 归档中运行
+- `asarUnpack` 配置确保该模块在打包时从 asar 中解包到单独的目录
+- 这是解决 "Cannot find module 'electron-updater'" 错误的标准方案
 
 ## 应用图标
 
@@ -320,6 +329,31 @@ A: 可以。需要做以下修改：
 ### Q: 出现 "require is not defined in ES module scope" 错误？
 
 A: 确保 Electron 文件使用 `.cjs` 扩展名。本项目使用 ES modules (`"type": "module"`)，但 Electron 主进程需要 CommonJS。
+
+### Q: 出现 "Cannot find module 'electron-updater'" 错误？
+
+A: 这个错误表示 `electron-updater` 模块在打包后的应用中找不到。解决方案：
+
+1. **确认依赖已安装：**
+   ```bash
+   npm list electron-updater
+   ```
+   应该显示 `electron-updater@6.x.x`
+
+2. **确认 package.json 配置正确：**
+   - `electron-updater` 必须在 `dependencies` 中（不是 `devDependencies`）
+   - `build.asarUnpack` 中必须包含 `"node_modules/electron-updater/**/*"`
+
+3. **重新安装并打包：**
+   ```bash
+   npm install
+   npm run electron:build:win
+   ```
+
+**技术说明：**
+- `electron-updater` 包含原生模块，不能直接在 asar 归档中运行
+- `asarUnpack` 配置让 electron-builder 将该模块解包到单独目录
+- 这样应用运行时就能正确加载该模块
 
 ### Q: 打包时出现 "Electron Builder" 错误？
 
