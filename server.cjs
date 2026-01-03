@@ -154,7 +154,7 @@ const backendApiProxy = createProxyMiddleware({
     target: BACKEND_API_URL,
     changeOrigin: true,
     // Use filter function to match /api/v1 paths but don't strip the prefix
-    filter: (pathname, req) => pathname.startsWith('/api/v1'),
+    filter: (pathname, req) => req && pathname.startsWith('/api/v1'),
     onProxyReq: (proxyReq, req, res) => {
         console.log(`[Backend Proxy] ➤ ${req.method} ${req.url} -> ${BACKEND_API_URL}${req.url}`);
     },
@@ -180,12 +180,15 @@ const backendApiProxy = createProxyMiddleware({
     }
 });
 
-// Use Proxy for Backend API requests (middleware will filter for /api/v1 paths)
+// Use Proxy for Backend API requests
+// Note: The filter function ensures only /api/v1 paths are proxied
 app.use(backendApiProxy);
 
 console.log(`[Server] 📡 Backend API proxy configured: /api/v1/* -> ${BACKEND_API_URL}`);
 
-// Body parser for non-proxied routes (must come AFTER proxy to avoid consuming request body)
+// Body parser for non-proxied routes
+// Note: Must come AFTER proxy to avoid consuming request body before it can be forwarded
+// The proxy's filter function ensures /api/v1 requests bypass this middleware
 app.use(bodyParser.json({ limit: '20mb' }));
 
 // Simple backend stitching service
