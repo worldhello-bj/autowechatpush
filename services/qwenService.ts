@@ -231,7 +231,7 @@ export const generateTitleSuggestionsQwen = async (
       options: { count }
     });
     
-    return Array.isArray(result) ? result : [];
+    return Array.isArray(result) ? result as string[] : [];
   } catch (error) {
     logger.error("Qwen title generation via backend failed:", error);
     throw error;
@@ -343,7 +343,7 @@ export const extractKeywordsQwen = async (
       options: { count }
     });
     
-    return Array.isArray(result) ? result : [];
+    return Array.isArray(result) ? result as string[] : [];
   } catch (error) {
     logger.error("Qwen keyword extraction via backend failed:", error);
     throw error;
@@ -397,7 +397,7 @@ export const suggestStylesQwen = async (
       provider: 'qwen'
     });
     
-    return Array.isArray(result) ? result : [];
+    return Array.isArray(result) ? result as StyleSuggestion[] : [];
   } catch (error) {
     logger.error("Qwen style suggestion via backend failed:", error);
     throw error;
