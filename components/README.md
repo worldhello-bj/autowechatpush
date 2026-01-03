@@ -12,6 +12,10 @@
 | AIToolsPanel | `AIToolsPanel.tsx` | AI 工具面板 |
 | ArticlePreview | `ArticlePreview.tsx` | 文章预览组件 |
 | Slider | `Slider.tsx` | 滑动条组件 |
+| AuthPage | `AuthPage.tsx` | 登录/注册页面 |
+| AuthContext | `AuthContext.tsx` | 认证上下文提供者 |
+| LogSettings | `LogSettings.tsx` | 日志设置面板 |
+| PromptEditor | `PromptEditor.tsx` | 提示词编辑器 |
 
 ---
 
@@ -33,15 +37,25 @@
 **关键状态：**
 ```typescript
 const [topic, setTopic] = useState('');
-const [aiProvider, setAiProvider] = useState<AIProvider>(AIProvider.GOOGLE);
+const [aiProvider, setAiProvider] = useState<AIProvider>(AIProvider.DEEPSEEK);  // 默认使用DeepSeek
 const [useDualAI, setUseDualAI] = useState(false);
 const [htmlContent, setHtmlContent] = useState<string>('');
+const [isFormattingMode, setIsFormattingMode] = useState(false);  // 格式化模式开关
 ```
 
 **核心函数：**
-- `handleGenerate()` - 生成文章内容
+- `handleGenerate()` - 生成文章内容（调用后端 API）
 - `convertBlocksToHtml()` - 将 AI 返回的块转换为 HTML
 - `handlePublish()` - 发布到微信
+- `handleGenerateTitles()` - 生成标题建议（调用 `aiApi.helper`）
+- `handleGenerateSummary()` - 生成摘要
+- `handleExtractKeywords()` - 提取关键词
+
+**AI 调用流程：**
+```
+用户操作 → Editor 组件 → aiApi.generate() → 后端 /api/v1/ai/generate → AI服务
+                       → aiApi.helper() → 后端 /api/v1/ai/helper → AI服务
+```
 
 **支持的块类型渲染：**
 - 基础块: header, paragraph, card, list, quote, image, divider, code, callout, numbered_list, highlight, table

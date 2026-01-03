@@ -1,18 +1,65 @@
 # 服务层 (Services)
 
-本目录包含所有 AI 服务、模板库和微信 API 集成。
+本目录包含前端服务模块，包括 AI 服务封装、模板库和微信 API 集成。
+
+> **⚠️ 重要架构说明**
+> 
+> 自 v1.3.0 起，DeepSeek 和 Qwen 的 AI 调用已迁移到后端统一处理。前端通过 `apiClient.ts` 调用后端 API，不再直接调用 AI 服务商接口。
+> 
+> - **DeepSeek/Qwen**: 通过 `apiClient.ts` → 后端 `/api/v1/ai/*`
+> - **Google Gemini**: 仍由前端直接调用（需用户配置 API Key）
 
 ## 📁 服务列表
 
 | 服务 | 文件 | 描述 |
 |------|------|------|
-| Gemini Service | `geminiService.ts` | Google Gemini AI 服务 |
-| Qwen Service | `qwenService.ts` | 阿里云 Qwen AI 服务 |
-| DeepSeek Service | `deepSeekService.ts` | DeepSeek AI 服务 |
-| Dual AI Service | `dualAIService.ts` | 双AI并行系统 |
-| Design Templates | `designTemplates.ts` | 设计模板库 |
-| Material Content | `materialLibraryContent.ts` | 文案素材库 |
+| API Client | `apiClient.ts` | 后端 API 客户端（推荐使用） |
+| Gemini Service | `geminiService.ts` | Google Gemini AI 服务（前端直调） |
+| Qwen Service | `qwenService.ts` | 阿里云 Qwen AI 服务（仅类型导出） |
+| DeepSeek Service | `deepSeekService.ts` | DeepSeek AI 服务（仅类型导出） |
+| Dual AI Service | `dualAIService.ts` | 双AI并行系统（记忆管理） |
+| Design Templates | `designTemplates.ts` | 设计模板库（45+ 模板） |
+| Material Content | `materialLibraryContent.ts` | 文案素材库（40+ 预设） |
 | WeChat Service | `wechatService.ts` | 微信公众号 API |
+| Analytics | `analytics.ts` | 用户行为追踪 |
+| Logger | `logger.ts` | 统一日志系统 |
+
+---
+
+## 🔌 API 客户端（推荐）
+
+### apiClient.ts
+
+后端 API 客户端，提供类型安全的接口调用。所有 AI 功能都应通过此客户端访问。
+
+**核心功能：**
+
+```typescript
+import { aiApi, authApi, quotaApi, materialApi } from '../services/apiClient';
+
+// AI 生成
+const result = await aiApi.generate({
+  message: '写一篇关于秋天的文章',
+  provider: 'deepseek',  // 或 'qwen'
+  useSearch: false,
+  isFormattingMode: false,
+});
+
+// AI 助手功能
+const titles = await aiApi.helper('generateTitles', content, 'deepseek', { count: 5 });
+
+// 认证
+const loginResult = await authApi.login(email, password);
+const user = await authApi.getMe();
+
+// 配额
+const quota = await quotaApi.getStatus();
+```
+
+**自动功能：**
+- Token 自动刷新（401 时自动重试）
+- 统一错误处理
+- 请求 ID 追踪
 
 ---
 
