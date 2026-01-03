@@ -101,23 +101,48 @@ AI Key Pool 是一个用于管理和分配 AI API 密钥的池化系统，旨在
 
 ### 1. 创建密钥池配置文件
 
-复制示例文件并修改：
+系统会按优先级顺序在以下位置查找 `aikeys.json`：
 
+1. **开发环境**: `backend/src/config/aikeys.json` (最高优先级)
+2. **生产部署**: `config/aikeys.json` (项目根目录下)
+3. **构建产物**: `backend/dist/config/aikeys.json` (由构建脚本自动复制)
+
+**推荐配置方式**：
+
+#### 开发环境
 ```bash
 cd backend/src/config
 cp aikeys.example.json aikeys.json
+# 编辑 aikeys.json，添加你的实际 API 密钥
 ```
 
-编辑 `aikeys.json`，添加你的实际 API 密钥。
+#### 生产部署
+在部署服务器上，在 backend 目录下创建配置文件：
+
+```bash
+cd /opt/wechat-ai-publisher/backend
+cd src/config
+cp aikeys.example.json aikeys.json
+# 编辑 aikeys.json，添加你的实际 API 密钥
+```
+
+**重要提示**：
+- `aikeys.json` 已添加到 `.gitignore`，不会被提交到版本控制
+- 如果文件不存在，系统会自动回退到使用环境变量中的密钥
+- 修改配置后，可通过管理员 API 热重载，无需重启服务
 
 ### 2. 启动服务
 
-密钥池会在服务启动时自动加载。如果配置文件不存在，系统会回退到使用环境变量中的密钥。
+密钥池会在服务启动时自动加载。启动时会显示找到配置文件的路径。
 
 ```bash
 cd backend
 npm run dev
 ```
+
+查看日志输出，确认密钥池是否成功加载：
+- 成功：`Key pool loaded successfully` 
+- 未找到文件：`Key pool file not found in any location, using environment variables as fallback`
 
 ### 3. 管理密钥池（管理员接口）
 
