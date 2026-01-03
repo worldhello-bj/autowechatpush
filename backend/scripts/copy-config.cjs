@@ -15,8 +15,9 @@ const DEST_CONFIG_DIR = path.join(__dirname, '../dist/config');
 try {
   // Ensure source directory exists
   if (!fs.existsSync(SRC_CONFIG_DIR)) {
-    console.error(`Error: Source config directory not found: ${SRC_CONFIG_DIR}`);
-    process.exit(1);
+    console.warn(`Warning: Source config directory not found: ${SRC_CONFIG_DIR}`);
+    console.log('Skipping config file copy - this may be expected for fresh builds');
+    process.exit(0);
   }
 
   // Create destination directory if it doesn't exist
@@ -30,7 +31,7 @@ try {
   const jsonFiles = files.filter(file => file.endsWith('.json'));
 
   if (jsonFiles.length === 0) {
-    console.log('No JSON files found in src/config');
+    console.log('No JSON configuration files found to copy - this is normal for fresh builds');
     process.exit(0);
   }
 

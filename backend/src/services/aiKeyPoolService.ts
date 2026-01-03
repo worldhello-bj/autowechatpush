@@ -12,11 +12,11 @@ const __dirname = path.dirname(__filename);
 
 // Paths to check for the key pool configuration file (in priority order)
 // 1. Source config directory (for development: src/config/aikeys.json)
-// 2. Project root config (for deployment: ../config/aikeys.json relative to backend)  
+// 2. Project root config (for deployment: ../config/aikeys.json relative to backend)
 // 3. Dist config directory (for compiled code: dist/config/aikeys.json)
 const KEY_POOL_PATHS = [
   path.join(process.cwd(), 'src', 'config', 'aikeys.json'),
-  path.join(process.cwd(), '..', 'config', 'aikeys.json'),
+  path.join(__dirname, '../../config/aikeys.json'),
   path.join(__dirname, '../config/aikeys.json'),
 ];
 
