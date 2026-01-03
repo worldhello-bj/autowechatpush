@@ -62,6 +62,9 @@
       "server.cjs",
       "package.json"
     ],
+    "asarUnpack": [
+      "node_modules/electron-updater/**/*"
+    ],
     "extraResources": [
       {
         "from": "dist",
