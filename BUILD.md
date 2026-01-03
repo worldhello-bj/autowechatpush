@@ -16,11 +16,7 @@
 
 ```env
 # 修改这个地址为你的后端服务器
-# 生产环境推荐使用 HTTPS 和域名
-VITE_API_BASE=https://api.your-domain.com/api/v1
-
-# 或者使用 IP 地址（仅内网测试环境推荐）
-# VITE_API_BASE=http://your-server-ip:3001/api/v1
+VITE_API_BASE=http://49.232.11.108:3001/api/v1
 ```
 
 **✅ 好处：**
@@ -239,13 +235,11 @@ A: **取决于你的 `BACKEND_API_URL` 配置：**
 
 | 配置 | 本机访问 | 其他设备访问 | 适用场景 |
 |------|---------|-------------|---------|
+| `http://49.232.11.108:3001` | ✅ | ✅ | **生产环境（推荐）** |
 | `https://api.your-domain.com` | ✅ | ✅ | **生产环境（推荐）** |
-| `http://your-public-ip:3001` | ✅ | ✅ | 测试环境（仅内网） |
 | `http://192.168.1.100:3001` | ✅ | ⚠️ 仅同局域网 | 内网部署 |
 | `http://localhost:3001` | ✅ | ❌ | 仅本地开发 |
 | `http://127.0.0.1:3001` | ✅ | ❌ | 仅本地开发 |
-
-> ⚠️ **安全提示**：公网生产环境强烈建议使用 HTTPS，HTTP 仅适用于内网测试环境。
 
 **验证方法：**
 
@@ -253,7 +247,7 @@ A: **取决于你的 `BACKEND_API_URL` 配置：**
 2. 按 F12 打开开发者工具
 3. 查看 Console 标签，应该看到：
    ```
-   [Server] Backend API URL: http://your-server-ip:3001
+   [Server] Backend API URL: http://49.232.11.108:3001
    ```
 4. 尝试生成 AI 内容，检查 Network 标签的请求
 

@@ -51,7 +51,7 @@
 ```javascript
 // Backend API base URL - configurable via environment variable
 // IMPORTANT: For multi-device access, use public IP or domain name, NOT localhost
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://your-server-ip:3001';
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://49.232.11.108:3001';
 
 // Proxy Configuration for Backend API
 const backendApiProxy = createProxyMiddleware({
@@ -69,8 +69,8 @@ app.use('/api/v1', backendApiProxy);
 
 **⚠️ 重要：多设备访问配置**
 
-- ✅ **正确**：`https://api.your-domain.com` - 使用域名 + HTTPS（推荐）
-- ✅ **正确**：`http://your-public-ip:3001` - 使用公网 IP，所有设备都能访问
+- ✅ **正确**：`http://49.232.11.108:3001` - 使用公网 IP，所有设备都能访问
+- ✅ **正确**：`https://your-backend.com` - 使用域名，所有设备都能访问
 - ❌ **错误**：`http://localhost:3001` - 只有本机能访问，其他设备会失败
 - ❌ **错误**：`http://127.0.0.1:3001` - 同样只有本机能访问
 
@@ -179,11 +179,11 @@ A: **取决于 `BACKEND_API_URL` 的配置：**
 
 **✅ 可以连接（推荐配置）：**
 ```javascript
-// 使用域名 + HTTPS（推荐）
-const BACKEND_API_URL = 'https://api.your-domain.com';
+// 使用公网 IP
+const BACKEND_API_URL = 'http://49.232.11.108:3001';
 
-// 或使用公网 IP
-const BACKEND_API_URL = 'http://your-public-ip:3001';
+// 或使用域名
+const BACKEND_API_URL = 'https://api.your-domain.com';
 ```
 
 **❌ 无法连接（仅限本机）：**
