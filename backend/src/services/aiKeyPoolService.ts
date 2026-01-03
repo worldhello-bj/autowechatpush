@@ -266,6 +266,21 @@ export const getKeyPoolConfig = (): AIKeyPoolConfig => {
 };
 
 /**
+ * Check if Qwen features are available (image analysis and TTS)
+ * Returns true if there are Qwen keys configured in the pool or environment
+ */
+export const isQwenAvailable = (): boolean => {
+  // Check if there are keys in the pool
+  if (keyPool.qwen && keyPool.qwen.length > 0) {
+    return true;
+  }
+  
+  // Check if there's a fallback environment variable
+  const envKey = config.DASHSCOPE_API_KEY || process.env.DASHSCOPE_API_KEY;
+  return !!envKey;
+};
+
+/**
  * Update key pool configuration (for admin purposes)
  */
 export const updateKeyPoolConfig = async (newConfig: AIKeyPoolConfig): Promise<void> => {

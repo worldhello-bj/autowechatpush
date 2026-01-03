@@ -224,11 +224,25 @@ export interface GenerationResult {
   sources: Array<{ title: string; uri: string }>;
 }
 
+// AI Helper response types
+export interface AIHelperResponse {
+  action: string;
+  result: string | string[] | Array<{style: string; preview: string}>;
+  provider: string;
+}
+
 export const aiApi = {
   generate: async (genRequest: GenerationRequest): Promise<ApiResponse<GenerationResult>> => {
     return request<GenerationResult>('/ai/generate', {
       method: 'POST',
       body: JSON.stringify(genRequest),
+    });
+  },
+  
+  helper: async (action: string, content: string, provider?: 'deepseek' | 'qwen', options?: Record<string, unknown>): Promise<ApiResponse<AIHelperResponse>> => {
+    return request<AIHelperResponse>('/ai/helper', {
+      method: 'POST',
+      body: JSON.stringify({ action, content, provider, options }),
     });
   },
   
@@ -244,6 +258,20 @@ export const aiApi = {
     message: string;
   }>> => {
     return request('/ai/quota');
+  },
+  
+  getFeatures: async (): Promise<ApiResponse<{
+    features: {
+      articleGeneration: boolean;
+      imageAnalysis: boolean;
+      textToSpeech: boolean;
+    };
+    providers: {
+      deepseek: boolean;
+      qwen: boolean;
+    };
+  }>> => {
+    return request('/ai/features');
   },
 };
 

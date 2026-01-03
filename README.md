@@ -35,8 +35,17 @@
 |--------|--------|------|
 | Gemini 2.5 Flash | Google | 文本生成、搜索增强 |
 | Gemini 3 Pro Preview | Google | 图像分析 |
-| DeepSeek V3 | DeepSeek | 文本生成 |
-| Qwen Plus | 阿里云 | 文本生成、图像分析、TTS |
+| DeepSeek V3 | DeepSeek | 文本生成（后端管理） |
+| Qwen Plus | 阿里云 | 文本生成、图像分析（后端管理） |
+
+**🔒 API 密钥管理说明**：
+- **DeepSeek 和 Qwen**：由后端统一管理，支持密钥池负载均衡。用户无需配置 API 密钥，专注内容创作即可。
+  - ✅ 主文章生成
+  - ✅ 标题建议、摘要生成、关键词提取
+  - ✅ 内容扩展、润色、翻译、改写
+  - ✅ Hook生成、CTA生成、风格建议
+  - 所有功能完全通过后端API处理，详见 [backend/AI_KEY_POOL.md](./backend/AI_KEY_POOL.md)
+- **Google Gemini**：由于浏览器安全限制，需在前端设置页面配置个人 API Key（客户端直接调用）
 
 ### 🔀 双AI并行架构 (Dual AI System)
 
@@ -625,8 +634,10 @@ CMD ["node", "dist/index.js"]
 | `NODE_ENV` | `production` | 生产环境 |
 | `JWT_SECRET` | `your-secret-32chars` | JWT 密钥 (≥32字符) |
 | `CORS_ORIGINS` | `https://your-domain.com` | 允许的前端域名 |
-| `DEEPSEEK_API_KEY` | `sk-xxx` | DeepSeek API 密钥 |
-| `DASHSCOPE_API_KEY` | `sk-xxx` | 通义千问 API 密钥 |
+| `DEEPSEEK_API_KEY` | `sk-xxx` | DeepSeek API 密钥（后端管理，用户无需配置） |
+| `DASHSCOPE_API_KEY` | `sk-xxx` | 通义千问 API 密钥（后端管理，用户无需配置） |
+
+> **注意**：DeepSeek 和 Qwen 的 API 密钥由后端统一管理。对于高并发场景，建议配置密钥池以实现负载均衡，详见 [backend/AI_KEY_POOL.md](./backend/AI_KEY_POOL.md)。
 
 **1.4 部署后端**
 

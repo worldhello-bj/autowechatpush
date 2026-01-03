@@ -101,6 +101,90 @@ const wechatProxy = createProxyMiddleware({
 // Use Proxy for WeChat API requests
 app.use('/api/wechat', wechatProxy);
 
+// Backend API base URL - configurable via environment variable
+// IMPORTANT: For Electron apps to work across multiple devices, use public IP or domain name
+const NODE_ENV = process.env.NODE_ENV || 'development';
+
+function isLocalhostUrl(urlString) {
+    try {
+        const parsed = new URL(urlString);
+        const hostname = parsed.hostname;
+        return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+    } catch (e) {
+        return false;
+    }
+}
+
+let BACKEND_API_URL = process.env.BACKEND_API_URL;
+
+if (!BACKEND_API_URL) {
+    if (NODE_ENV !== 'production') {
+        // In non-production, default to local backend over HTTP
+        BACKEND_API_URL = 'http://127.0.0.1:3001';
+        console.warn('[Backend Proxy] ⚠ BACKEND_API_URL is not set. Using default local development backend at http://127.0.0.1:3001');
+    } else {
+        // In production, default to the configured backend but warn about security
+        BACKEND_API_URL = 'http://49.232.11.108:3001';
+        console.warn('[Backend Proxy] ⚠ BACKEND_API_URL is not set. Using default backend. For security, please configure HTTPS endpoint.');
+    }
+}
+
+// Security check: Warn if using HTTP in production for non-localhost backends
+if (NODE_ENV === 'production' && /^http:\/\//i.test(BACKEND_API_URL) && !isLocalhostUrl(BACKEND_API_URL)) {
+    const boxWidth = 63;
+    const urlDisplay = BACKEND_API_URL.length > 51 ? BACKEND_API_URL.substring(0, 48) + '...' : BACKEND_API_URL;
+    const urlLine = `│ URL: ${urlDisplay}${' '.repeat(Math.max(0, boxWidth - 7 - urlDisplay.length))}│`;
+    
+    console.warn('');
+    console.warn('┌─────────────────────────────────────────────────────────────┐');
+    console.warn('│ ⚠️  SECURITY WARNING                                        │');
+    console.warn('│─────────────────────────────────────────────────────────────│');
+    console.warn('│ Backend API URL uses HTTP (not HTTPS) in production mode   │');
+    console.warn(urlLine);
+    console.warn('│                                                             │');
+    console.warn('│ This exposes sensitive data (tokens, AI requests) to        │');
+    console.warn('│ network interception and tampering.                         │');
+    console.warn('│                                                             │');
+    console.warn('│ RECOMMENDED: Use HTTPS for production backends              │');
+    console.warn('│ Set BACKEND_API_URL=https://your-backend-domain.com         │');
+    console.warn('└─────────────────────────────────────────────────────────────┘');
+    console.warn('');
+}
+
+// Proxy Configuration for Backend API
+const backendApiProxy = createProxyMiddleware({
+    target: BACKEND_API_URL,
+    changeOrigin: true,
+    onProxyReq: (proxyReq, req, res) => {
+        console.log(`[Backend Proxy] ➤ ${req.method} ${req.url} -> ${BACKEND_API_URL}${req.url}`);
+    },
+    onProxyRes: (proxyRes, req, res) => {
+        console.log(`[Backend Proxy] ◀ ${proxyRes.statusCode} from ${req.url}`);
+    },
+    onError: (err, req, res) => {
+        console.error(`[Backend Proxy] 🔴 Error:`, err.message);
+        console.error(`[Backend Proxy] 🔴 Failed to connect to backend at ${BACKEND_API_URL}`);
+        console.error(`[Backend Proxy] 🔴 This could be caused by:`);
+        console.error(`[Backend Proxy]    1. Backend server is not running`);
+        console.error(`[Backend Proxy]    2. Incorrect BACKEND_API_URL configuration`);
+        console.error(`[Backend Proxy]    3. Network connectivity issues`);
+        console.error(`[Backend Proxy]    4. Firewall blocking the connection`);
+        
+        if (!res.headersSent) {
+            res.status(502).json({ 
+                error: 'Backend API Unavailable', 
+                details: err.message,
+                suggestion: `Cannot connect to backend server at ${BACKEND_API_URL}. Please check the server is running and accessible.`
+            });
+        }
+    }
+});
+
+// Use Proxy for Backend API requests
+app.use('/api/v1', backendApiProxy);
+
+console.log(`[Server] 📡 Backend API proxy configured: /api/v1/* -> ${BACKEND_API_URL}`);
+
 // Simple backend stitching service
 const sanitizeDataUrl = (value = '') => {
     const trimmed = value.trim();

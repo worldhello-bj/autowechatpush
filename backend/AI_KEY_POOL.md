@@ -10,6 +10,40 @@ AI Key Pool 是一个用于管理和分配 AI API 密钥的池化系统，旨在
 - 实时监控每个密钥的使用情况
 - 支持热重载，无需重启服务即可更新密钥配置
 
+## 重要说明
+
+**🔒 安全设计：后端统一管理**
+
+所有 API 密钥由后端统一管理，用户无需也无法提供自己的 API 密钥。这种设计具有以下优势：
+
+- ✅ **安全性**：密钥集中管理，避免泄露风险
+- ✅ **便捷性**：用户无需获取和配置 API 密钥
+- ✅ **稳定性**：统一的密钥池确保服务质量
+- ✅ **成本控制**：管理员可以集中监控和控制 API 使用成本
+
+用户只需专注于内容创作，系统会自动从密钥池中选择最优密钥处理所有 AI 请求。
+
+**✨ 支持的AI功能（全部后端处理）**
+
+1. **主要生成功能**
+   - 文章生成（单AI模式）
+   - 双AI并行生成（文案AI + 美化AI）
+   - SSE流式生成
+
+2. **辅助工具功能**
+   - 标题建议生成
+   - 内容摘要生成
+   - 关键词提取
+   - 内容扩展
+   - 内容润色
+   - 内容翻译
+   - 风格建议
+   - Hook（开场白）生成
+   - CTA（行动号召）生成
+   - 内容改写
+
+所有以上功能均通过后端API端点（`/api/v1/ai/generate` 和 `/api/v1/ai/helper`）处理，自动使用密钥池管理的API密钥。
+
 ## 配置文件
 
 ### 文件位置
@@ -228,9 +262,9 @@ A: 密钥选择算法非常轻量，对性能影响可忽略不计。所有配�
 
 A: 可以。通过管理员接口更新配置，或直接修改 `aikeys.json` 文件后调用热重载接口。
 
-### Q: 用户自己提供的 API key 会使用密钥池吗？
+### Q: 用户可以提供自己的 API key 吗？
 
-A: 不会。用户通过 `X-API-Key` header 提供的密钥会直接使用，不经过密钥池系统。
+A: **不可以**。出于安全考虑，所有 API 密钥都由后端统一管理。用户无需也无法提供自己的 API 密钥，系统会自动从密钥池中选择最优密钥处理请求。这种设计确保了密钥的集中管理和安全性。
 
 ## 示例：完整工作流程
 
@@ -275,6 +309,26 @@ curl -X POST http://localhost:3001/api/v1/admin/keypool/reload \
 - `backend/src/controllers/adminController.ts`: 管理接口
 - `backend/src/routes/adminRoutes.ts`: 路由配置
 - `backend/src/services/aiService.ts`: AI 服务集成
+- `backend/src/controllers/aiController.ts`: AI 请求处理（仅使用后端密钥池）
 
-密钥使用流程：
-1. AI 请求到达 → 2. aiService 调用 getApiKeyFromPool() → 3. aiKeyPoolService 选择最优密钥 → 4. 执行 AI 请求 → 5. releaseApiKey() 更新统计 → 6. 返回结果
+### 密钥使用流程
+
+```
+用户请求 → aiController (后端统一管理)
+           ↓
+    getApiKeyFromPool() (从密钥池选择最优密钥)
+           ↓
+    aiKeyPoolService (负载均衡算法)
+           ↓
+    执行 AI 请求
+           ↓
+    releaseApiKey() (更新统计信息)
+           ↓
+    返回结果给用户
+```
+
+**关键设计**：
+- 用户请求中的 `X-API-Key` header 会被忽略（即使存在）
+- 所有请求都通过 `getApiKeyFromPool()` 获取密钥
+- 密钥选择基于并发数和权重的智能负载均衡
+- 请求完成后自动释放密钥并更新统计

@@ -48,6 +48,11 @@ Key environment variables:
 
 For production deployments with high traffic, you can configure an AI key pool to distribute load across multiple API keys. See [AI_KEY_POOL.md](./AI_KEY_POOL.md) for detailed setup instructions.
 
+**Important**: All API keys are managed by the backend. Users cannot and do not need to provide their own API keys. This ensures:
+- 🔒 **Security**: Centralized key management prevents key leakage
+- 🚀 **Simplicity**: Users focus on content creation, not API configuration
+- 📊 **Control**: Administrators monitor and control API usage costs
+
 Quick setup:
 ```bash
 cd src/config
@@ -90,11 +95,26 @@ npm start
 
 ### AI Generation
 
+**🔒 Note**: All API keys are managed by the backend. Users cannot provide their own API keys for security reasons.
+
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/v1/ai/generate` | Generate article |
+| POST | `/api/v1/ai/generate` | Generate article (main content generation) |
 | POST | `/api/v1/ai/chat/stream` | SSE streaming generation |
+| POST | `/api/v1/ai/helper` | AI helper functions (titles, summary, keywords, polish, translate, etc.) |
 | GET | `/api/v1/ai/quota` | Get user quota |
+
+**AI Helper Actions** (via `/api/v1/ai/helper`):
+- `generateTitles` - Generate title suggestions
+- `generateSummary` - Generate content summary
+- `extractKeywords` - Extract keywords from content
+- `expandContent` - Expand/elaborate on content
+- `polishContent` - Polish/refine content
+- `translateContent` - Translate content to another language
+- `suggestStyles` - Suggest writing style variations
+- `generateHook` - Generate article hooks/intros
+- `generateCTA` - Generate call-to-action
+- `rewriteContent` - Rewrite content in different style
 
 ## Architecture
 

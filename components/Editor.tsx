@@ -6,37 +6,11 @@ import analytics from '../services/analytics';
 import { 
   GenerationResult
 } from '../services/geminiService';
+// StyleSuggestion type still needed for component state
 import { 
-  generateArticleStructureDeepSeek,
-  generateTitleSuggestionsDeepSeek,
-  generateSummaryDeepSeek,
-  expandContentDeepSeek,
-  polishContentDeepSeek,
-  extractKeywordsDeepSeek,
-  translateContentDeepSeek,
-  suggestStylesDeepSeek,
-  generateHookDeepSeek,
-  generateCTADeepSeek,
-  rewriteContentDeepSeek,
   StyleSuggestion
 } from '../services/deepSeekService';
-import { 
-  generateArticleStructureQwen, 
-  analyzeImageQwen, 
-  generateSpeechQwen,
-  generateTitleSuggestionsQwen,
-  generateSummaryQwen,
-  expandContentQwen,
-  polishContentQwen,
-  extractKeywordsQwen,
-  translateContentQwen,
-  suggestStylesQwen,
-  generateHookQwen,
-  generateCTAQwen,
-  rewriteContentQwen
-} from '../services/qwenService';
 import {
-  generateWithDualAI,
   loadMemory,
   saveMemory,
   AIMemory
@@ -551,6 +525,12 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   const stitchFileInputRef = useRef<HTMLInputElement>(null);
   const [stitchLoading, setStitchLoading] = useState(false);
 
+  // Features availability from backend
+  const [featuresAvailable, setFeaturesAvailable] = useState({
+    imageAnalysis: false,
+    textToSpeech: false,
+  });
+
   // Draft State
   const [foundDraft, setFoundDraft] = useState(false);
 
@@ -777,14 +757,14 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
       const mimeType = file.type;
       setUploadedImagePreview(reader.result as string);
 
-      // Analyze if Qwen
-      if (aiProvider === AIProvider.QWEN) {
+      // Image analysis - feature is only available if backend has Qwen configured
+      // UI elements that trigger this are only shown when featuresAvailable.imageAnalysis is true
+      if (aiProvider === AIProvider.QWEN && featuresAvailable.imageAnalysis) {
         setAnalyzingImage(true);
         try {
-          let analysis = "";
-          // Backend will use server-configured key from pool
-          analysis = await analyzeImageQwen(base64String, mimeType);
-          setImageContext(analysis);
+          // TODO: Implement backend endpoint for image analysis that uses backend Qwen keys
+          // Backend endpoint should accept base64 image and return analysis
+          onError("图片分析功能暂未实现后端接口，请联系管理员。");
         } catch (err: any) {
           onError("Failed to analyze image: " + err.message);
         } finally {
@@ -857,25 +837,17 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
         return;
     }
 
+    // TTS feature is only available if backend has Qwen configured
+    // This function should only be called when featuresAvailable.textToSpeech is true
+    // (The TTS button is conditionally rendered based on this check)
+    
     try {
       setIsPlaying(true);
       
-      let audioBufferData: ArrayBuffer;
-      // Backend will use server-configured key from pool
-      audioBufferData = await generateSpeechQwen(textToRead.slice(0, 500));
-      
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      const ctx = audioContextRef.current;
-      const audioBuffer = await ctx.decodeAudioData(audioBufferData);
-      
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(ctx.destination);
-      source.onended = () => setIsPlaying(false);
-      source.start(0);
-      audioSourceRef.current = source;
+      // TODO: Implement backend endpoint for TTS that uses backend Qwen keys
+      // Backend endpoint should accept text and return audio buffer
+      onError("文字转语音功能暂未实现后端接口，请联系管理员。");
+      setIsPlaying(false);
     } catch (err: any) {
       onError("Failed to generate speech: " + err.message);
       setIsPlaying(false);
@@ -992,13 +964,15 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let titles: string[] = [];
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        titles = await generateTitleSuggestionsDeepSeek(content, 5);
-      } else if (aiProvider === AIProvider.QWEN) {
-        titles = await generateTitleSuggestionsQwen(content, 5);
+      // Only use DeepSeek or Qwen for helper functions
+      const helperProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
+      const response = await aiApi.helper('generateTitles', content, helperProvider, { count: 5 });
+      if (response.success && response.data) {
+        const titles = Array.isArray(response.data.result) ? response.data.result as string[] : [];
+        setTitleSuggestions(titles);
+      } else {
+        throw new Error(response.error?.message || 'Failed to generate titles');
       }
-      setTitleSuggestions(titles);
     } catch (e: any) {
       onError(e.message || "Failed to generate titles");
     } finally {
@@ -1014,13 +988,14 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let summary: string = "";
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        summary = await generateSummaryDeepSeek(content, 120);
-      } else if (aiProvider === AIProvider.QWEN) {
-        summary = await generateSummaryQwen(content, 120);
+      const helperProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
+      const response = await aiApi.helper('generateSummary', content, helperProvider, { maxLength: 120 });
+      if (response.success && response.data) {
+        const summary = typeof response.data.result === 'string' ? response.data.result : '';
+        setArticleDigest(summary);
+      } else {
+        throw new Error(response.error?.message || 'Failed to generate summary');
       }
-      setArticleDigest(summary);
     } catch (e: any) {
       onError(e.message || "Failed to generate summary");
     } finally {
@@ -1036,13 +1011,14 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let kws: string[] = [];
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        kws = await extractKeywordsDeepSeek(content, 10);
-      } else if (aiProvider === AIProvider.QWEN) {
-        kws = await extractKeywordsQwen(content, 10);
+      const helperProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
+      const response = await aiApi.helper('extractKeywords', content, helperProvider, { count: 10 });
+      if (response.success && response.data) {
+        const kws = Array.isArray(response.data.result) ? response.data.result as string[] : [];
+        setKeywords(kws);
+      } else {
+        throw new Error(response.error?.message || 'Failed to extract keywords');
       }
-      setKeywords(kws);
     } catch (e: any) {
       onError(e.message || "Failed to extract keywords");
     } finally {
@@ -1058,13 +1034,23 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let styles: StyleSuggestion[] = [];
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        styles = await suggestStylesDeepSeek(content);
-      } else if (aiProvider === AIProvider.QWEN) {
-        styles = await suggestStylesQwen(content);
+      const helperProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
+      const response = await aiApi.helper('suggestStyles', content, helperProvider);
+      if (response.success && response.data) {
+        // Backend returns simplified style suggestions, adapt to UI format
+        const styles = Array.isArray(response.data.result) 
+          ? (response.data.result as Array<{style: string; preview: string}>).map(s => ({
+              style: s.style,
+              preview: s.preview,
+              reason: '',
+              colorScheme: [] as string[],
+              mood: s.style
+            } as StyleSuggestion))
+          : [];
+        setStyleSuggestions(styles);
+      } else {
+        throw new Error(response.error?.message || 'Failed to suggest styles');
       }
-      setStyleSuggestions(styles);
     } catch (e: any) {
       onError(e.message || "Failed to suggest styles");
     } finally {
@@ -1079,13 +1065,14 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let hook: string = "";
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        hook = await generateHookDeepSeek(topic, style);
-      } else if (aiProvider === AIProvider.QWEN) {
-        hook = await generateHookQwen(topic, style);
+      const helperProvider = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
+      const response = await aiApi.helper('generateHook', topic, helperProvider, { style });
+      if (response.success && response.data) {
+        const hook = typeof response.data.result === 'string' ? response.data.result : '';
+        setGeneratedHook(hook);
+      } else {
+        throw new Error(response.error?.message || 'Failed to generate hook');
       }
-      setGeneratedHook(hook);
     } catch (e: any) {
       onError(e.message || "Failed to generate hook");
     } finally {
@@ -1101,13 +1088,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let cta: string = "";
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        cta = await generateCTADeepSeek(content, ctaType);
-      } else if (aiProvider === AIProvider.QWEN) {
-        cta = await generateCTAQwen(content, ctaType);
+      const response = await aiApi.helper('generateCTA', content, aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek', { type: ctaType });
+      if (response.success && response.data) {
+        const cta = typeof response.data.result === 'string' ? response.data.result : '';
+        setGeneratedCTA(cta);
+      } else {
+        throw new Error(response.error?.message || 'Failed to generate CTA');
       }
-      setGeneratedCTA(cta);
     } catch (e: any) {
       onError(e.message || "Failed to generate CTA");
     } finally {
@@ -1123,14 +1110,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let polished: string = "";
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        polished = await polishContentDeepSeek(content, tone);
-      } else if (aiProvider === AIProvider.QWEN) {
-        polished = await polishContentQwen(content, tone);
+      const response = await aiApi.helper('polishContent', content, aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek', { tone });
+      if (response.success && response.data) {
+        const polished = typeof response.data.result === 'string' ? response.data.result : '';
+        setHtmlContent(textToSafeHtml(polished));
+      } else {
+        throw new Error(response.error?.message || 'Failed to polish content');
       }
-      // Convert polished text back to safe HTML
-      setHtmlContent(textToSafeHtml(polished));
     } catch (e: any) {
       onError(e.message || "Failed to polish content");
     } finally {
@@ -1146,13 +1132,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let rewritten: string = "";
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        rewritten = await rewriteContentDeepSeek(content, style);
-      } else if (aiProvider === AIProvider.QWEN) {
-        rewritten = await rewriteContentQwen(content, style);
+      const response = await aiApi.helper('rewriteContent', content, aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek', { style });
+      if (response.success && response.data) {
+        const rewritten = typeof response.data.result === 'string' ? response.data.result : '';
+        setHtmlContent(textToSafeHtml(rewritten));
+      } else {
+        throw new Error(response.error?.message || 'Failed to rewrite content');
       }
-      setHtmlContent(textToSafeHtml(rewritten));
     } catch (e: any) {
       onError(e.message || "Failed to rewrite content");
     } finally {
@@ -1168,13 +1154,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let translated: string = "";
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        translated = await translateContentDeepSeek(content, targetLang);
-      } else if (aiProvider === AIProvider.QWEN) {
-        translated = await translateContentQwen(content, targetLang);
+      const response = await aiApi.helper('translateContent', content, aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek', { targetLanguage: targetLang });
+      if (response.success && response.data) {
+        const translated = typeof response.data.result === 'string' ? response.data.result : '';
+        setHtmlContent(textToSafeHtml(translated));
+      } else {
+        throw new Error(response.error?.message || 'Failed to translate content');
       }
-      setHtmlContent(textToSafeHtml(translated));
     } catch (e: any) {
       onError(e.message || "Failed to translate content");
     } finally {
@@ -1190,13 +1176,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
     setAiToolLoading(true);
     try {
-      let expanded: string = "";
-      if (aiProvider === AIProvider.DEEPSEEK) {
-        expanded = await expandContentDeepSeek(content, style);
-      } else if (aiProvider === AIProvider.QWEN) {
-        expanded = await expandContentQwen(content, style);
+      const response = await aiApi.helper('expandContent', content, aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek', { style });
+      if (response.success && response.data) {
+        const expanded = typeof response.data.result === 'string' ? response.data.result : '';
+        setHtmlContent(textToSafeHtml(expanded));
+      } else {
+        throw new Error(response.error?.message || 'Failed to expand content');
       }
-      setHtmlContent(textToSafeHtml(expanded));
     } catch (e: any) {
       onError(e.message || "Failed to expand content");
     } finally {
@@ -1335,6 +1321,29 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
         console.error('Failed to parse WeChat credentials', e);
       }
     }
+
+    // Fetch features availability from backend
+    // This determines which AI features are enabled based on backend configuration
+    const fetchFeatures = async () => {
+      try {
+        const response = await aiApi.getFeatures();
+        if (response.success && response.data) {
+          setFeaturesAvailable({
+            imageAnalysis: response.data.features.imageAnalysis,
+            textToSpeech: response.data.features.textToSpeech,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch features availability:', error);
+        // Default to false if fetch fails
+        setFeaturesAvailable({
+          imageAnalysis: false,
+          textToSpeech: false,
+        });
+      }
+    };
+    
+    fetchFeatures();
 
     // Note: API keys are managed by admin and used by backend services.
     // The frontend no longer fetches API keys directly for security reasons.
@@ -1765,14 +1774,17 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
       {/* Right Panel: Preview & Edit */}
       <div className="w-full lg:w-1/2 bg-gray-100 p-8 flex flex-col items-center justify-center relative overflow-y-auto">
          <div className="absolute top-4 right-4 flex gap-2">
-            <button 
-                onClick={handleTTS}
-                disabled={aiProvider === AIProvider.DEEPSEEK}
-                className={`p-1.5 rounded-full shadow-lg transition-colors ${isPlaying ? 'bg-red-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'} ${aiProvider === AIProvider.DEEPSEEK ? 'opacity-50 cursor-not-allowed' : ''}`}
-                title={aiProvider === AIProvider.DEEPSEEK ? "TTS unavailable with DeepSeek" : "Read Article Aloud"}
-            >
-                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-            </button>
+            {/* TTS Button - only show if feature is available */}
+            {featuresAvailable.textToSpeech && (
+              <button 
+                  onClick={handleTTS}
+                  disabled={aiProvider === AIProvider.DEEPSEEK}
+                  className={`p-1.5 rounded-full shadow-lg transition-colors ${isPlaying ? 'bg-red-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'} ${aiProvider === AIProvider.DEEPSEEK ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title={aiProvider === AIProvider.DEEPSEEK ? "TTS unavailable with DeepSeek" : "Read Article Aloud"}
+              >
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+              </button>
+            )}
          </div>
 
          {/* Phone Mockup with HTML Editor */}
