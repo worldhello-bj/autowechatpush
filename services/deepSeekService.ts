@@ -4,7 +4,7 @@ import { GenerationResult } from "./geminiService";
 import { loggers } from './logger';
 import { safeParseJSON } from './jsonParser';
 import { loadPrompts, interpolatePrompt } from './promptConfig';
-import { callAIHelper } from './backendAIClient';
+import { generateArticleViaBackend, callAIHelper, type StyleSuggestion } from './backendAIClient';
 
 const logger = loggers.deepseek;
 
@@ -411,9 +411,6 @@ export const generateArticleStructureDeepSeek = async (
     logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
   }
   
-  // Import backend client dynamically to avoid circular dependencies
-  const { generateArticleViaBackend } = await import('./backendAIClient.js');
-  
   // Determine whether to use thinking mode
   const useThinking = useReasonerMode !== undefined ? useReasonerMode : thinkingModeEnabled;
   
@@ -671,13 +668,6 @@ export const translateContentDeepSeek = async (
 /**
  * Suggest visual styles based on content theme
  */
-export interface StyleSuggestion {
-  style: string;
-  reason: string;
-  colorScheme: string[];
-  mood: string;
-}
-
 export const suggestStylesDeepSeek = async (
   content: string,
   apiKey: string = ''

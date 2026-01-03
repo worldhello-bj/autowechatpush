@@ -3,7 +3,7 @@ import { ArticleBlock, GroundingSource } from "../types";
 import { GenerationResult } from "./geminiService";
 import { loggers } from './logger';
 import { safeParseJSON } from './jsonParser';
-import { generateArticleViaBackend, callAIHelper } from './backendAIClient';
+import { generateArticleViaBackend, callAIHelper, type StyleSuggestion } from './backendAIClient';
 
 const logger = loggers.qwen;
 
@@ -381,13 +381,6 @@ export const translateContentQwen = async (
 /**
  * Suggest visual styles based on content theme
  */
-export interface StyleSuggestion {
-  style: string;
-  reason: string;
-  colorScheme: string[];
-  mood: string;
-}
-
 export const suggestStylesQwen = async (
   content: string,
   apiKey: string = ''

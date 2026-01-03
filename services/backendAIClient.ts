@@ -38,6 +38,20 @@ export interface BackendHelperRequest {
   options?: Record<string, any>;
 }
 
+// Style suggestion interface
+export interface StyleSuggestion {
+  style: string;
+  reason: string;
+  colorScheme: string[];
+  mood: string;
+}
+
+// Union type for AI helper return values based on action
+export type AIHelperResult = 
+  | string          // For generateSummary, polishContent, expandContent, translateContent, generateHook, generateCTA, rewriteContent
+  | string[]        // For generateTitles, extractKeywords
+  | StyleSuggestion[];  // For suggestStyles
+
 /**
  * Generate article using backend AI service
  */
@@ -87,7 +101,7 @@ export const generateArticleViaBackend = async (
  */
 export const callAIHelper = async (
   request: BackendHelperRequest
-): Promise<any> => {
+): Promise<AIHelperResult> => {
   const baseUrl = getBackendBaseUrl();
   const url = `${baseUrl}/ai/helper`;
   
