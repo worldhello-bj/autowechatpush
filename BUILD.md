@@ -185,7 +185,8 @@ npm run build
       "dist/**/*",
       "electron/**/*",
       "server.cjs",
-      "package.json"
+      "package.json",
+      "node_modules/**/*"
     ],
     "win": {
       "target": ["nsis", "portable"]
@@ -199,6 +200,9 @@ npm run build
 - `electron/` - Electron 主进程文件
 - `server.cjs` - 内置代理服务器
 - `package.json` - 应用元数据
+- `node_modules/` - 应用依赖（包括 electron-updater 等运行时所需模块）
+
+**注意：** `files` 数组必须包含 `node_modules/**/*`，否则 electron-builder 不会打包运行时依赖，导致 "Cannot find module" 错误。
 
 ## 应用图标
 
@@ -320,6 +324,40 @@ A: 可以。需要做以下修改：
 ### Q: 出现 "require is not defined in ES module scope" 错误？
 
 A: 确保 Electron 文件使用 `.cjs` 扩展名。本项目使用 ES modules (`"type": "module"`)，但 Electron 主进程需要 CommonJS。
+
+### Q: 出现 "Cannot find module 'electron-updater'" 或其他模块未找到错误？
+
+A: 这通常是因为 `package.json` 的 `build.files` 配置没有包含 `node_modules`，导致打包时依赖模块没有被包含进去。
+
+**解决方案：**
+
+确保 `package.json` 的 `build.files` 数组包含 `"node_modules/**/*"`：
+
+```json
+{
+  "build": {
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "server.cjs",
+      "package.json",
+      "node_modules/**/*"  // 必须包含这一行
+    ]
+  }
+}
+```
+
+**重新打包：**
+```bash
+npm install
+npm run electron:build:win
+```
+
+**技术说明：**
+- electron-builder 默认会自动包含 `package.json` 中的依赖
+- 但当你显式配置 `files` 数组时，必须手动包含 `node_modules`
+- 大多数 npm 模块（包括 electron-updater）都是纯 JavaScript，可以正常在 asar 归档中运行
+- 只有极少数包含原生扩展（如 sqlite3）的模块才需要使用 `asarUnpack` 配置
 
 ### Q: 打包时出现 "Electron Builder" 错误？
 
