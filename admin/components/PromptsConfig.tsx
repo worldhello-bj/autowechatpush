@@ -49,9 +49,15 @@ const PromptsConfig: React.FC = () => {
         }
       });
     } else {
+      const keyMap: Record<string, string> = {
+        system: 'systemPrompt',
+        generation: 'generationPrompt',
+        formatting: 'formattingPrompt',
+      };
+      const mappedKey = keyMap[key] || key;
       setPrompts({
         ...prompts,
-        [key === 'system' ? 'systemPrompt' : key === 'generation' ? 'generationPrompt' : 'formattingPrompt']: value
+        [mappedKey]: value
       });
     }
   };
