@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { sendSuccess, sendError, createLogger } from '../utils/index.js';
 import { generateArticle, generateArticleParallel } from '../services/index.js';
 import { checkQuota, consumeQuota, getUserQuotaStatus } from '../services/index.js';
-import { getApiConfigStatus } from '../services/index.js';
+import { getApiConfigStatus, isQwenAvailable } from '../services/index.js';
 import { AIChatRequest, SSEEvent, AIProvider } from '../types/index.js';
 
 const logger = createLogger('ai');
@@ -509,5 +509,32 @@ export const aiHelper = async (req: Request, res: Response) => {
     }
     
     sendError(res, 500, 'AI_ERROR', message);
+  }
+};
+
+/**
+ * Get AI features availability
+ * Returns which AI features are available based on backend configuration
+ */
+export const getFeaturesAvailability = (req: Request, res: Response): void => {
+  try {
+    const configStatus = getApiConfigStatus();
+    const qwenAvailable = isQwenAvailable();
+    
+    sendSuccess(res, {
+      features: {
+        articleGeneration: configStatus.deepSeekConfigured || configStatus.dashScopeConfigured,
+        imageAnalysis: qwenAvailable,
+        textToSpeech: qwenAvailable,
+      },
+      providers: {
+        deepseek: configStatus.deepSeekConfigured,
+        qwen: configStatus.dashScopeConfigured,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to check features';
+    logger.error('Failed to check features availability', { error: message });
+    sendError(res, 500, 'FEATURE_CHECK_ERROR', message);
   }
 };

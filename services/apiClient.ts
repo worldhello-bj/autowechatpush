@@ -259,6 +259,20 @@ export const aiApi = {
   }>> => {
     return request('/ai/quota');
   },
+  
+  getFeatures: async (): Promise<ApiResponse<{
+    features: {
+      articleGeneration: boolean;
+      imageAnalysis: boolean;
+      textToSpeech: boolean;
+    };
+    providers: {
+      deepseek: boolean;
+      qwen: boolean;
+    };
+  }>> => {
+    return request('/ai/features');
+  },
 };
 
 // SSE streaming for AI generation

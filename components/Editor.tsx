@@ -10,11 +10,6 @@ import {
 import { 
   StyleSuggestion
 } from '../services/deepSeekService';
-// Image analysis and TTS functions from qwenService (optional features with user-provided key)
-import {
-  analyzeImageQwen,
-  generateSpeechQwen
-} from '../services/qwenService';
 import {
   loadMemory,
   saveMemory,
@@ -530,6 +525,12 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   const stitchFileInputRef = useRef<HTMLInputElement>(null);
   const [stitchLoading, setStitchLoading] = useState(false);
 
+  // Features availability from backend
+  const [featuresAvailable, setFeaturesAvailable] = useState({
+    imageAnalysis: false,
+    textToSpeech: false,
+  });
+
   // Draft State
   const [foundDraft, setFoundDraft] = useState(false);
 
@@ -756,23 +757,16 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
       const mimeType = file.type;
       setUploadedImagePreview(reader.result as string);
 
-      // Analyze if Qwen
-      if (aiProvider === AIProvider.QWEN) {
+      // Analyze if Qwen and feature is available
+      if (aiProvider === AIProvider.QWEN && featuresAvailable.imageAnalysis) {
         setAnalyzingImage(true);
         try {
-          // Try to get optional Qwen API key from localStorage
-          const qwenApiKey = localStorage.getItem('qwen_api_key') || '';
-          
-          if (!qwenApiKey) {
-            // No key configured - show friendly message
-            onError("图片分析需要配置 Qwen API 密钥。请在设置中添加您的 Qwen API Key 以使用此功能。");
-            setAnalyzingImage(false);
-            return;
-          }
-          
-          let analysis = "";
-          analysis = await analyzeImageQwen(base64String, mimeType, qwenApiKey);
-          setImageContext(analysis);
+          // Image analysis now uses backend Qwen keys
+          // TODO: Implement backend endpoint for image analysis
+          // For now, skip analysis as backend endpoint doesn't exist yet
+          onError("图片分析功能暂未实现后端接口。");
+          setAnalyzingImage(false);
+          return;
         } catch (err: any) {
           onError("Failed to analyze image: " + err.message);
         } finally {
@@ -845,34 +839,21 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
         return;
     }
 
+    // Check if TTS feature is available
+    if (!featuresAvailable.textToSpeech) {
+      onError("文字转语音功能未配置。请联系管理员配置 Qwen API 密钥。");
+      return;
+    }
+
     try {
       setIsPlaying(true);
       
-      // Try to get optional Qwen API key from localStorage
-      const qwenApiKey = localStorage.getItem('qwen_api_key') || '';
-      
-      if (!qwenApiKey) {
-        // No key configured - show friendly message
-        onError("文字转语音需要配置 Qwen API 密钥。请在设置中添加您的 Qwen API Key 以使用此功能。");
-        setIsPlaying(false);
-        return;
-      }
-      
-      let audioBufferData: ArrayBuffer;
-      audioBufferData = await generateSpeechQwen(textToRead.slice(0, 500), qwenApiKey);
-      
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      const ctx = audioContextRef.current;
-      const audioBuffer = await ctx.decodeAudioData(audioBufferData);
-      
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(ctx.destination);
-      source.onended = () => setIsPlaying(false);
-      source.start(0);
-      audioSourceRef.current = source;
+      // TTS now uses backend Qwen keys
+      // TODO: Implement backend endpoint for TTS
+      // For now, show error as backend endpoint doesn't exist yet
+      onError("文字转语音功能暂未实现后端接口。");
+      setIsPlaying(false);
+      return;
     } catch (err: any) {
       onError("Failed to generate speech: " + err.message);
       setIsPlaying(false);
@@ -1347,6 +1328,29 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
       }
     }
 
+    // Fetch features availability from backend
+    // This determines which AI features are enabled based on backend configuration
+    const fetchFeatures = async () => {
+      try {
+        const response = await aiApi.getFeatures();
+        if (response.success && response.data) {
+          setFeaturesAvailable({
+            imageAnalysis: response.data.features.imageAnalysis,
+            textToSpeech: response.data.features.textToSpeech,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch features availability:', error);
+        // Default to false if fetch fails
+        setFeaturesAvailable({
+          imageAnalysis: false,
+          textToSpeech: false,
+        });
+      }
+    };
+    
+    fetchFeatures();
+
     // Note: API keys are managed by admin and used by backend services.
     // The frontend no longer fetches API keys directly for security reasons.
     // All AI operations should go through the backend AI endpoints.
@@ -1776,14 +1780,17 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
       {/* Right Panel: Preview & Edit */}
       <div className="w-full lg:w-1/2 bg-gray-100 p-8 flex flex-col items-center justify-center relative overflow-y-auto">
          <div className="absolute top-4 right-4 flex gap-2">
-            <button 
-                onClick={handleTTS}
-                disabled={aiProvider === AIProvider.DEEPSEEK}
-                className={`p-1.5 rounded-full shadow-lg transition-colors ${isPlaying ? 'bg-red-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'} ${aiProvider === AIProvider.DEEPSEEK ? 'opacity-50 cursor-not-allowed' : ''}`}
-                title={aiProvider === AIProvider.DEEPSEEK ? "TTS unavailable with DeepSeek" : "Read Article Aloud"}
-            >
-                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-            </button>
+            {/* TTS Button - only show if feature is available */}
+            {featuresAvailable.textToSpeech && (
+              <button 
+                  onClick={handleTTS}
+                  disabled={aiProvider === AIProvider.DEEPSEEK}
+                  className={`p-1.5 rounded-full shadow-lg transition-colors ${isPlaying ? 'bg-red-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'} ${aiProvider === AIProvider.DEEPSEEK ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title={aiProvider === AIProvider.DEEPSEEK ? "TTS unavailable with DeepSeek" : "Read Article Aloud"}
+              >
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+              </button>
+            )}
          </div>
 
          {/* Phone Mockup with HTML Editor */}

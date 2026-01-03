@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { generate, chatStream, getQuota, aiHelper } from '../controllers/index.js';
+import { generate, chatStream, getQuota, aiHelper, getFeaturesAvailability } from '../controllers/index.js';
 import { validate, optionalAuth, authGuard, aiRateLimit } from '../middleware/index.js';
 import { aiChatRequestSchema } from '../types/index.js';
 
@@ -25,6 +25,13 @@ router.post('/chat/stream', optionalAuth, aiRateLimit, validate(aiChatRequestSch
  * @access Public (with optional auth for quota tracking)
  */
 router.post('/helper', optionalAuth, aiRateLimit, aiHelper);
+
+/**
+ * @route GET /api/v1/ai/features
+ * @desc Get AI features availability based on backend configuration
+ * @access Public
+ */
+router.get('/features', getFeaturesAvailability);
 
 /**
  * @route GET /api/v1/ai/quota
