@@ -7,17 +7,16 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build output
 dist
-dist-admin
-dist-ssr
-*.local
 
 # Environment files
 .env
 .env.local
 .env.*.local
-.env.production.backup
 
 # Editor directories and files
 .vscode/*
@@ -30,15 +29,6 @@ dist-ssr
 *.sln
 *.sw?
 
-# Electron build output
-release/
-*.exe
-*.dmg
-*.AppImage
-*.deb
-*.snap
-*.rpm
-
 # Temporary files
 *.tmp
 *.temp
@@ -48,4 +38,3 @@ backend/dist
 backend/node_modules
 backend/data
 backend/src/config/aikeys.json
-backend/test-keypool.js

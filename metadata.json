@@ -1,7 +1,0 @@
-{
-  "name": "Copy of WeChat AI Publisher",
-  "description": "An AI-powered automated article writer and publisher for WeChat Official Accounts, featuring rich text formatting, search grounding, image analysis, and TTS.",
-  "requestFramePermissions": [
-    "microphone"
-  ]
-}
