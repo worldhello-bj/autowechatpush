@@ -269,30 +269,45 @@ export const generateSummaryQwen = async (
 /**
  * Expand a paragraph or section with more details
  */
-/**
- * Expand a paragraph or section with more details
- */
 export const expandContentQwen = async (
   content: string,
   style: 'detailed' | 'examples' | 'storytelling' = 'detailed',
   apiKey: string = ''
 ): Promise<string> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
+
+  const stylePrompts = {
+    detailed: '添加更多详细的解释、事实和深度内容。',
+    examples: '用具体的案例、实例和实际应用来扩展内容。',
+    storytelling: '使用叙事技巧、轶事和故事元素来扩展内容。'
+  };
 
   try {
-    const result = await callAIHelper({
-      action: 'expandContent',
-      content,
-      provider: 'qwen',
-      options: { style }
-    });
-    
-    return typeof result === 'string' ? result : content;
+    const text = await callQwenAPI(apiKey, [
+      { role: "system", content: "你是一位专业的内容作家，擅长扩展和丰富文章内容。" },
+      { role: "user", content: `
+        扩展以下内容，同时保持其核心信息和语调。
+        
+        扩展风格: ${stylePrompts[style]}
+        
+        原始内容:
+        """
+        ${content}
+        """
+        
+        要求:
+        - 扩展到原始长度的2-3倍
+        - 保持原有的声音和风格
+        - 添加有价值的信息，而不是填充词
+        - 保持适合微信文章的格式
+        
+        只返回扩展后的内容，不要其他任何内容。
+      ` }
+    ], 0.7);
+
+    return text.trim() || content;
   } catch (error) {
-    logger.error("Qwen content expansion via backend failed:", error);
+    console.error("Qwen content expansion failed:", error);
     throw error;
   }
 };
@@ -305,22 +320,40 @@ export const polishContentQwen = async (
   tone: 'professional' | 'casual' | 'formal' | 'creative' = 'professional',
   apiKey: string = ''
 ): Promise<string> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
+
+  const toneDescriptions = {
+    professional: '专业、清晰、权威',
+    casual: '友好、对话式、亲切',
+    formal: '正式、学术、严谨',
+    creative: '创意、生动、富有文学性'
+  };
 
   try {
-    const result = await callAIHelper({
-      action: 'polishContent',
-      content,
-      provider: 'qwen',
-      options: { tone }
-    });
-    
-    return typeof result === 'string' ? result : content;
+    const text = await callQwenAPI(apiKey, [
+      { role: "system", content: "你是一位专业的编辑，擅长润色和改进文章内容。" },
+      { role: "user", content: `
+        润色并改进以下内容，使其更加${toneDescriptions[tone]}。
+        
+        原始内容:
+        """
+        ${content}
+        """
+        
+        要求:
+        - 修正任何语法或拼写错误
+        - 改进句子结构和流畅性
+        - 优化用词以增强表达效果
+        - 保持原意
+        - 保持大致相同的长度
+        
+        只返回润色后的内容，不要其他任何内容。
+      ` }
+    ], 0.5);
+
+    return text.trim() || content;
   } catch (error) {
-    logger.error("Qwen content polish via backend failed:", error);
+    console.error("Qwen content polish failed:", error);
     throw error;
   }
 };
@@ -333,22 +366,36 @@ export const extractKeywordsQwen = async (
   count: number = 10,
   apiKey: string = ''
 ): Promise<string[]> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   try {
-    const result = await callAIHelper({
-      action: 'extractKeywords',
-      content,
-      provider: 'qwen',
-      options: { count }
-    });
-    
-    return Array.isArray(result) ? result : [];
+    const text = await callQwenAPI(apiKey, [
+      { role: "system", content: "你是一位SEO专家，擅长从文章中提取关键词。" },
+      { role: "user", content: `
+        从以下内容中提取${count}个最重要的关键词或关键短语。
+        这些关键词应该适用于SEO和内容标签。
+        
+        内容:
+        """
+        ${content.slice(0, 3000)}
+        """
+        
+        要求:
+        - 包括单个词和短语
+        - 关注主题、主题和重要概念
+        - 按相关性和搜索潜力排序
+        
+        只返回JSON数组格式，如: ["关键词1", "关键词2", ...]
+      ` }
+    ], 0.3);
+
+    const match = text.match(/\[[\s\S]*\]/);
+    if (match) {
+      return JSON.parse(match[0]);
+    }
+    return [];
   } catch (error) {
-    logger.error("Qwen keyword extraction via backend failed:", error);
+    console.error("Qwen keyword extraction failed:", error);
     throw error;
   }
 };
@@ -361,22 +408,34 @@ export const translateContentQwen = async (
   targetLanguage: 'zh' | 'en',
   apiKey: string = ''
 ): Promise<string> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
+
+  const targetLangName = targetLanguage === 'zh' ? '简体中文' : '英文';
 
   try {
-    const result = await callAIHelper({
-      action: 'translateContent',
-      content,
-      provider: 'qwen',
-      options: { targetLanguage }
-    });
-    
-    return typeof result === 'string' ? result : content;
+    const text = await callQwenAPI(apiKey, [
+      { role: "system", content: "你是一位专业的翻译专家，精通中英双语。" },
+      { role: "user", content: `
+        将以下内容翻译成${targetLangName}。
+        
+        内容:
+        """
+        ${content}
+        """
+        
+        要求:
+        - 提供自然流畅的翻译
+        - 保持原有的语调和风格
+        - 保留任何格式标记
+        - 适当地转换习语和表达
+        
+        只返回翻译后的内容，不要其他任何内容。
+      ` }
+    ], 0.3);
+
+    return text.trim() || content;
   } catch (error) {
-    logger.error("Qwen translation via backend failed:", error);
+    console.error("Qwen translation failed:", error);
     throw error;
   }
 };
@@ -395,21 +454,39 @@ export const suggestStylesQwen = async (
   content: string,
   apiKey: string = ''
 ): Promise<StyleSuggestion[]> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
 
   try {
-    const result = await callAIHelper({
-      action: 'suggestStyles',
-      content,
-      provider: 'qwen'
-    });
-    
-    return Array.isArray(result) ? result : [];
+    const text = await callQwenAPI(apiKey, [
+      { role: "system", content: "你是一位设计专家，擅长为文章推荐视觉样式。" },
+      { role: "user", content: `
+        分析以下文章内容，为微信文章推荐合适的视觉样式。
+        
+        内容:
+        """
+        ${content.slice(0, 2000)}
+        """
+        
+        返回一个包含3个样式建议的JSON数组。每个建议应包含:
+        - style: 主要样式名称（如"professional"、"playful"、"elegant"、"tech"、"nature"）
+        - reason: 简要说明为什么这个样式适合
+        - colorScheme: 3-4个推荐颜色的数组（使用如"blue"、"red"、"gold"等名称）
+        - mood: 这个样式传达的整体氛围
+        
+        可用颜色: red, blue, purple, orange, gold, green, pink, cyan, gradient
+        
+        只返回有效的JSON数组，如:
+        [{"style": "...", "reason": "...", "colorScheme": ["...", "..."], "mood": "..."}, ...]
+      ` }
+    ], 0.6);
+
+    const match = text.match(/\[[\s\S]*\]/);
+    if (match) {
+      return JSON.parse(match[0]);
+    }
+    return [];
   } catch (error) {
-    logger.error("Qwen style suggestion via backend failed:", error);
+    console.error("Qwen style suggestion failed:", error);
     throw error;
   }
 };
@@ -422,22 +499,37 @@ export const generateHookQwen = async (
   style: 'question' | 'story' | 'statistic' | 'quote' | 'surprising' = 'question',
   apiKey: string = ''
 ): Promise<string> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
+
+  const styleDescriptions = {
+    question: '以一个发人深省的问题开头，吸引读者的注意',
+    story: '以一个简短而引人入胜的轶事或小故事开头',
+    statistic: '以一个令人惊讶或有影响力的统计数据或事实开头',
+    quote: '以一句鼓舞人心或相关的名言开头',
+    surprising: '以一个令人惊讶或反直觉的陈述开头'
+  };
 
   try {
-    const result = await callAIHelper({
-      action: 'generateHook',
-      content: topic,
-      provider: 'qwen',
-      options: { style }
-    });
-    
-    return typeof result === 'string' ? result : '';
+    const text = await callQwenAPI(apiKey, [
+      { role: "system", content: "你是一位创意写手，擅长撰写引人入胜的文章开头。" },
+      { role: "user", content: `
+        为一篇关于 "${topic}" 的文章生成一个引人入胜的开头/钩子。
+        
+        风格: ${styleDescriptions[style]}
+        
+        要求:
+        - 保持简洁（2-4句话）
+        - 立即吸引读者
+        - 创造继续阅读的好奇心
+        - 适合微信文章的受众
+        
+        只返回开头段落，不要其他任何内容。
+      ` }
+    ], 0.8);
+
+    return text.trim();
   } catch (error) {
-    logger.error("Qwen hook generation via backend failed:", error);
+    console.error("Qwen hook generation failed:", error);
     throw error;
   }
 };
@@ -450,22 +542,40 @@ export const generateCTAQwen = async (
   ctaType: 'subscribe' | 'share' | 'comment' | 'action' | 'reflection' = 'share',
   apiKey: string = ''
 ): Promise<string> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
+
+  const ctaDescriptions = {
+    subscribe: '鼓励读者关注/订阅账号',
+    share: '鼓励读者分享文章给他人',
+    comment: '鼓励读者留言评论并参与讨论',
+    action: '鼓励读者采取与内容相关的具体行动',
+    reflection: '以一个反思性的想法或问题结束，供读者思考'
+  };
 
   try {
-    const result = await callAIHelper({
-      action: 'generateCTA',
-      content: articleContext,
-      provider: 'qwen',
-      options: { type: ctaType }
-    });
-    
-    return typeof result === 'string' ? result : '';
+    const text = await callQwenAPI(apiKey, [
+      { role: "system", content: "你是一位营销专家，擅长撰写有吸引力的行动号召。" },
+      { role: "user", content: `
+        为一篇具有以下上下文的文章生成一个有吸引力的行动号召结尾:
+        """
+        ${articleContext.slice(0, 1000)}
+        """
+        
+        CTA类型: ${ctaDescriptions[ctaType]}
+        
+        要求:
+        - 保持自然，不要太商业化
+        - 与文章内容相关
+        - 温暖且有吸引力
+        - 最多2-3句话
+        
+        只返回CTA文本，不要其他任何内容。
+      ` }
+    ], 0.7);
+
+    return text.trim();
   } catch (error) {
-    logger.error("Qwen CTA generation via backend failed:", error);
+    console.error("Qwen CTA generation failed:", error);
     throw error;
   }
 };
@@ -478,22 +588,40 @@ export const rewriteContentQwen = async (
   newStyle: 'humorous' | 'serious' | 'inspirational' | 'educational' | 'conversational',
   apiKey: string = ''
 ): Promise<string> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
+  if (!apiKey) throw new Error("This feature requires backend support. API keys are no longer accepted from frontend.");
+
+  const styleDescriptions = {
+    humorous: '诙谐、有趣，带有适当的幽默和轻松的语调',
+    serious: '严肃、深思熟虑，有分量和深度',
+    inspirational: '鼓舞人心、有激励性，带有情感共鸣',
+    educational: '信息性强、清晰，有结构化的解释',
+    conversational: '友好、随意，像和朋友聊天一样'
+  };
 
   try {
-    const result = await callAIHelper({
-      action: 'rewriteContent',
-      content,
-      provider: 'qwen',
-      options: { style: newStyle }
-    });
-    
-    return typeof result === 'string' ? result : content;
+    const text = await callQwenAPI(apiKey, [
+      { role: "system", content: "你是一位多才多艺的作家，擅长将内容改写成不同的风格。" },
+      { role: "user", content: `
+        将以下内容改写成${styleDescriptions[newStyle]}的风格。
+        
+        原始内容:
+        """
+        ${content}
+        """
+        
+        要求:
+        - 完全转变语调和风格
+        - 保持核心信息和事实
+        - 保持大致相同的长度
+        - 使其适合微信文章格式
+        
+        只返回改写后的内容，不要其他任何内容。
+      ` }
+    ], 0.8);
+
+    return text.trim() || content;
   } catch (error) {
-    logger.error("Qwen content rewrite via backend failed:", error);
+    console.error("Qwen content rewrite failed:", error);
     throw error;
   }
 };
