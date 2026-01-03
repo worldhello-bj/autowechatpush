@@ -131,12 +131,16 @@ if (!BACKEND_API_URL) {
 
 // Security check: Warn if using HTTP in production for non-localhost backends
 if (NODE_ENV === 'production' && /^http:\/\//i.test(BACKEND_API_URL) && !isLocalhostUrl(BACKEND_API_URL)) {
+    const boxWidth = 63;
+    const urlDisplay = BACKEND_API_URL.length > 51 ? BACKEND_API_URL.substring(0, 48) + '...' : BACKEND_API_URL;
+    const urlLine = `│ URL: ${urlDisplay}${' '.repeat(Math.max(0, boxWidth - 7 - urlDisplay.length))}│`;
+    
     console.warn('');
     console.warn('┌─────────────────────────────────────────────────────────────┐');
     console.warn('│ ⚠️  SECURITY WARNING                                        │');
     console.warn('│─────────────────────────────────────────────────────────────│');
     console.warn('│ Backend API URL uses HTTP (not HTTPS) in production mode   │');
-    console.warn(`│ URL: ${BACKEND_API_URL.padEnd(47)} │`);
+    console.warn(urlLine);
     console.warn('│                                                             │');
     console.warn('│ This exposes sensitive data (tokens, AI requests) to        │');
     console.warn('│ network interception and tampering.                         │');
