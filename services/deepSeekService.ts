@@ -4,7 +4,7 @@ import { GenerationResult } from "./geminiService";
 import { loggers } from './logger';
 import { safeParseJSON } from './jsonParser';
 import { loadPrompts, interpolatePrompt } from './promptConfig';
-import { generateArticleViaBackend, callAIHelper } from './backendAIClient';
+import { callAIHelper } from './backendAIClient';
 
 const logger = loggers.deepseek;
 
