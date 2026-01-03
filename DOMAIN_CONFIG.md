@@ -3,6 +3,7 @@
 ## 当前配置（使用 IP 地址）
 
 ```env
+# 开发/测试环境示例，请替换为您的实际服务器 IP
 VITE_API_BASE=http://your-server-ip:3001/api/v1
 ```
 
@@ -182,6 +183,7 @@ server {
 A: 可以！先用 IP：
 
 ```env
+# 替换为您的实际服务器 IP
 VITE_API_BASE=http://your-server-ip:3001/api/v1
 ```
 

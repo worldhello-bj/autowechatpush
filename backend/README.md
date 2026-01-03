@@ -103,6 +103,42 @@ npm start
 | POST | `/api/v1/ai/chat/stream` | SSE streaming generation |
 | POST | `/api/v1/ai/helper` | AI helper functions (titles, summary, keywords, polish, translate, etc.) |
 | GET | `/api/v1/ai/quota` | Get user quota |
+| GET | `/api/v1/ai/features` | Get available AI features |
+
+### User/Quota
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/user/quota` | Get user quota status |
+| GET | `/api/v1/user/quota/check` | Check if user has sufficient quota |
+| GET | `/api/v1/user/quota/history` | Get usage history |
+
+### Materials
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/materials` | Upload material (image, video, SVG) |
+| GET | `/api/v1/materials` | List user materials |
+| GET | `/api/v1/materials/:id` | Get material by ID |
+| DELETE | `/api/v1/materials/:id` | Delete material |
+
+### Admin (requires admin role)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/admin/stats` | Dashboard statistics |
+| GET | `/api/v1/admin/users` | List all users |
+| POST | `/api/v1/admin/users` | Create user |
+| PATCH | `/api/v1/admin/users/:id/role` | Change user role |
+| PATCH | `/api/v1/admin/users/:id/quota` | Update user quota |
+| DELETE | `/api/v1/admin/users/:id` | Delete user |
+| GET | `/api/v1/admin/analytics` | Get analytics summary |
+
+### Analytics
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/analytics/event` | Track user event |
 
 **AI Helper Actions** (via `/api/v1/ai/helper`):
 - `generateTitles` - Generate title suggestions
@@ -155,14 +191,22 @@ See `TRANSFORMATION_PLAN.md` for the full transformation roadmap. Current implem
   - [x] Input validation
 
 - [x] Phase 2: Core Business Migration
-  - [x] AI service abstraction
+  - [x] AI service abstraction (DeepSeek, Qwen)
+  - [x] AI Key Pool with load balancing
   - [x] SSE streaming infrastructure
+  - [x] AI helper functions (10 helper actions)
   - [x] Material upload
   - [x] Frontend integration
+  - [x] Automatic fallback between AI providers
 
 - [x] Phase 3: Commercialization (Partial)
-  - [x] Quota/points system
+  - [x] User quota system with persistence
   - [x] Rate limiting middleware
-  - [ ] BullMQ async queue
+  - [x] User data persistence (JSON files)
+  - [x] Analytics and event tracking
+  - [ ] BullMQ async queue (pending)
 
 - [ ] Phase 4: Production Readiness
+  - [ ] ClamAV/Sharp image processing
+  - [ ] Dockerfile and docker-compose
+  - [ ] CI/CD pipeline

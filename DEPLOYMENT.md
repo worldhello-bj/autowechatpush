@@ -1,6 +1,31 @@
-# 服务器部署指南 (新手版)
+# 服务器部署指南
 
-本指南将帮助您将后端 API 服务部署到您的服务器上。
+本指南将帮助您将 WeChat AI Publisher 后端 API 服务部署到您的服务器上。
+
+## 系统架构
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   前端应用       │    │   后端 API        │    │   AI 服务        │
+│   (React/Vite)  │───▶│   (Express/TS)   │───▶│   DeepSeek/Qwen │
+│   端口: 5173    │    │   端口: 3001     │    │                 │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+        │                      │
+        │                      ▼
+        │              ┌──────────────────┐
+        │              │   数据持久化       │
+        │              │   backend/data/   │
+        │              │   - users.json    │
+        │              │   - quota.json    │
+        │              │   - analytics.json│
+        │              └──────────────────┘
+        ▼
+┌─────────────────┐
+│   Electron/Web  │
+│   端口: 3000    │
+│   (server.cjs)  │
+└─────────────────┘
+```
 
 ## 目录
 
@@ -135,13 +160,26 @@ JWT_SECRET=请运行上方命令生成64位随机密钥并粘贴在这里
 # 如果只有IP，格式如: http://您的IP:端口
 CORS_ORIGINS=http://您的域名
 
-# AI 服务密钥（可选，用户也可以在前端设置自己的密钥）
+# AI 服务密钥（必填 - 后端统一管理，用户无需提供）
+# DeepSeek 和 Qwen 至少配置一个
 DEEPSEEK_API_KEY=您的DeepSeek密钥
 DASHSCOPE_API_KEY=您的通义千问密钥
-GOOGLE_API_KEY=您的Google密钥
+# 注意：Google Gemini 由前端直接调用，用户需在设置页面配置
 ```
 
-### 4.3 生成 JWT 密钥
+### 4.3 配置 AI 密钥池（高并发推荐）
+
+对于需要支持高并发的生产环境，可以配置多个 API 密钥实现负载均衡：
+
+```bash
+cd backend/src/config
+cp aikeys.example.json aikeys.json
+# 编辑 aikeys.json，添加多个密钥
+```
+
+详见 [backend/AI_KEY_POOL.md](./backend/AI_KEY_POOL.md)。
+
+### 4.4 生成 JWT 密钥
 
 运行以下命令生成安全的随机密钥：
 
@@ -151,7 +189,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 将输出的字符串复制到 `.env` 文件的 `JWT_SECRET` 中。
 
-### 4.4 保存配置
+### 4.5 保存配置
 
 如果使用 nano 编辑器：
 - 按 `Ctrl + O` 保存
@@ -193,6 +231,18 @@ curl http://localhost:3001/api/v1/health
 ```
 
 如果返回类似 `{"status":"ok","timestamp":"..."}` 的响应，说明服务运行正常！
+
+### 5.4 数据持久化说明
+
+后端服务会自动将以下数据持久化到 `backend/data/` 目录：
+
+| 文件 | 内容 | 说明 |
+|------|------|------|
+| `users.json` | 用户账户信息 | 邮箱、密码哈希、角色、配额 |
+| `quota.json` | 配额使用记录 | 每个用户的使用量和历史 |
+| `analytics.json` | 用户行为数据 | 事件追踪、活跃度统计 |
+
+**备份建议：** 定期备份 `backend/data/` 目录以防数据丢失。
 
 ---
 

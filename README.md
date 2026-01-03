@@ -790,8 +790,8 @@ MIT License
 # 生产环境推荐使用 HTTPS 域名
 VITE_API_BASE=https://api.your-domain.com/api/v1
 
-# 仅开发 / 内网测试环境示例，请勿用于公网生产环境
-VITE_API_BASE=http://your-server-ip:3001/api/v1
+# 或使用服务器 IP（仅开发/内网测试环境）
+# VITE_API_BASE=http://your-server-ip:3001/api/v1
 ```
 
 **修改后重新构建即可！** 详细说明请参考：
