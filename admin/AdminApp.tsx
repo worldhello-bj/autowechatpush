@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import PromptsConfig from './components/PromptsConfig';
 
 // API configuration
 const API_BASE = '/api/v1';
 
 // Types
-type AdminTab = 'dashboard' | 'users' | 'apiconfig' | 'analytics';
+type AdminTab = 'dashboard' | 'users' | 'apiconfig' | 'prompts' | 'analytics';
 
 interface User {
   id: string;
@@ -386,6 +387,17 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
               API设置
             </button>
             <button
+              onClick={() => setActiveTab('prompts')}
+              className={`px-6 py-3 font-medium rounded-t-lg transition ${
+                activeTab === 'prompts' 
+                  ? 'bg-gray-100 text-gray-800' 
+                  : 'text-white/70 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <span className="material-icons text-sm mr-2 align-middle">edit_note</span>
+              提示词配置
+            </button>
+            <button
               onClick={() => setActiveTab('analytics')}
               className={`px-6 py-3 font-medium rounded-t-lg transition ${
                 activeTab === 'analytics' 
@@ -670,6 +682,9 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
               </div>
             </div>
           </div>
+        ) : activeTab === 'prompts' ? (
+          /* Prompts Configuration Tab */
+          <PromptsConfig />
         ) : (
           /* Analytics Tab */
           <div className="space-y-6">
