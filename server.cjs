@@ -13,8 +13,6 @@ const distPath = process.resourcesPath
   ? path.join(process.resourcesPath, 'dist')
   : path.join(__dirname, 'dist');
 
-app.use(bodyParser.json({ limit: '20mb' }));
-
 // Utility: Check Public IP for Whitelist
 async function logPublicIP() {
     try {
@@ -186,6 +184,9 @@ const backendApiProxy = createProxyMiddleware({
 app.use(backendApiProxy);
 
 console.log(`[Server] 📡 Backend API proxy configured: /api/v1/* -> ${BACKEND_API_URL}`);
+
+// Body parser for non-proxied routes (must come AFTER proxy to avoid consuming request body)
+app.use(bodyParser.json({ limit: '20mb' }));
 
 // Simple backend stitching service
 const sanitizeDataUrl = (value = '') => {
