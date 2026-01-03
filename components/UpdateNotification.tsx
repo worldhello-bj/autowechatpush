@@ -37,42 +37,52 @@ const UpdateNotification: React.FC = () => {
 
     const electronAPI = (window as any).electronAPI;
 
-    // Listen for update events
-    electronAPI.onUpdateAvailable?.((data: UpdateInfo) => {
+    const handleUpdateAvailable = (data: UpdateInfo) => {
       console.log('[Update] Update available:', data.version);
       setUpdateInfo(data);
       setStatus('available');
       setDismissed(false);
-    });
+    };
 
-    electronAPI.onUpdateNotAvailable?.((data: { version: string }) => {
+    const handleUpdateNotAvailable = (data: { version: string }) => {
       console.log('[Update] No update available, current version:', data.version);
       setStatus('idle');
-    });
+    };
 
-    electronAPI.onUpdateDownloadProgress?.((data: DownloadProgress) => {
+    const handleUpdateDownloadProgress = (data: DownloadProgress) => {
       setProgress(data);
       setStatus('downloading');
-    });
+    };
 
-    electronAPI.onUpdateDownloaded?.((data: UpdateInfo) => {
+    const handleUpdateDownloaded = (data: UpdateInfo) => {
       console.log('[Update] Update downloaded:', data.version);
       setUpdateInfo(data);
       setStatus('downloaded');
       setProgress(null);
-    });
+    };
 
-    electronAPI.onUpdateError?.((data: { message: string }) => {
+    const handleUpdateError = (data: { message: string }) => {
       console.error('[Update] Update error:', data.message);
       setError(data.message);
       setStatus('error');
-    });
+    };
 
-    // Note: IPC listeners in Electron preload scripts are registered globally
-    // and persist for the lifetime of the renderer process. This is by design
-    // and doesn't cause memory leaks as the listeners are cleaned up when
-    // the window is closed. Each listener is only registered once due to
-    // the isElectron guard.
+    // Listen for update events
+    electronAPI.onUpdateAvailable?.(handleUpdateAvailable);
+    electronAPI.onUpdateNotAvailable?.(handleUpdateNotAvailable);
+    electronAPI.onUpdateDownloadProgress?.(handleUpdateDownloadProgress);
+    electronAPI.onUpdateDownloaded?.(handleUpdateDownloaded);
+    electronAPI.onUpdateError?.(handleUpdateError);
+
+    // Cleanup listeners when component unmounts or dependencies change
+    return () => {
+      const api = (window as any).electronAPI;
+      api?.offUpdateAvailable?.(handleUpdateAvailable);
+      api?.offUpdateNotAvailable?.(handleUpdateNotAvailable);
+      api?.offUpdateDownloadProgress?.(handleUpdateDownloadProgress);
+      api?.offUpdateDownloaded?.(handleUpdateDownloaded);
+      api?.offUpdateError?.(handleUpdateError);
+    };
   }, [isElectron]);
 
   // Manual check for updates
