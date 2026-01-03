@@ -150,18 +150,19 @@ router.put('/keypool', updateKeyPool);
 router.post('/keypool/reload', reloadKeyPoolConfig);
 
 /**
+ * @route GET /api/v1/admin/feedback/stats
+ * @desc Get feedback statistics
+ * @access Admin only
+ * Note: This specific route must be placed before parameterized routes to avoid routing conflicts
+ */
+router.get('/feedback/stats', getFeedbackStatistics);
+
+/**
  * @route GET /api/v1/admin/feedback
  * @desc List all feedbacks with filters
  * @access Admin only
  */
 router.get('/feedback', listAllFeedbacks);
-
-/**
- * @route GET /api/v1/admin/feedback/stats
- * @desc Get feedback statistics
- * @access Admin only
- */
-router.get('/feedback/stats', getFeedbackStatistics);
 
 /**
  * @route PATCH /api/v1/admin/feedback/:id
