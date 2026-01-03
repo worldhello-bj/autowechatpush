@@ -23,16 +23,19 @@ const categories: { value: FeedbackCategory; label: string; icon: string }[] = [
   { value: 'other', label: '其他', icon: 'more_horiz' },
 ];
 
+// Default app version when not in Electron
+const DEFAULT_APP_VERSION = '1.0.0';
+
 // Get app version from Electron or default
 const getAppVersion = async (): Promise<string> => {
   if (typeof window !== 'undefined' && (window as any).electronAPI?.getAppVersion) {
     try {
       return await (window as any).electronAPI.getAppVersion();
     } catch {
-      return '1.0.0';
+      return DEFAULT_APP_VERSION;
     }
   }
-  return '1.0.0';
+  return DEFAULT_APP_VERSION;
 };
 
 // Get platform
