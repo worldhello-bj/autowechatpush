@@ -154,7 +154,7 @@ const backendApiProxy = createProxyMiddleware({
     target: BACKEND_API_URL,
     changeOrigin: true,
     // Use filter function to match /api/v1 paths but don't strip the prefix
-    filter: (pathname, req) => req && pathname.startsWith('/api/v1'),
+    filter: (pathname) => pathname.startsWith('/api/v1'),
     onProxyReq: (proxyReq, req, res) => {
         console.log(`[Backend Proxy] ➤ ${req.method} ${req.url} -> ${BACKEND_API_URL}${req.url}`);
     },
