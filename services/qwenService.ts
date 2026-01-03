@@ -269,9 +269,6 @@ export const generateSummaryQwen = async (
 /**
  * Expand a paragraph or section with more details
  */
-/**
- * Expand a paragraph or section with more details
- */
 export const expandContentQwen = async (
   content: string,
   style: 'detailed' | 'examples' | 'storytelling' = 'detailed',
