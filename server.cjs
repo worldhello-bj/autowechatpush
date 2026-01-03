@@ -153,10 +153,11 @@ if (NODE_ENV === 'production' && /^http:\/\//i.test(BACKEND_API_URL) && !isLocal
 const backendApiProxy = createProxyMiddleware({
     target: BACKEND_API_URL,
     changeOrigin: true,
-    // Use filter function to match /api/v1 paths but don't strip the prefix
-    filter: (pathname) => pathname.startsWith('/api/v1'),
+    // Rewrite path to add back /api/v1 prefix that Express strips when mounting at '/api/v1'
+    pathRewrite: (path, req) => '/api/v1' + path,
     onProxyReq: (proxyReq, req, res) => {
-        console.log(`[Backend Proxy] ➤ ${req.method} ${req.url} -> ${BACKEND_API_URL}${req.url}`);
+        const fullPath = '/api/v1' + req.url;
+        console.log(`[Backend Proxy] ➤ ${req.method} ${fullPath} -> ${BACKEND_API_URL}${fullPath}`);
     },
     onProxyRes: (proxyRes, req, res) => {
         console.log(`[Backend Proxy] ◀ ${proxyRes.statusCode} from ${req.url}`);
@@ -180,15 +181,14 @@ const backendApiProxy = createProxyMiddleware({
     }
 });
 
-// Use Proxy for Backend API requests
-// Note: The filter function ensures only /api/v1 paths are proxied
-app.use(backendApiProxy);
+// Use Proxy for Backend API requests at /api/v1 path
+// Note: Express strips /api/v1 when routing, but pathRewrite adds it back for the backend
+app.use('/api/v1', backendApiProxy);
 
 console.log(`[Server] 📡 Backend API proxy configured: /api/v1/* -> ${BACKEND_API_URL}`);
 
 // Body parser for non-proxied routes
 // Note: Must come AFTER proxy to avoid consuming request body before it can be forwarded
-// The proxy's filter function ensures /api/v1 requests bypass this middleware
 app.use(bodyParser.json({ limit: '20mb' }));
 
 // Simple backend stitching service
