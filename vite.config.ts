@@ -15,8 +15,7 @@ export default defineConfig({
       },
       '/api/v1': {
         target: 'http://localhost:3001',
-        changeOrigin: true,
-        rewrite: (path) => path // Keep the path as-is (don't strip /api/v1)
+        changeOrigin: true
       }
     }
   }
