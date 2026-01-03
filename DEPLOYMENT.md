@@ -160,8 +160,8 @@ JWT_SECRET=请运行上方命令生成64位随机密钥并粘贴在这里
 # 如果只有IP，格式如: http://您的IP:端口
 CORS_ORIGINS=http://您的域名
 
-# AI 服务密钥（必填 - 后端统一管理，用户无需提供）
-# DeepSeek 和 Qwen 至少配置一个
+# AI 服务密钥（后端统一管理，用户无需提供）
+# ⚠️ DeepSeek 或 Qwen 至少配置一个（可以两个都配置）
 DEEPSEEK_API_KEY=您的DeepSeek密钥
 DASHSCOPE_API_KEY=您的通义千问密钥
 # 注意：Google Gemini 由前端直接调用，用户需在设置页面配置
