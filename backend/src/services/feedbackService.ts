@@ -205,6 +205,17 @@ export const getAllFeedbacks = (
   
   const total = filtered.length;
   const offset = (page - 1) * limit;
+
+  // If the requested page is beyond the available data, return an empty result
+  if (offset >= total) {
+    return {
+      feedbacks: [],
+      total,
+      page,
+      limit,
+      hasMore: false,
+    };
+  }
   const paged = filtered.slice(offset, offset + limit);
   
   return {
