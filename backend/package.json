@@ -6,7 +6,8 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && npm run copy-config",
+    "copy-config": "node -e \"const fs=require('fs');const path=require('path');const src='src/config';const dest='dist/config';fs.mkdirSync(dest,{recursive:true});fs.readdirSync(src).filter(f=>f.endsWith('.json')).forEach(f=>fs.copyFileSync(path.join(src,f),path.join(dest,f)))\"",
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts"
   },
