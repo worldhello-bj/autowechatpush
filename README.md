@@ -791,7 +791,7 @@ MIT License
 VITE_API_BASE=https://api.your-domain.com/api/v1
 
 # 仅开发 / 内网测试环境示例，请勿用于公网生产环境
-VITE_API_BASE=http://49.232.11.108:3001/api/v1
+VITE_API_BASE=http://your-server-ip:3001/api/v1
 ```
 
 **修改后重新构建即可！** 详细说明请参考：

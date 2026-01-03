@@ -3,7 +3,7 @@
 ## 当前配置（使用 IP 地址）
 
 ```env
-VITE_API_BASE=http://49.232.11.108:3001/api/v1
+VITE_API_BASE=http://your-server-ip:3001/api/v1
 ```
 
 ## 添加域名后的配置
@@ -14,7 +14,7 @@ VITE_API_BASE=http://49.232.11.108:3001/api/v1
 
 ```
 类型    主机记录    记录值
-A       api         49.232.11.108
+A       api         your-server-ip
 ```
 
 ### 步骤 2：配置 Nginx/后端服务器
@@ -65,7 +65,7 @@ server {
 # 
 # 配置示例：
 #   开发环境: http://localhost:3001/api/v1
-#   生产环境: http://49.232.11.108:3001/api/v1  
+#   生产环境: http://your-server-ip:3001/api/v1  
 #   域名部署: https://api.example.com/api/v1
 #
 # 当前配置：使用域名（推荐）
@@ -182,7 +182,7 @@ server {
 A: 可以！先用 IP：
 
 ```env
-VITE_API_BASE=http://49.232.11.108:3001/api/v1
+VITE_API_BASE=http://your-server-ip:3001/api/v1
 ```
 
 等域名配置好后，修改为：

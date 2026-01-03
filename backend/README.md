@@ -154,11 +154,15 @@ See `TRANSFORMATION_PLAN.md` for the full transformation roadmap. Current implem
   - [x] CORS and rate limiting
   - [x] Input validation
 
-- [ ] Phase 2: Core Business Migration (In Progress)
+- [x] Phase 2: Core Business Migration
   - [x] AI service abstraction
   - [x] SSE streaming infrastructure
-  - [ ] Material upload
-  - [ ] Frontend integration
+  - [x] Material upload
+  - [x] Frontend integration
 
-- [ ] Phase 3: Commercialization
+- [x] Phase 3: Commercialization (Partial)
+  - [x] Quota/points system
+  - [x] Rate limiting middleware
+  - [ ] BullMQ async queue
+
 - [ ] Phase 4: Production Readiness
