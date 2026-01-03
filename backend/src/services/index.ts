@@ -5,3 +5,4 @@ export * from './quotaService.js';
 export * from './configService.js';
 export * from './analyticsService.js';
 export * from './aiKeyPoolService.js';
+export * from './feedbackService.js';

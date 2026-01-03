@@ -4,6 +4,7 @@
  */
 const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron');
 const path = require('path');
+const { autoUpdater } = require('electron-updater');
 
 // Keep a global reference of the window object
 let mainWindow = null;
@@ -11,6 +12,81 @@ let mainWindow = null;
 // Environment detection
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const PORT = 3000;
+
+// Auto-updater configuration
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
+
+/**
+ * Setup auto-updater event handlers
+ */
+function setupAutoUpdater() {
+  // Only check for updates in production
+  if (isDev) {
+    console.log('[AutoUpdater] Skipping auto-update check in development mode');
+    return;
+  }
+
+  // Check for updates on app ready
+  autoUpdater.checkForUpdates().catch((err) => {
+    console.error('[AutoUpdater] Failed to check for updates:', err.message);
+  });
+
+  // Update available
+  autoUpdater.on('update-available', (info) => {
+    console.log('[AutoUpdater] Update available:', info.version);
+    if (mainWindow) {
+      mainWindow.webContents.send('update-available', {
+        version: info.version,
+        releaseDate: info.releaseDate,
+        releaseNotes: info.releaseNotes,
+      });
+    }
+  });
+
+  // Update not available
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('[AutoUpdater] Current version is up to date:', info.version);
+    if (mainWindow) {
+      mainWindow.webContents.send('update-not-available', {
+        version: info.version,
+      });
+    }
+  });
+
+  // Download progress
+  autoUpdater.on('download-progress', (progress) => {
+    console.log(`[AutoUpdater] Download progress: ${progress.percent.toFixed(2)}%`);
+    if (mainWindow) {
+      mainWindow.webContents.send('update-download-progress', {
+        percent: progress.percent,
+        bytesPerSecond: progress.bytesPerSecond,
+        transferred: progress.transferred,
+        total: progress.total,
+      });
+    }
+  });
+
+  // Update downloaded
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('[AutoUpdater] Update downloaded:', info.version);
+    if (mainWindow) {
+      mainWindow.webContents.send('update-downloaded', {
+        version: info.version,
+      });
+    }
+  });
+
+  // Error
+  autoUpdater.on('error', (err) => {
+    console.error('[AutoUpdater] Error:', err.message);
+    if (mainWindow) {
+      mainWindow.webContents.send('update-error', {
+        message: err.message,
+      });
+    }
+  });
+}
 
 /**
  * Create the main application window
@@ -221,6 +297,7 @@ function createMenu() {
 app.whenReady().then(async () => {
   await startServer();
   createWindow();
+  setupAutoUpdater();
   
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -259,4 +336,37 @@ ipcMain.handle('get-app-version', () => {
 
 ipcMain.handle('get-app-path', () => {
   return app.getPath('userData');
+});
+
+// Auto-update IPC handlers
+ipcMain.handle('check-for-updates', async () => {
+  if (isDev) {
+    return { success: false, message: 'Updates are disabled in development mode' };
+  }
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return { success: true, updateInfo: result?.updateInfo };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle('download-update', async () => {
+  if (isDev) {
+    return { success: false, message: 'Updates are disabled in development mode' };
+  }
+  try {
+    await autoUpdater.downloadUpdate();
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle('install-update', () => {
+  if (isDev) {
+    return { success: false, message: 'Updates are disabled in development mode' };
+  }
+  autoUpdater.quitAndInstall();
+  return { success: true };
 });

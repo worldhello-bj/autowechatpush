@@ -7,6 +7,7 @@ import userRoutes from './userRoutes.js';
 import adminRoutes from './adminRoutes.js';
 import utilityRoutes from './utilityRoutes.js';
 import analyticsRoutes from './analyticsRoutes.js';
+import feedbackRoutes from './feedbackRoutes.js';
 
 const router = Router();
 
@@ -19,5 +20,6 @@ router.use('/user', userRoutes);
 router.use('/admin', adminRoutes);
 router.use('/utility', utilityRoutes);
 router.use('/analytics', analyticsRoutes);
+router.use('/feedback', feedbackRoutes);
 
 export default router;

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import PromptsConfig from './components/PromptsConfig';
+import FeedbackManagement from './components/FeedbackManagement';
 
 // API configuration
 const API_BASE = '/api/v1';
 
 // Types
-type AdminTab = 'dashboard' | 'users' | 'apiconfig' | 'prompts' | 'analytics';
+type AdminTab = 'dashboard' | 'users' | 'apiconfig' | 'prompts' | 'analytics' | 'feedback';
 
 interface User {
   id: string;
@@ -408,6 +409,17 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
               <span className="material-icons text-sm mr-2 align-middle">bar_chart</span>
               数据分析
             </button>
+            <button
+              onClick={() => setActiveTab('feedback')}
+              className={`px-6 py-3 font-medium rounded-t-lg transition ${
+                activeTab === 'feedback' 
+                  ? 'bg-gray-100 text-gray-800' 
+                  : 'text-white/70 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <span className="material-icons text-sm mr-2 align-middle">feedback</span>
+              用户反馈
+            </button>
           </div>
         </div>
       </header>
@@ -685,7 +697,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
         ) : activeTab === 'prompts' ? (
           /* Prompts Configuration Tab */
           <PromptsConfig />
-        ) : (
+        ) : activeTab === 'analytics' ? (
           /* Analytics Tab */
           <div className="space-y-6">
             {/* Analytics Summary Cards */}
@@ -800,7 +812,10 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
               </div>
             </div>
           </div>
-        )}
+        ) : activeTab === 'feedback' ? (
+          /* Feedback Management Tab */
+          <FeedbackManagement />
+        ) : null}
       </main>
 
       {/* Create User Modal */}
