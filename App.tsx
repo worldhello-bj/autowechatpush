@@ -4,6 +4,8 @@ import Editor from './components/Editor';
 import LogSettings from './components/LogSettings';
 import PromptEditor from './components/PromptEditor';
 import AuthPage from './components/AuthPage';
+import FeedbackDialog from './components/FeedbackDialog';
+import UpdateNotification from './components/UpdateNotification';
 import { AuthProvider, useAuth } from './components/AuthContext';
 import { WeChatCredentials } from './types';
 import analytics from './services/analytics';
@@ -411,6 +413,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const UserMenu: React.FC = () => {
   const { user, logout } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   
   const handleLogout = async () => {
     await logout();
@@ -463,6 +466,17 @@ const UserMenu: React.FC = () => {
                 <span className="material-icons text-lg text-gray-400">token</span>
                 <span>配额: <strong className="text-green-600">{user.quota}</strong></span>
               </div>
+              
+              <button
+                onClick={() => {
+                  setShowFeedback(true);
+                  setShowMenu(false);
+                }}
+                className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition w-full text-left"
+              >
+                <span className="material-icons text-lg text-gray-400">feedback</span>
+                意见反馈
+              </button>
             </div>
             
             <div className="border-t border-gray-100 py-1">
@@ -477,6 +491,12 @@ const UserMenu: React.FC = () => {
           </div>
         </>
       )}
+      
+      {/* Feedback Dialog */}
+      <FeedbackDialog 
+        isOpen={showFeedback} 
+        onClose={() => setShowFeedback(false)} 
+      />
     </div>
   );
 };
@@ -586,6 +606,9 @@ const AppLayout: React.FC = () => {
            } />
          </Routes>
       </main>
+      
+      {/* Update Notification (only shown in Electron) */}
+      <UpdateNotification />
     </div>
   );
 };

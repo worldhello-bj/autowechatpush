@@ -17,6 +17,10 @@ import {
   getKeyPool,
   updateKeyPool,
   reloadKeyPoolConfig,
+  listAllFeedbacks,
+  getFeedbackStatistics,
+  updateFeedback,
+  removeFeedback,
 } from '../controllers/index.js';
 import { authGuard, adminOnly } from '../middleware/index.js';
 
@@ -144,5 +148,33 @@ router.put('/keypool', updateKeyPool);
  * @access Admin only
  */
 router.post('/keypool/reload', reloadKeyPoolConfig);
+
+/**
+ * @route GET /api/v1/admin/feedback
+ * @desc List all feedbacks with filters
+ * @access Admin only
+ */
+router.get('/feedback', listAllFeedbacks);
+
+/**
+ * @route GET /api/v1/admin/feedback/stats
+ * @desc Get feedback statistics
+ * @access Admin only
+ */
+router.get('/feedback/stats', getFeedbackStatistics);
+
+/**
+ * @route PATCH /api/v1/admin/feedback/:id
+ * @desc Update feedback status and reply
+ * @access Admin only
+ */
+router.patch('/feedback/:id', updateFeedback);
+
+/**
+ * @route DELETE /api/v1/admin/feedback/:id
+ * @desc Delete feedback
+ * @access Admin only
+ */
+router.delete('/feedback/:id', removeFeedback);
 
 export default router;

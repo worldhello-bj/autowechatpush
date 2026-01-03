@@ -28,6 +28,7 @@
   "dependencies": {
     "@google/genai": "*",
     "dompurify": "^3.3.0",
+    "electron-updater": "^6.6.2",
     "express": "^4.19.2",
     "http-proxy-middleware": "^3.0.0",
     "react": "^18.3.1",
@@ -71,11 +72,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "electron/icons/icon.ico",
@@ -88,16 +93,25 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "微信AI发布助手",
-      "installerLanguages": ["zh_CN", "en_US"],
+      "installerLanguages": [
+        "zh_CN",
+        "en_US"
+      ],
       "language": "2052"
     },
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "electron/icons/icon.icns",
       "category": "public.app-category.productivity"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "electron/icons",
       "category": "Office"
     },
