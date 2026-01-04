@@ -4,8 +4,94 @@ import { scrapeWeChatArticle, parseHtmlToBlocks } from '../services/index.js';
 import { parseArticleContent } from '../services/index.js';
 import { AIProvider, BlockType } from '../types/index.js';
 import { v4 as uuidv4 } from 'uuid';
+import * as cheerio from 'cheerio';
 
 const logger = createLogger('scraper-controller');
+
+/**
+ * Parse WeChat article preserving section structure
+ * WeChat articles use nested sections with backgrounds and styling
+ */
+const parseWeChatSections = (html: string, svgBlocks: Array<{ id: string; content: string }>) => {
+  const $ = cheerio.load(html);
+  const blocks: Array<{ id: string; type: BlockType; content: string; level?: number }> = [];
+  const svgBlockMap = new Map(svgBlocks.map(svg => [svg.id, svg]));
+  
+  // Find top-level sections and major content blocks
+  const topElements = $('body > *');
+  
+  topElements.each((_, element) => {
+    const $el = $(element);
+    const tagName = element.tagName?.toLowerCase();
+    
+    // Check if this is a styled section (has background, padding, etc.)
+    const hasBackground = $el.attr('style')?.includes('background');
+    const hasSection = $el.find('section').length > 0;
+    
+    // If it's a complex section with styling, preserve it as HTML block
+    if (hasBackground || hasSection || tagName === 'section') {
+      const sectionHtml = $.html($el);
+      
+      // Check for SVG markers in this section
+      const svgMarkerRegex = /data-svg-block-id="([^"]+)"/g;
+      const matches = [...sectionHtml.matchAll(svgMarkerRegex)];
+      
+      if (matches.length > 0) {
+        // Extract and insert SVG blocks from markers
+        let processedHtml = sectionHtml;
+        for (const match of matches) {
+          const svgId = match[1];
+          const svgBlock = svgBlockMap.get(svgId);
+          if (svgBlock) {
+            // Replace marker with actual SVG
+            processedHtml = processedHtml.replace(
+              `<div data-svg-block-id="${svgId}" class="svg-placeholder"></div>`,
+              svgBlock.content
+            );
+          }
+        }
+        
+        blocks.push({
+          id: uuidv4(),
+          type: BlockType.PARAGRAPH, // Use paragraph type for HTML sections
+          content: processedHtml,
+        });
+      } else {
+        blocks.push({
+          id: uuidv4(),
+          type: BlockType.PARAGRAPH,
+          content: sectionHtml,
+        });
+      }
+    }
+    // Handle simple headers
+    else if (tagName?.match(/^h[1-6]$/)) {
+      const level = parseInt(tagName.charAt(1));
+      const text = $el.text().trim();
+      if (text) {
+        blocks.push({
+          id: uuidv4(),
+          type: BlockType.HEADER,
+          content: text,
+          level: level <= 3 ? level as 1 | 2 | 3 : 3,
+        });
+      }
+    }
+    // Handle simple paragraphs (no nested sections)
+    else if (tagName === 'p' && !hasSection) {
+      const text = $el.text().trim();
+      if (text) {
+        blocks.push({
+          id: uuidv4(),
+          type: BlockType.PARAGRAPH,
+          content: text,
+        });
+      }
+    }
+  });
+  
+  return blocks;
+};
 
 /**
  * Import article from WeChat URL
@@ -28,97 +114,9 @@ export const importFromUrl = async (req: Request, res: Response) => {
     // Step 1: Scrape the article
     const scrapedArticle = await scrapeWeChatArticle(url);
 
-    // Step 2: Parse content to get structured blocks
-    // Try AI parsing first, fall back to simple HTML parsing if AI is not available
-    let parsedBlocks;
-    try {
-      parsedBlocks = await parseArticleContent(scrapedArticle.cleanedHtml, AIProvider.DEEPSEEK);
-      logger.info('Used AI parsing for article structure');
-    } catch (aiError) {
-      logger.warn('AI parsing failed, using fallback HTML parser', { error: aiError instanceof Error ? aiError.message : 'Unknown error' });
-      parsedBlocks = parseHtmlToBlocks(scrapedArticle.cleanedHtml);
-      logger.info('Used fallback HTML parser', { blocksCount: parsedBlocks.length });
-    }
-
-    // Step 3: Process SVG markers and insert SVG blocks at their original positions
-    const finalBlocks: typeof parsedBlocks = [];
-    const svgBlockMap = new Map(scrapedArticle.svgBlocks.map(svg => [svg.id, svg]));
-    
-    for (const block of parsedBlocks) {
-      // Check if this block's content contains SVG markers
-      const svgMarkerRegex = /data-svg-block-id="([^"]+)"/g;
-      let match;
-      
-      if (block.content && typeof block.content === 'string') {
-        const matches = [...block.content.matchAll(svgMarkerRegex)];
-        
-        if (matches.length > 0) {
-          // This block contains SVG markers
-          // Split the content and insert SVG blocks
-          let lastIndex = 0;
-          const parts: typeof parsedBlocks = [];
-          
-          for (const m of matches) {
-            const svgId = m[1];
-            const markerIndex = m.index || 0;
-            
-            // Add text before the marker (if any)
-            if (markerIndex > lastIndex) {
-              const textBefore = block.content.substring(lastIndex, markerIndex);
-              if (textBefore.trim()) {
-                parts.push({ ...block, id: uuidv4(), content: textBefore });
-              }
-            }
-            
-            // Add the SVG block
-            const svgBlock = svgBlockMap.get(svgId);
-            if (svgBlock) {
-              parts.push({
-                id: svgBlock.id,
-                type: BlockType.SVG,
-                content: svgBlock.content,
-              });
-            }
-            
-            lastIndex = markerIndex + m[0].length;
-          }
-          
-          // Add remaining text after last marker (if any)
-          if (lastIndex < block.content.length) {
-            const textAfter = block.content.substring(lastIndex);
-            if (textAfter.trim()) {
-              parts.push({ ...block, id: uuidv4(), content: textAfter });
-            }
-          }
-          
-          finalBlocks.push(...parts);
-        } else {
-          // No SVG markers in this block
-          finalBlocks.push(block);
-        }
-      } else {
-        // Block has no content or content is not a string
-        finalBlocks.push(block);
-      }
-    }
-    
-    // Add any remaining SVG blocks that weren't found in markers (append at end)
-    const usedSvgIds = new Set<string>();
-    for (const block of finalBlocks) {
-      if (block.type === BlockType.SVG) {
-        usedSvgIds.add(block.id);
-      }
-    }
-    
-    for (const svg of scrapedArticle.svgBlocks) {
-      if (!usedSvgIds.has(svg.id)) {
-        finalBlocks.push({
-          id: svg.id,
-          type: BlockType.SVG,
-          content: svg.content,
-        });
-      }
-    }
+    // Step 2: Parse content preserving WeChat section structure
+    // Use specialized WeChat parser that keeps styled sections intact
+    const finalBlocks = parseWeChatSections(scrapedArticle.cleanedHtml, scrapedArticle.svgBlocks);
 
     logger.info('Article imported successfully', {
       title: scrapedArticle.title,
