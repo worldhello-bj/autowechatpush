@@ -110,6 +110,9 @@ const logMessage = (
   // Check if this log level should be displayed
   if (level < globalLogLevel) return;
 
+  // Store log entry in memory for later export
+  storeLogEntry(level, module, message, args);
+
   const timestamp = formatTimestamp();
   const icon = LOG_LEVEL_ICONS[level];
   const levelName = LOG_LEVEL_NAMES[level];
@@ -153,6 +156,69 @@ export interface ModuleLogger {
 
 // Store timing labels
 const timings: Map<string, number> = new Map();
+
+// In-memory log storage for export
+interface LogEntry {
+  timestamp: string;
+  level: string;
+  module: string;
+  message: string;
+  args?: string;
+}
+
+const logStorage: LogEntry[] = [];
+const MAX_LOG_ENTRIES = 500; // Keep last 500 entries
+
+/**
+ * Store a log entry in memory for later export
+ */
+const storeLogEntry = (level: LogLevel, module: string, message: string, args: unknown[]): void => {
+  const entry: LogEntry = {
+    timestamp: formatTimestamp(),
+    level: LOG_LEVEL_NAMES[level],
+    module,
+    message,
+    args: args.length > 0 ? JSON.stringify(args, null, 2) : undefined,
+  };
+  
+  logStorage.push(entry);
+  
+  // Trim old entries if we exceed max
+  if (logStorage.length > MAX_LOG_ENTRIES) {
+    logStorage.splice(0, logStorage.length - MAX_LOG_ENTRIES);
+  }
+};
+
+/**
+ * Get all stored logs as a formatted string for export
+ */
+export const getStoredLogs = (): string => {
+  if (logStorage.length === 0) {
+    return '暂无日志记录';
+  }
+  
+  return logStorage.map(entry => {
+    let line = `[${entry.timestamp}] [${entry.level}] [${entry.module}] ${entry.message}`;
+    if (entry.args) {
+      line += `\n  ${entry.args.replace(/\n/g, '\n  ')}`;
+    }
+    return line;
+  }).join('\n');
+};
+
+/**
+ * Clear all stored logs
+ */
+export const clearStoredLogs = (): void => {
+  logStorage.length = 0;
+};
+
+/**
+ * Get the count of stored log entries
+ */
+export const getStoredLogCount = (): number => {
+  return logStorage.length;
+};
 
 /**
  * Create a logger for a specific module
@@ -239,6 +305,9 @@ export default {
   setLogLevel,
   getLogLevel,
   getLogLevelName,
+  getStoredLogs,
+  clearStoredLogs,
+  getStoredLogCount,
   LogLevel,
   loggers
 };

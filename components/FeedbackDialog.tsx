@@ -6,6 +6,7 @@
 
 import React, { useState } from 'react';
 import { getAccessToken } from '../services/apiClient';
+import { getStoredLogs, getStoredLogCount } from '../services/logger';
 
 // API base URL - configurable via environment variable
 const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1';
@@ -53,8 +54,12 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
   const [category, setCategory] = useState<FeedbackCategory>('bug');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [attachLogs, setAttachLogs] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Get log count for display
+  const logCount = getStoredLogCount();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +82,9 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
       const platform = getPlatform();
       const accessToken = getAccessToken();
 
+      // Get logs if user opted to attach them
+      const logContent = attachLogs ? getStoredLogs() : undefined;
+
       // Use API_BASE constant instead of hardcoded path
       const response = await fetch(`${API_BASE}/feedback`, {
         method: 'POST',
@@ -90,6 +98,7 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
           content: content.trim(),
           appVersion,
           platform,
+          logContent,
         }),
       });
 
@@ -100,6 +109,7 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
         setTitle('');
         setContent('');
         setCategory('bug');
+        setAttachLogs(false);
         // Close dialog after 2 seconds
         setTimeout(() => {
           onClose();
@@ -193,6 +203,32 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent resize-none"
             />
             <div className="text-xs text-gray-400 mt-1 text-right">{content.length}/2000</div>
+          </div>
+
+          {/* Attach Logs Option */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={attachLogs}
+                onChange={(e) => setAttachLogs(e.target.checked)}
+                className="mt-1 w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-400"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="material-icons text-gray-500 text-lg">description</span>
+                  <span className="font-medium text-gray-700">附带日志信息</span>
+                  {logCount > 0 && (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                      {logCount} 条记录
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  将自动附带应用运行日志，帮助开发者更快定位问题。日志仅包含操作记录，不含敏感信息。
+                </p>
+              </div>
+            </label>
           </div>
 
           {/* Message */}

@@ -21,6 +21,7 @@ export interface Feedback {
   updatedAt: string;
   appVersion?: string;
   platform?: string;
+  logContent?: string; // Optional attached logs for debugging
 }
 
 // Create feedback request schema
@@ -30,6 +31,7 @@ export const createFeedbackSchema = z.object({
   content: z.string().min(1, 'Content is required').max(2000, 'Content is too long'),
   appVersion: z.string().optional(),
   platform: z.string().optional(),
+  logContent: z.string().max(100000, 'Log content is too large').optional(), // Max 100KB of logs
 });
 
 // Update feedback status schema (admin only)

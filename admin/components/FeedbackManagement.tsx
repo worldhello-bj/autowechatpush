@@ -27,6 +27,7 @@ interface Feedback {
   updatedAt: string;
   appVersion?: string;
   platform?: string;
+  logContent?: string;
 }
 
 interface FeedbackStats {
@@ -315,6 +316,9 @@ const FeedbackManagement: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {feedback.logContent && (
+                      <span className="material-icons text-blue-500 text-lg" title="包含日志">description</span>
+                    )}
                     {feedback.adminReply && (
                       <span className="material-icons text-green-500 text-lg" title="已回复">reply</span>
                     )}
@@ -396,6 +400,21 @@ const FeedbackManagement: React.FC = () => {
                   <div className="text-gray-800">{selectedFeedback.appVersion || '-'}</div>
                 </div>
               </div>
+
+              {/* Attached Logs */}
+              {selectedFeedback.logContent && (
+                <div>
+                  <label className="block text-sm font-medium text-blue-600 mb-1 flex items-center gap-2">
+                    <span className="material-icons text-sm">description</span>
+                    附带日志
+                  </label>
+                  <div className="bg-gray-900 text-gray-100 p-4 rounded-lg border border-gray-700 overflow-auto max-h-64">
+                    <pre className="text-xs font-mono whitespace-pre-wrap break-all">
+                      {selectedFeedback.logContent}
+                    </pre>
+                  </div>
+                </div>
+              )}
 
               {/* Existing Reply */}
               {selectedFeedback.adminReply && (

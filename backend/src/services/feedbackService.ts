@@ -143,6 +143,7 @@ export const createFeedback = (
     updatedAt: now,
     appVersion: data.appVersion,
     platform: data.platform,
+    logContent: data.logContent,
   };
 
   feedbacks.push(feedback);
@@ -159,6 +160,7 @@ export const createFeedback = (
     userId, 
     category: data.category,
     title: data.title,
+    hasLogContent: !!data.logContent,
   });
 
   return feedback;
