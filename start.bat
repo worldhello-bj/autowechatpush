@@ -70,6 +70,24 @@ if not exist "backend\node_modules" (
     echo.
     echo [成功] 后端依赖安装完成
     echo.
+) else (
+    :: Check if critical dependencies are installed
+    pushd "%~dp0backend"
+    call npm list cheerio >nul 2>&1
+    if %ERRORLEVEL% NEQ 0 (
+        echo [警告] 检测到缺少后端依赖 (cheerio)
+        echo [信息] 正在更新后端依赖...
+        call npm install
+        if %ERRORLEVEL% NEQ 0 (
+            echo [错误] 后端依赖更新失败
+            popd
+            pause
+            exit /b 1
+        )
+        echo [成功] 后端依赖更新完成
+        echo.
+    )
+    popd
 )
 
 :: Check if backend .env file exists
