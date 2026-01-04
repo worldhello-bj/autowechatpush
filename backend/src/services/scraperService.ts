@@ -115,6 +115,23 @@ const cleanContent = ($: cheerio.CheerioAPI): { cleanedHtml: string; svgBlocks: 
   // Remove all script tags for XSS prevention
   contentArea.find('script').remove();
   
+  // Remove visibility:hidden and opacity:0 styles that hide content
+  // WeChat articles often use these for lazy loading
+  contentArea.removeAttr('style');
+  contentArea.find('[style*="visibility"]').each((_, element) => {
+    const $el = $(element);
+    let style = $el.attr('style') || '';
+    // Remove visibility and opacity properties
+    style = style.replace(/visibility\s*:\s*hidden\s*;?/gi, '');
+    style = style.replace(/opacity\s*:\s*0\s*;?/gi, '');
+    style = style.trim();
+    if (style) {
+      $el.attr('style', style);
+    } else {
+      $el.removeAttr('style');
+    }
+  });
+  
   // Extract SVG blocks
   contentArea.find('svg').each((_, element) => {
     const svgHtml = $.html(element);
