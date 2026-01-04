@@ -1002,11 +1002,15 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
       setShowImportDialog(false);
       setImportUrl('');
       
-      // Track import event
-      analytics.track('article_import', {
-        url: urlToImport,
-        blocksCount: blocks.length,
-      });
+      // Track import event (don't let analytics errors affect the import)
+      try {
+        analytics.track('article_import', {
+          url: urlToImport,
+          blocksCount: blocks.length,
+        });
+      } catch (err) {
+        console.error('Analytics tracking failed:', err);
+      }
 
       // Success message could be added here
       

@@ -4,22 +4,28 @@ import { v4 as uuidv4 } from 'uuid';
 
 const logger = createLogger('scraper-service');
 
+// Configuration constants for placeholder image
+const PLACEHOLDER_WIDTH = 600;
+const PLACEHOLDER_HEIGHT = 400;
+const PLACEHOLDER_BORDER_MARGIN = 50;
+const PLACEHOLDER_BORDER_RADIUS = 10;
+
 // SVG placeholder configuration
 const PLACEHOLDER_SVG_CONTENT = `
-<svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
-  <rect width="600" height="400" fill="#f5f5f5"/>
-  <rect x="50" y="50" width="500" height="300" fill="#e0e0e0" rx="10"/>
-  <text x="300" y="180" font-family="Arial, sans-serif" font-size="24" fill="#999" text-anchor="middle" font-weight="bold">图片占位符</text>
-  <text x="300" y="220" font-family="Arial, sans-serif" font-size="16" fill="#bbb" text-anchor="middle">Image Placeholder</text>
-  <text x="300" y="250" font-family="Arial, sans-serif" font-size="12" fill="#ccc" text-anchor="middle">仅供排版学习使用</text>
+<svg width="${PLACEHOLDER_WIDTH}" height="${PLACEHOLDER_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+  <rect width="${PLACEHOLDER_WIDTH}" height="${PLACEHOLDER_HEIGHT}" fill="#f5f5f5"/>
+  <rect x="${PLACEHOLDER_BORDER_MARGIN}" y="${PLACEHOLDER_BORDER_MARGIN}" width="${PLACEHOLDER_WIDTH - 2 * PLACEHOLDER_BORDER_MARGIN}" height="${PLACEHOLDER_HEIGHT - 2 * PLACEHOLDER_BORDER_MARGIN}" fill="#e0e0e0" rx="${PLACEHOLDER_BORDER_RADIUS}"/>
+  <text x="${PLACEHOLDER_WIDTH / 2}" y="${PLACEHOLDER_HEIGHT / 2 - 20}" font-family="Arial, sans-serif" font-size="24" fill="#999" text-anchor="middle" font-weight="bold">图片占位符</text>
+  <text x="${PLACEHOLDER_WIDTH / 2}" y="${PLACEHOLDER_HEIGHT / 2 + 20}" font-family="Arial, sans-serif" font-size="16" fill="#bbb" text-anchor="middle">Image Placeholder</text>
+  <text x="${PLACEHOLDER_WIDTH / 2}" y="${PLACEHOLDER_HEIGHT / 2 + 50}" font-family="Arial, sans-serif" font-size="12" fill="#ccc" text-anchor="middle">仅供排版学习使用</text>
 </svg>
 `.trim();
 
 // Placeholder image - using data URL to avoid storing files on client side
 const PLACEHOLDER_IMAGE_DATA_URL = 'data:image/svg+xml;base64,' + Buffer.from(PLACEHOLDER_SVG_CONTENT).toString('base64');
 
-// Modern User-Agent string
-const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+// Modern User-Agent string (can be updated via environment variable)
+const USER_AGENT = process.env.SCRAPER_USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 export interface ScrapedArticle {
   title: string;
