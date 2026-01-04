@@ -6,3 +6,4 @@ export * from './configService.js';
 export * from './analyticsService.js';
 export * from './aiKeyPoolService.js';
 export * from './feedbackService.js';
+export * from './scraperService.js';
