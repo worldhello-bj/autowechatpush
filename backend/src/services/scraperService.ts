@@ -181,6 +181,7 @@ export const scrapeWeChatArticle = async (url: string): Promise<ScrapedArticle> 
 /**
  * Simple HTML to blocks parser (fallback when AI is not available)
  * Converts basic HTML structure to ArticleBlock format
+ * Optimized for WeChat article structures
  */
 export const parseHtmlToBlocks = (html: string, depth: number = 0): ArticleBlock[] => {
   const $ = cheerio.load(html);
@@ -215,7 +216,31 @@ export const parseHtmlToBlocks = (html: string, depth: number = 0): ArticleBlock
     // Handle paragraphs
     else if (tagName === 'p') {
       const text = $el.text().trim();
-      if (text) {
+      const imgCount = $el.find('img').length;
+      
+      // If paragraph contains images, create separate blocks
+      if (imgCount > 0) {
+        $el.find('img').each((_, img) => {
+          const imgSrc = $(img).attr('src');
+          if (imgSrc) {
+            blocks.push({
+              id: uuidv4(),
+              type: BlockType.IMAGE,
+              content: imgSrc,
+            });
+          }
+        });
+        
+        // Add text content if any (excluding image alt text)
+        const textContent = $el.clone().find('img').remove().end().text().trim();
+        if (textContent && textContent.length > MIN_TEXT_LENGTH) {
+          blocks.push({
+            id: uuidv4(),
+            type: BlockType.PARAGRAPH,
+            content: textContent,
+          });
+        }
+      } else if (text) {
         blocks.push({
           id: uuidv4(),
           type: BlockType.PARAGRAPH,
@@ -223,14 +248,38 @@ export const parseHtmlToBlocks = (html: string, depth: number = 0): ArticleBlock
         });
       }
     }
-    // Handle images
-    else if (tagName === 'img' || $el.find('img').length > 0) {
-      const imgSrc = $el.is('img') ? $el.attr('src') : $el.find('img').first().attr('src');
+    // Handle standalone images
+    else if (tagName === 'img') {
+      const imgSrc = $el.attr('src');
       if (imgSrc) {
         blocks.push({
           id: uuidv4(),
           type: BlockType.IMAGE,
           content: imgSrc,
+        });
+      }
+    }
+    // Handle sections/divs with images
+    else if ((tagName === 'div' || tagName === 'section') && $el.find('img').length > 0) {
+      // Extract all images from the section
+      $el.find('img').each((_, img) => {
+        const imgSrc = $(img).attr('src');
+        if (imgSrc) {
+          blocks.push({
+            id: uuidv4(),
+            type: BlockType.IMAGE,
+            content: imgSrc,
+          });
+        }
+      });
+      
+      // Get text content excluding images
+      const textContent = $el.clone().find('img').remove().end().text().trim();
+      if (textContent && textContent.length > MIN_TEXT_LENGTH) {
+        blocks.push({
+          id: uuidv4(),
+          type: BlockType.PARAGRAPH,
+          content: textContent,
         });
       }
     }
@@ -243,7 +292,7 @@ export const parseHtmlToBlocks = (html: string, depth: number = 0): ArticleBlock
         content: `<div data-svg-block-id="${$el.attr('data-svg-block-id')}" class="svg-placeholder"></div>`,
       });
     }
-    // Handle divs with text content
+    // Handle divs/sections with text content
     else if (tagName === 'div' || tagName === 'section') {
       const text = $el.text().trim();
       // Only add if it has substantial text and no nested block elements

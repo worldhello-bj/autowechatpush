@@ -385,6 +385,99 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Handle drag and drop for images
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Visual feedback: add a class or style when dragging over
+    if (contentRef.current) {
+      contentRef.current.style.outline = '2px dashed #10b981';
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Remove visual feedback
+    if (contentRef.current) {
+      contentRef.current.style.outline = '';
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Remove visual feedback
+    if (contentRef.current) {
+      contentRef.current.style.outline = '';
+    }
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      
+      // Check if it's an image file
+      if (file.type.startsWith('image/')) {
+        const target = e.target as HTMLElement;
+        
+        // Check if dropped on an existing image (placeholder or otherwise)
+        let imgElement: HTMLImageElement | null = null;
+        if (target.tagName === 'IMG') {
+          imgElement = target as HTMLImageElement;
+        } else {
+          // Check if target contains an image
+          imgElement = target.querySelector('img');
+        }
+
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const src = ev.target?.result as string;
+          
+          if (imgElement) {
+            // Replace existing image
+            imgElement.src = src;
+            // Remove placeholder-specific attributes if any
+            imgElement.removeAttribute('data-placeholder');
+            handleInput();
+          } else {
+            // Insert new image at drop location
+            const imgHtml = `
+              <section style="margin: 20px 0; text-align: center;">
+                <img src="${src}" style="max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
+                <section style="font-size: 12px; color: #888; margin-top: 6px;">Image Caption</section>
+              </section>
+              <p><br/></p>
+            `;
+            
+            // Insert at cursor position or at the end
+            if (contentRef.current && document.getSelection()?.rangeCount) {
+              const selection = document.getSelection();
+              const range = selection!.getRangeAt(0);
+              
+              // Create a temporary div to convert HTML string to DOM
+              const tempDiv = document.createElement('div');
+              tempDiv.innerHTML = imgHtml;
+              
+              // Insert the fragment
+              const fragment = document.createDocumentFragment();
+              while (tempDiv.firstChild) {
+                fragment.appendChild(tempDiv.firstChild);
+              }
+              
+              range.deleteContents();
+              range.insertNode(fragment);
+              handleInput();
+            } else {
+              insertHtmlAtCursor(imgHtml);
+            }
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-white relative">
       <input 
@@ -605,6 +698,9 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
                     saveCursorPosition();
                     handleInput();
                 }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
                 suppressContentEditableWarning={true}
             />
         )}
