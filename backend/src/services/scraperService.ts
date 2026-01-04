@@ -4,9 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 const logger = createLogger('scraper-service');
 
-// Placeholder image - using data URL to avoid storing files on client side
-// This SVG will be embedded directly in the HTML
-const PLACEHOLDER_IMAGE_DATA_URL = 'data:image/svg+xml;base64,' + Buffer.from(`
+// SVG placeholder configuration
+const PLACEHOLDER_SVG_CONTENT = `
 <svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
   <rect width="600" height="400" fill="#f5f5f5"/>
   <rect x="50" y="50" width="500" height="300" fill="#e0e0e0" rx="10"/>
@@ -14,7 +13,13 @@ const PLACEHOLDER_IMAGE_DATA_URL = 'data:image/svg+xml;base64,' + Buffer.from(`
   <text x="300" y="220" font-family="Arial, sans-serif" font-size="16" fill="#bbb" text-anchor="middle">Image Placeholder</text>
   <text x="300" y="250" font-family="Arial, sans-serif" font-size="12" fill="#ccc" text-anchor="middle">仅供排版学习使用</text>
 </svg>
-`.trim()).toString('base64');
+`.trim();
+
+// Placeholder image - using data URL to avoid storing files on client side
+const PLACEHOLDER_IMAGE_DATA_URL = 'data:image/svg+xml;base64,' + Buffer.from(PLACEHOLDER_SVG_CONTENT).toString('base64');
+
+// Modern User-Agent string
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 export interface ScrapedArticle {
   title: string;
@@ -34,7 +39,7 @@ const fetchWeChatArticle = async (url: string): Promise<string> => {
     const response = await fetch(url, {
       headers: {
         'Referer': 'https://mp.weixin.qq.com/',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': USER_AGENT,
       },
     });
 

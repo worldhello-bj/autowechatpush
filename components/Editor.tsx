@@ -972,10 +972,17 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     await performImport();
   };
 
+  const acceptDisclaimerAndImport = () => {
+    localStorage.setItem('import-disclaimer-seen', 'true');
+    setShowDisclaimer(false);
+    performImport();
+  };
+
   const performImport = async () => {
     setIsImporting(true);
+    const urlToImport = importUrl; // Capture URL before state might change
     try {
-      const response = await aiApi.importUrl(importUrl);
+      const response = await aiApi.importUrl(urlToImport);
       
       if (!response.success || !response.data) {
         throw new Error(response.error?.message || 'Failed to import article');
@@ -997,7 +1004,7 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
       
       // Track import event
       analytics.track('article_import', {
-        url: importUrl,
+        url: urlToImport,
         blocksCount: blocks.length,
       });
 
@@ -1008,12 +1015,6 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     } finally {
       setIsImporting(false);
     }
-  };
-
-  const acceptDisclaimerAndImport = () => {
-    localStorage.setItem('import-disclaimer-seen', 'true');
-    setShowDisclaimer(false);
-    performImport();
   };
 
   // --- AI Tools Handlers ---
