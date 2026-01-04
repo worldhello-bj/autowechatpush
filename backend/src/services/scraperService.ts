@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 const logger = createLogger('scraper-service');
 
 // Placeholder image URL - will be replaced with actual placeholder
-const PLACEHOLDER_IMAGE_URL = '/images/placeholder_note.png';
+const PLACEHOLDER_IMAGE_URL = '/images/placeholder_note.svg';
 
 export interface ScrapedArticle {
   title: string;
