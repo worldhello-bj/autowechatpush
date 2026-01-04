@@ -1,6 +1,0 @@
-<svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
-  <rect width="600" height="400" fill="#f0f0f0"/>
-  <text x="300" y="180" font-family="Arial" font-size="24" fill="#999" text-anchor="middle">图片占位符</text>
-  <text x="300" y="220" font-family="Arial" font-size="16" fill="#bbb" text-anchor="middle">Image Placeholder</text>
-  <text x="300" y="250" font-family="Arial" font-size="12" fill="#ccc" text-anchor="middle">仅供排版学习使用</text>
-</svg>

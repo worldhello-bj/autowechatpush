@@ -4,8 +4,17 @@ import { v4 as uuidv4 } from 'uuid';
 
 const logger = createLogger('scraper-service');
 
-// Placeholder image URL - will be replaced with actual placeholder
-const PLACEHOLDER_IMAGE_URL = '/images/placeholder_note.svg';
+// Placeholder image - using data URL to avoid storing files on client side
+// This SVG will be embedded directly in the HTML
+const PLACEHOLDER_IMAGE_DATA_URL = 'data:image/svg+xml;base64,' + Buffer.from(`
+<svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
+  <rect width="600" height="400" fill="#f5f5f5"/>
+  <rect x="50" y="50" width="500" height="300" fill="#e0e0e0" rx="10"/>
+  <text x="300" y="180" font-family="Arial, sans-serif" font-size="24" fill="#999" text-anchor="middle" font-weight="bold">图片占位符</text>
+  <text x="300" y="220" font-family="Arial, sans-serif" font-size="16" fill="#bbb" text-anchor="middle">Image Placeholder</text>
+  <text x="300" y="250" font-family="Arial, sans-serif" font-size="12" fill="#ccc" text-anchor="middle">仅供排版学习使用</text>
+</svg>
+`.trim()).toString('base64');
 
 export interface ScrapedArticle {
   title: string;
@@ -102,8 +111,8 @@ const cleanContent = ($: cheerio.CheerioAPI): { cleanedHtml: string; svgBlocks: 
   // Replace all images with placeholder
   contentArea.find('img').each((_, element) => {
     const $img = $(element);
-    // Preserve the img tag structure but replace src
-    $img.attr('src', PLACEHOLDER_IMAGE_URL);
+    // Preserve the img tag structure but replace src with data URL
+    $img.attr('src', PLACEHOLDER_IMAGE_DATA_URL);
     // Remove data-src and other lazy loading attributes
     $img.removeAttr('data-src');
     $img.removeAttr('data-original');
