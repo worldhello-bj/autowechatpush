@@ -7,3 +7,4 @@ export * from './adminController.js';
 export * from './utilityController.js';
 export * from './analyticsController.js';
 export * from './feedbackController.js';
+export * from './scraperController.js';

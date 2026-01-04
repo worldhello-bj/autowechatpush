@@ -385,6 +385,117 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Handle drag and drop for images
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Visual feedback: add a class or style when dragging over
+    if (contentRef.current && e.dataTransfer.types.includes('Files')) {
+      contentRef.current.style.outline = '2px dashed #10b981';
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Only remove outline if actually leaving the editor (not just moving between children)
+    if (contentRef.current && 
+        e.relatedTarget && 
+        !contentRef.current.contains(e.relatedTarget as Node)) {
+      contentRef.current.style.outline = '';
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Remove visual feedback
+    if (contentRef.current) {
+      contentRef.current.style.outline = '';
+    }
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      
+      // Check if it's an image file
+      if (file.type.startsWith('image/')) {
+        const target = e.target as HTMLElement;
+        
+        // Check if dropped on an existing image (placeholder or otherwise)
+        let imgElement: HTMLImageElement | null = null;
+        if (target.tagName === 'IMG') {
+          imgElement = target as HTMLImageElement;
+        } else {
+          // Check if target contains an image
+          imgElement = target.querySelector('img');
+        }
+
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const src = ev.target?.result as string;
+          
+          if (imgElement) {
+            // Replace existing image using DOM methods (secure)
+            imgElement.setAttribute('src', src);
+            imgElement.removeAttribute('data-placeholder');
+            handleInput();
+          } else {
+            // Insert new image at drop location
+            // Create image element securely
+            const section = document.createElement('section');
+            section.style.margin = '20px 0';
+            section.style.textAlign = 'center';
+            
+            const img = document.createElement('img');
+            img.setAttribute('src', src);
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.style.borderRadius = '6px';
+            img.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            
+            const caption = document.createElement('section');
+            caption.style.fontSize = '12px';
+            caption.style.color = '#888';
+            caption.style.marginTop = '6px';
+            caption.textContent = 'Image Caption';
+            
+            const spacer = document.createElement('p');
+            spacer.innerHTML = '<br/>';
+            
+            section.appendChild(img);
+            section.appendChild(caption);
+            
+            // Insert at cursor position or at the end
+            if (contentRef.current && document.getSelection()?.rangeCount) {
+              const selection = document.getSelection();
+              const range = selection!.getRangeAt(0);
+              
+              // Only delete contents if range is not collapsed (has selection)
+              if (!range.collapsed) {
+                range.deleteContents();
+              }
+              
+              range.insertNode(spacer);
+              range.insertNode(section);
+              handleInput();
+            } else {
+              // Fallback: append to content
+              if (contentRef.current) {
+                contentRef.current.appendChild(section);
+                contentRef.current.appendChild(spacer);
+                handleInput();
+              }
+            }
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-white relative">
       <input 
@@ -605,6 +716,9 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
                     saveCursorPosition();
                     handleInput();
                 }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
                 suppressContentEditableWarning={true}
             />
         )}

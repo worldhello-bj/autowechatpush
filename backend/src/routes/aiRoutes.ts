@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { generate, chatStream, getQuota, aiHelper, getFeaturesAvailability } from '../controllers/index.js';
+import { generate, chatStream, getQuota, aiHelper, getFeaturesAvailability, importFromUrl } from '../controllers/index.js';
 import { validate, optionalAuth, authGuard, aiRateLimit } from '../middleware/index.js';
 import { aiChatRequestSchema } from '../types/index.js';
 
@@ -25,6 +25,13 @@ router.post('/chat/stream', optionalAuth, aiRateLimit, validate(aiChatRequestSch
  * @access Public (with optional auth for quota tracking)
  */
 router.post('/helper', optionalAuth, aiRateLimit, aiHelper);
+
+/**
+ * @route POST /api/v1/ai/import-url
+ * @desc Import article from WeChat URL
+ * @access Public (with optional auth for quota tracking)
+ */
+router.post('/import-url', optionalAuth, aiRateLimit, importFromUrl);
 
 /**
  * @route GET /api/v1/ai/features

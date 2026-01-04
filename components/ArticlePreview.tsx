@@ -59,6 +59,21 @@ const ArticlePreview: React.FC<ArticlePreviewProps> = ({ title, author, date, bl
           </div>
         );
       case BlockType.PARAGRAPH:
+        // Check if content contains HTML tags (WeChat sections)
+        const hasHtmlTags = typeof block.content === 'string' && /<[^>]+>/.test(block.content);
+        
+        if (hasHtmlTags) {
+          // Render as HTML (for WeChat styled sections)
+          return (
+            <div 
+              key={block.id} 
+              className="wechat-section"
+              dangerouslySetInnerHTML={{ __html: block.content }}
+            />
+          );
+        }
+        
+        // Render as plain text
         return (
           <p key={block.id} className={`mb-4 px-4 text-gray-700 text-base leading-7 tracking-wide ${alignment}`}>
             {block.content}
@@ -174,6 +189,12 @@ const ArticlePreview: React.FC<ArticlePreviewProps> = ({ title, author, date, bl
                 ))}
               </tbody>
             </table>
+          </div>
+        );
+      case BlockType.SVG:
+        return (
+          <div key={block.id} className="my-6 overflow-hidden">
+            <div dangerouslySetInnerHTML={{ __html: block.content }} />
           </div>
         );
       default:

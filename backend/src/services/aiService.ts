@@ -334,3 +334,60 @@ export const generateArticleParallel = async (
     throw new Error('All AI providers failed to generate content');
   }
 };
+
+/**
+ * Parse article content and convert to structured blocks
+ * Used for importing articles from external sources
+ */
+export const parseArticleContent = async (
+  cleanedHtml: string,
+  provider: AIProvider = AIProvider.DEEPSEEK
+): Promise<ArticleBlock[]> => {
+  logger.info('Parsing article content with AI');
+
+  const systemPrompt = `You are a layout reverse engineer. Your task is to analyze HTML content and convert it into structured blocks.
+
+Guidelines:
+- Identify headers (h1, h2, h3) and create HEADER blocks with appropriate levels
+- Convert paragraphs to PARAGRAPH blocks
+- Identify images (marked with placeholder URLs) and create IMAGE blocks
+- Identify quoted text and create QUOTE blocks
+- Identify lists and create LIST or NUMBERED_LIST blocks
+- Preserve text hierarchy and structure
+- Use appropriate block types from: header, paragraph, image, quote, list, numbered_list, divider, card, callout
+- For images, preserve the placeholder URL as content
+- Add visual variety with different styles (red, blue, purple, green, orange, gold)`;
+
+  const userPrompt = `Convert the following HTML content into structured article blocks:
+
+"""
+${cleanedHtml}
+"""
+
+Return structured blocks using the layout_article tool. For each image placeholder found, create an IMAGE block.`;
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
+  ];
+
+  let result: GenerationResult;
+  
+  switch (provider) {
+    case AIProvider.DEEPSEEK: {
+      const apiKey = await getApiKeyFromPool(AIProvider.DEEPSEEK);
+      result = await callDeepSeekAPI(apiKey, messages, false);
+      break;
+    }
+    case AIProvider.QWEN: {
+      const apiKey = await getApiKeyFromPool(AIProvider.QWEN);
+      result = await callQwenAPI(apiKey, messages);
+      break;
+    }
+    default:
+      throw new Error('Unsupported AI provider');
+  }
+
+  logger.info('Content parsed successfully', { blocksCount: result.blocks.length });
+  return result.blocks;
+};
