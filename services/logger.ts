@@ -170,6 +170,19 @@ const logStorage: LogEntry[] = [];
 const MAX_LOG_ENTRIES = 500; // Keep last 500 entries
 
 /**
+ * Safe JSON stringify that handles circular references and non-serializable values
+ */
+const safeStringify = (value: unknown[]): string | undefined => {
+  if (value.length === 0) return undefined;
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    // Handle circular references or non-serializable values
+    return '[Non-serializable value]';
+  }
+};
+
+/**
  * Store a log entry in memory for later export
  */
 const storeLogEntry = (level: LogLevel, module: string, message: string, args: unknown[]): void => {
@@ -178,14 +191,14 @@ const storeLogEntry = (level: LogLevel, module: string, message: string, args: u
     level: LOG_LEVEL_NAMES[level],
     module,
     message,
-    args: args.length > 0 ? JSON.stringify(args, null, 2) : undefined,
+    args: safeStringify(args),
   };
   
   logStorage.push(entry);
   
-  // Trim old entries if we exceed max
+  // Trim oldest entry if we exceed max (using shift for better performance)
   if (logStorage.length > MAX_LOG_ENTRIES) {
-    logStorage.splice(0, logStorage.length - MAX_LOG_ENTRIES);
+    logStorage.shift();
   }
 };
 
