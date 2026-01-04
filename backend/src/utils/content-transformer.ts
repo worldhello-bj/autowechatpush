@@ -4,8 +4,8 @@
  * Provides utilities for converting content to styled HTML following best practices
  */
 
-import { ThemeConfig, applyThemeToStyles } from './theme-config.js';
-import { SVGDecorator, injectDecorator } from './svg-decorators.js';
+import { ThemeConfig, applyThemeToStyles } from '../config/theme-config';
+import { SVGDecorator, injectDecorator } from '../config/svg-decorators';
 
 /**
  * Content Block Interface

@@ -8,7 +8,7 @@ export interface SVGDecorator {
   id: string;
   name: string;
   svg: string;
-  position?: 'before' | 'after' | 'inline';
+  position?: 'before' | 'after';
 }
 
 /**
@@ -50,7 +50,7 @@ export const RED_DOTS_DECORATOR: SVGDecorator = {
 export const CORNER_TRIANGLE: SVGDecorator = {
   id: 'corner-triangle',
   name: 'Corner Triangle',
-  position: 'inline',
+  position: 'before',
   svg: `<svg viewBox="0 0 75.29 55" style="display: block; width: 40px; height: auto;">
     <g><g><g>
       <path d="M11.87,55H8.79S1.42,54.81,0,48.77H24.64L20.08,55Z" style="fill: #d48d12; fill-rule: evenodd;"></path>
@@ -68,7 +68,7 @@ export const CORNER_TRIANGLE: SVGDecorator = {
 export const DIVIDER_LINE: SVGDecorator = {
   id: 'divider-line',
   name: 'Divider Line',
-  position: 'inline',
+  position: 'before',
   svg: `<section style="height: 1px; background: linear-gradient(to right, transparent, #e0e0e0, transparent); margin: 20px 0;"></section>`,
 };
 
@@ -78,7 +78,7 @@ export const DIVIDER_LINE: SVGDecorator = {
 export const STAR_ACCENT: SVGDecorator = {
   id: 'star-accent',
   name: 'Star Accent',
-  position: 'inline',
+  position: 'before',
   svg: `<section style="display: inline-block; color: #ffd427; font-size: 20px; margin: 0 5px;">★</section>`,
 };
 
