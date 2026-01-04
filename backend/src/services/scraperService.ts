@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import { createLogger } from '../utils/index.js';
 import { v4 as uuidv4 } from 'uuid';
+import { BlockType, ArticleBlock } from '../types/index.js';
 
 const logger = createLogger('scraper-service');
 
@@ -9,6 +10,11 @@ const PLACEHOLDER_WIDTH = 600;
 const PLACEHOLDER_HEIGHT = 400;
 const PLACEHOLDER_BORDER_MARGIN = 50;
 const PLACEHOLDER_BORDER_RADIUS = 10;
+
+// HTML parsing constants
+const MAX_HEADER_LEVEL = 3;
+const MIN_TEXT_LENGTH = 10;
+const MAX_RECURSION_DEPTH = 5;
 
 // SVG placeholder configuration
 const PLACEHOLDER_SVG_CONTENT = `
@@ -176,9 +182,15 @@ export const scrapeWeChatArticle = async (url: string): Promise<ScrapedArticle> 
  * Simple HTML to blocks parser (fallback when AI is not available)
  * Converts basic HTML structure to ArticleBlock format
  */
-export const parseHtmlToBlocks = (html: string): Array<{ id: string; type: string; content: string; level?: number }> => {
+export const parseHtmlToBlocks = (html: string, depth: number = 0): ArticleBlock[] => {
   const $ = cheerio.load(html);
-  const blocks: Array<{ id: string; type: string; content: string; level?: number }> = [];
+  const blocks: ArticleBlock[] = [];
+  
+  // Prevent deep recursion
+  if (depth > MAX_RECURSION_DEPTH) {
+    logger.warn('Max recursion depth reached in HTML parser');
+    return blocks;
+  }
   
   // Process each top-level element in the content
   $('body').children().each((_, element) => {
@@ -194,9 +206,9 @@ export const parseHtmlToBlocks = (html: string): Array<{ id: string; type: strin
       if (text) {
         blocks.push({
           id: uuidv4(),
-          type: 'header',
+          type: BlockType.HEADER,
           content: text,
-          level: level <= 3 ? level : 3,
+          level: level <= MAX_HEADER_LEVEL ? level as 1 | 2 | 3 : MAX_HEADER_LEVEL as 3,
         });
       }
     }
@@ -206,7 +218,7 @@ export const parseHtmlToBlocks = (html: string): Array<{ id: string; type: strin
       if (text) {
         blocks.push({
           id: uuidv4(),
-          type: 'paragraph',
+          type: BlockType.PARAGRAPH,
           content: text,
         });
       }
@@ -217,7 +229,7 @@ export const parseHtmlToBlocks = (html: string): Array<{ id: string; type: strin
       if (imgSrc) {
         blocks.push({
           id: uuidv4(),
-          type: 'image',
+          type: BlockType.IMAGE,
           content: imgSrc,
         });
       }
@@ -227,7 +239,7 @@ export const parseHtmlToBlocks = (html: string): Array<{ id: string; type: strin
       // Keep the marker in the content for later SVG insertion
       blocks.push({
         id: uuidv4(),
-        type: 'paragraph',
+        type: BlockType.PARAGRAPH,
         content: `<div data-svg-block-id="${$el.attr('data-svg-block-id')}" class="svg-placeholder"></div>`,
       });
     }
@@ -235,18 +247,20 @@ export const parseHtmlToBlocks = (html: string): Array<{ id: string; type: strin
     else if (tagName === 'div' || tagName === 'section') {
       const text = $el.text().trim();
       // Only add if it has substantial text and no nested block elements
-      if (text && text.length > 10 && $el.find('p, h1, h2, h3, h4, h5, h6').length === 0) {
+      if (text && text.length > MIN_TEXT_LENGTH && $el.find('p, h1, h2, h3, h4, h5, h6').length === 0) {
         blocks.push({
           id: uuidv4(),
-          type: 'paragraph',
+          type: BlockType.PARAGRAPH,
           content: text,
         });
-      } else {
-        // Process children recursively
+      } else if ($el.children().length > 0) {
+        // Process children recursively with depth limit
         $el.children().each((_, child) => {
           const childHtml = $(child).prop('outerHTML') || '';
-          const childBlocks = parseHtmlToBlocks(childHtml);
-          blocks.push(...childBlocks);
+          if (childHtml) {
+            const childBlocks = parseHtmlToBlocks(childHtml, depth + 1);
+            blocks.push(...childBlocks);
+          }
         });
       }
     }
