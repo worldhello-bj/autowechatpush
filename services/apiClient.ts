@@ -246,6 +246,18 @@ export const aiApi = {
     });
   },
   
+  importUrl: async (url: string, mode: string = 'structure_only'): Promise<ApiResponse<{
+    title: string;
+    author: string;
+    digest: string;
+    blocks: ArticleBlock[];
+  }>> => {
+    return request('/ai/import-url', {
+      method: 'POST',
+      body: JSON.stringify({ url, mode }),
+    });
+  },
+  
   getQuota: async (): Promise<ApiResponse<{
     userId: string;
     hasQuota: boolean;

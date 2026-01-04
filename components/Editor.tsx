@@ -558,6 +558,12 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   // AI Settings State (with sliders)
   const [aiSettings, setAiSettings] = useState<AISettings>(DEFAULT_AI_SETTINGS);
 
+  // Article Import State
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importUrl, setImportUrl] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
+
   // --- Handlers ---
 
   const handleGenerate = async () => {
@@ -946,6 +952,68 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     setHtmlContent(draft.content || '');
     setTopic(draft.topic || '');
     setFoundDraft(false);
+  };
+
+  // --- Article Import Handler ---
+  
+  const handleImportArticle = async () => {
+    if (!importUrl.trim()) {
+      onError('Please enter a WeChat article URL');
+      return;
+    }
+
+    // Show disclaimer on first use
+    const hasSeenDisclaimer = localStorage.getItem('import-disclaimer-seen');
+    if (!hasSeenDisclaimer) {
+      setShowDisclaimer(true);
+      return;
+    }
+
+    await performImport();
+  };
+
+  const performImport = async () => {
+    setIsImporting(true);
+    try {
+      const response = await aiApi.importUrl(importUrl);
+      
+      if (!response.success || !response.data) {
+        throw new Error(response.error?.message || 'Failed to import article');
+      }
+
+      const { title, digest, blocks } = response.data;
+      
+      // Update article state
+      setArticleTitle(title);
+      setArticleDigest(digest);
+      
+      // Convert blocks to HTML
+      const html = convertBlocksToHtml(blocks);
+      setHtmlContent(html);
+      
+      // Close import dialog
+      setShowImportDialog(false);
+      setImportUrl('');
+      
+      // Track import event
+      analytics.track('article_import', {
+        url: importUrl,
+        blocksCount: blocks.length,
+      });
+
+      // Success message could be added here
+      
+    } catch (e: any) {
+      onError(e.message || 'Failed to import article. Please check the URL and try again.');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const acceptDisclaimerAndImport = () => {
+    localStorage.setItem('import-disclaimer-seen', 'true');
+    setShowDisclaimer(false);
+    performImport();
   };
 
   // --- AI Tools Handlers ---
@@ -1511,6 +1579,128 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
           </div>
       )}
 
+      {/* Import Article Dialog */}
+      {showImportDialog && (
+          <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                  <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                          <span className="material-icons text-green-600">download</span>
+                          导入微信文章
+                      </h3>
+                      <button onClick={() => setShowImportDialog(false)} className="text-gray-400 hover:text-gray-600">
+                          <span className="material-icons">close</span>
+                      </button>
+                  </div>
+                  
+                  <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                          粘贴微信公众号文章链接
+                      </label>
+                      <input
+                          type="text"
+                          value={importUrl}
+                          onChange={(e) => setImportUrl(e.target.value)}
+                          placeholder="https://mp.weixin.qq.com/s/..."
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          disabled={isImporting}
+                      />
+                      <p className="text-xs text-gray-500 mt-2">
+                          支持微信公众号文章链接
+                      </p>
+                  </div>
+                  
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                      <div className="flex items-start gap-2">
+                          <span className="material-icons text-yellow-600 text-sm mt-0.5">info</span>
+                          <div className="text-xs text-yellow-800">
+                              <p className="font-medium mb-1">版权提示</p>
+                              <p>本工具仅供排版学习使用，所有图片将被替换为占位符。请勿侵犯他人版权。</p>
+                          </div>
+                      </div>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                      <button
+                          onClick={() => setShowImportDialog(false)}
+                          className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                          disabled={isImporting}
+                      >
+                          取消
+                      </button>
+                      <button
+                          onClick={handleImportArticle}
+                          disabled={isImporting || !importUrl.trim()}
+                          className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                          {isImporting ? (
+                              <>
+                                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  导入中...
+                              </>
+                          ) : (
+                              '智能拆解'
+                          )}
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* Disclaimer Dialog */}
+      {showDisclaimer && (
+          <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
+                  <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                          <span className="material-icons text-yellow-600">warning</span>
+                          免责声明
+                      </h3>
+                  </div>
+                  
+                  <div className="space-y-4 mb-6">
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <h4 className="font-semibold text-gray-800 mb-2">版权提示</h4>
+                          <ul className="text-sm text-gray-700 space-y-2 list-disc list-inside">
+                              <li>本工具仅供学习优秀文章的排版结构使用</li>
+                              <li>所有外部图片将被替换为占位符，不保留原始图片</li>
+                              <li>请勿将导入的内容用于商业用途</li>
+                              <li>请尊重原作者的版权，仅学习排版思路</li>
+                          </ul>
+                      </div>
+                      
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <h4 className="font-semibold text-gray-800 mb-2">功能说明</h4>
+                          <ul className="text-sm text-gray-700 space-y-2 list-disc list-inside">
+                              <li>系统会自动提取文章结构（标题、段落、布局等）</li>
+                              <li>保留排版骨架和代码结构</li>
+                              <li>清洗原文章的图片素材，替换为占位符</li>
+                              <li>可识别并提取SVG图形元素</li>
+                          </ul>
+                      </div>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                      <button
+                          onClick={() => setShowDisclaimer(false)}
+                          className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                      >
+                          取消
+                      </button>
+                      <button
+                          onClick={acceptDisclaimerAndImport}
+                          className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                      >
+                          我已阅读并同意
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {/* Left Panel: Controls */}
       <div className="w-full lg:w-1/2 p-6 flex flex-col gap-6 overflow-y-auto bg-white border-r border-gray-200">
         <div className="flex justify-between items-start">
@@ -1551,6 +1741,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
                 >
                     <span className="material-icons text-sm">format_paint</span>
                     Format Existing
+                </button>
+                <button 
+                    onClick={() => setShowImportDialog(true)}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition"
+                >
+                    <span className="material-icons text-sm">download</span>
+                    Import Article
                 </button>
             </div>
 

@@ -176,6 +176,12 @@ const ArticlePreview: React.FC<ArticlePreviewProps> = ({ title, author, date, bl
             </table>
           </div>
         );
+      case BlockType.SVG:
+        return (
+          <div key={block.id} className="my-6 overflow-hidden">
+            <div dangerouslySetInnerHTML={{ __html: block.content }} />
+          </div>
+        );
       default:
         return null;
     }
