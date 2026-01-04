@@ -390,7 +390,7 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
     e.preventDefault();
     e.stopPropagation();
     // Visual feedback: add a class or style when dragging over
-    if (contentRef.current) {
+    if (contentRef.current && e.dataTransfer.types.includes('Files')) {
       contentRef.current.style.outline = '2px dashed #10b981';
     }
   };
@@ -398,8 +398,11 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Remove visual feedback
-    if (contentRef.current) {
+    
+    // Only remove outline if actually leaving the editor (not just moving between children)
+    if (contentRef.current && 
+        e.relatedTarget && 
+        !contentRef.current.contains(e.relatedTarget as Node)) {
       contentRef.current.style.outline = '';
     }
   };
@@ -435,41 +438,56 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
           const src = ev.target?.result as string;
           
           if (imgElement) {
-            // Replace existing image
-            imgElement.src = src;
-            // Remove placeholder-specific attributes if any
+            // Replace existing image using DOM methods (secure)
+            imgElement.setAttribute('src', src);
             imgElement.removeAttribute('data-placeholder');
             handleInput();
           } else {
             // Insert new image at drop location
-            const imgHtml = `
-              <section style="margin: 20px 0; text-align: center;">
-                <img src="${src}" style="max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
-                <section style="font-size: 12px; color: #888; margin-top: 6px;">Image Caption</section>
-              </section>
-              <p><br/></p>
-            `;
+            // Create image element securely
+            const section = document.createElement('section');
+            section.style.margin = '20px 0';
+            section.style.textAlign = 'center';
+            
+            const img = document.createElement('img');
+            img.setAttribute('src', src);
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.style.borderRadius = '6px';
+            img.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            
+            const caption = document.createElement('section');
+            caption.style.fontSize = '12px';
+            caption.style.color = '#888';
+            caption.style.marginTop = '6px';
+            caption.textContent = 'Image Caption';
+            
+            const spacer = document.createElement('p');
+            spacer.innerHTML = '<br/>';
+            
+            section.appendChild(img);
+            section.appendChild(caption);
             
             // Insert at cursor position or at the end
             if (contentRef.current && document.getSelection()?.rangeCount) {
               const selection = document.getSelection();
               const range = selection!.getRangeAt(0);
               
-              // Create a temporary div to convert HTML string to DOM
-              const tempDiv = document.createElement('div');
-              tempDiv.innerHTML = imgHtml;
-              
-              // Insert the fragment
-              const fragment = document.createDocumentFragment();
-              while (tempDiv.firstChild) {
-                fragment.appendChild(tempDiv.firstChild);
+              // Only delete contents if range is not collapsed (has selection)
+              if (!range.collapsed) {
+                range.deleteContents();
               }
               
-              range.deleteContents();
-              range.insertNode(fragment);
+              range.insertNode(spacer);
+              range.insertNode(section);
               handleInput();
             } else {
-              insertHtmlAtCursor(imgHtml);
+              // Fallback: append to content
+              if (contentRef.current) {
+                contentRef.current.appendChild(section);
+                contentRef.current.appendChild(spacer);
+                handleInput();
+              }
             }
           }
         };
