@@ -12,6 +12,7 @@ export type EventType =
   | 'article_generate'
   | 'article_publish'
   | 'article_save_draft'
+  | 'article_import'
   | 'material_upload'
   | 'material_delete'
   | 'page_view'

@@ -205,17 +205,11 @@ export interface GenerationRequest {
   multiRoundMode?: boolean;
 }
 
-export interface ArticleBlock {
-  id: string;
-  type: string;
-  content: string;
-  title?: string;
-  style?: string;
-  items?: string[];
-  level?: number;
-  alignment?: string;
-  [key: string]: unknown;
-}
+// Import ArticleBlock from types.ts to maintain consistency
+import type { ArticleBlock } from '../types';
+
+// Re-export for convenience
+export type { ArticleBlock };
 
 export interface GenerationResult {
   title: string;
