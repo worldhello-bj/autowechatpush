@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { sendSuccess, sendError, createLogger } from '../utils/index.js';
-import { scrapeWeChatArticle } from '../services/index.js';
+import { scrapeWeChatArticle, parseHtmlToBlocks } from '../services/index.js';
 import { parseArticleContent } from '../services/index.js';
 import { AIProvider, BlockType } from '../types/index.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -28,8 +28,17 @@ export const importFromUrl = async (req: Request, res: Response) => {
     // Step 1: Scrape the article
     const scrapedArticle = await scrapeWeChatArticle(url);
 
-    // Step 2: Parse content with AI to get structured blocks
-    const parsedBlocks = await parseArticleContent(scrapedArticle.cleanedHtml, AIProvider.DEEPSEEK);
+    // Step 2: Parse content to get structured blocks
+    // Try AI parsing first, fall back to simple HTML parsing if AI is not available
+    let parsedBlocks;
+    try {
+      parsedBlocks = await parseArticleContent(scrapedArticle.cleanedHtml, AIProvider.DEEPSEEK);
+      logger.info('Used AI parsing for article structure');
+    } catch (aiError) {
+      logger.warn('AI parsing failed, using fallback HTML parser', { error: aiError instanceof Error ? aiError.message : 'Unknown error' });
+      parsedBlocks = parseHtmlToBlocks(scrapedArticle.cleanedHtml);
+      logger.info('Used fallback HTML parser', { blocksCount: parsedBlocks.length });
+    }
 
     // Step 3: Process SVG markers and insert SVG blocks at their original positions
     const finalBlocks: typeof parsedBlocks = [];

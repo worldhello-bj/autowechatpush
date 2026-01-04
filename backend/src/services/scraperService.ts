@@ -171,3 +171,86 @@ export const scrapeWeChatArticle = async (url: string): Promise<ScrapedArticle> 
     svgBlocks,
   };
 };
+
+/**
+ * Simple HTML to blocks parser (fallback when AI is not available)
+ * Converts basic HTML structure to ArticleBlock format
+ */
+export const parseHtmlToBlocks = (html: string): Array<{ id: string; type: string; content: string; level?: number }> => {
+  const $ = cheerio.load(html);
+  const blocks: Array<{ id: string; type: string; content: string; level?: number }> = [];
+  
+  // Process each top-level element in the content
+  $('body').children().each((_, element) => {
+    const $el = $(element);
+    const tagName = element.tagName?.toLowerCase();
+    
+    if (!tagName) return;
+    
+    // Handle headers
+    if (tagName.match(/^h[1-6]$/)) {
+      const level = parseInt(tagName.charAt(1));
+      const text = $el.text().trim();
+      if (text) {
+        blocks.push({
+          id: uuidv4(),
+          type: 'header',
+          content: text,
+          level: level <= 3 ? level : 3,
+        });
+      }
+    }
+    // Handle paragraphs
+    else if (tagName === 'p') {
+      const text = $el.text().trim();
+      if (text) {
+        blocks.push({
+          id: uuidv4(),
+          type: 'paragraph',
+          content: text,
+        });
+      }
+    }
+    // Handle images
+    else if (tagName === 'img' || $el.find('img').length > 0) {
+      const imgSrc = $el.is('img') ? $el.attr('src') : $el.find('img').first().attr('src');
+      if (imgSrc) {
+        blocks.push({
+          id: uuidv4(),
+          type: 'image',
+          content: imgSrc,
+        });
+      }
+    }
+    // Handle SVG markers
+    else if ($el.attr('data-svg-block-id')) {
+      // Keep the marker in the content for later SVG insertion
+      blocks.push({
+        id: uuidv4(),
+        type: 'paragraph',
+        content: `<div data-svg-block-id="${$el.attr('data-svg-block-id')}" class="svg-placeholder"></div>`,
+      });
+    }
+    // Handle divs with text content
+    else if (tagName === 'div' || tagName === 'section') {
+      const text = $el.text().trim();
+      // Only add if it has substantial text and no nested block elements
+      if (text && text.length > 10 && $el.find('p, h1, h2, h3, h4, h5, h6').length === 0) {
+        blocks.push({
+          id: uuidv4(),
+          type: 'paragraph',
+          content: text,
+        });
+      } else {
+        // Process children recursively
+        $el.children().each((_, child) => {
+          const childHtml = $(child).prop('outerHTML') || '';
+          const childBlocks = parseHtmlToBlocks(childHtml);
+          blocks.push(...childBlocks);
+        });
+      }
+    }
+  });
+  
+  return blocks;
+};
