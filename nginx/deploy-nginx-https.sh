@@ -11,9 +11,9 @@
 # - Node.js backend running on port 3001
 # - Root or sudo access
 #
-# Usage:
-#   chmod +x deploy-nginx-https.sh
-#   sudo ./deploy-nginx-https.sh
+# Usage (from project root):
+#   chmod +x nginx/deploy-nginx-https.sh
+#   sudo ./nginx/deploy-nginx-https.sh
 #
 # Environment Variables (optional):
 #   CERTBOT_EMAIL - Email address for Let's Encrypt notifications
@@ -60,6 +60,13 @@ apt update
 log_info "Step 2: Installing Nginx and Certbot..."
 apt install -y nginx certbot python3-certbot-nginx
 
+# Verify Nginx installation
+if ! command -v nginx &> /dev/null; then
+    log_error "Nginx installation failed. Please check the error messages above."
+    exit 1
+fi
+log_info "✓ Nginx installed successfully"
+
 # Step 3: Check if backend is running on port 3001
 log_info "Step 3: Checking if backend is running on port ${BACKEND_PORT}..."
 if curl -s "http://127.0.0.1:${BACKEND_PORT}/api/v1/health" > /dev/null 2>&1; then
@@ -77,6 +84,12 @@ fi
 # Step 4: Create Nginx configuration
 log_info "Step 4: Creating Nginx configuration..."
 cat > "${NGINX_CONF}" << 'EOF'
+# Map for conditional WebSocket Connection header
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
 server {
     listen 80;
     listen [::]:80;
@@ -92,7 +105,25 @@ server {
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
+
+    # SSE (Server-Sent Events) endpoint with long timeout
+    location /api/v1/ai/chat/stream {
+        proxy_pass http://127.0.0.1:3001;
+
+        # Pass real IP and headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # SSE support - disable buffering and set long timeout
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 86400;
+        proxy_send_timeout 86400;
+    }
 
     # Reverse proxy to Node.js backend
     location / {
@@ -104,15 +135,15 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
 
-        # WebSocket support
+        # WebSocket support with conditional Connection header
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
+        proxy_set_header Connection $connection_upgrade;
         proxy_cache_bypass $http_upgrade;
 
-        # SSE support
+        # Standard timeout for regular requests
+        proxy_read_timeout 60;
         proxy_buffering off;
-        proxy_read_timeout 86400;
     }
 }
 EOF
@@ -136,10 +167,10 @@ fi
 log_info "Step 6: Testing Nginx configuration..."
 nginx -t
 
-# Step 7: Reload Nginx
-log_info "Step 7: Reloading Nginx..."
-systemctl reload nginx
-log_info "✓ Nginx reloaded successfully"
+# Step 7: Restart Nginx
+log_info "Step 7: Restarting Nginx..."
+systemctl restart nginx
+log_info "✓ Nginx restarted successfully"
 
 # Step 8: Install SSL certificate with Certbot
 log_info "Step 8: Installing SSL certificate with Certbot..."
@@ -163,11 +194,18 @@ fi
 read -p "Proceed with SSL certificate installation? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    certbot --nginx -d "${DOMAIN}" -d "${WWW_DOMAIN}" --non-interactive --agree-tos --redirect ${CERTBOT_EMAIL_FLAG} || {
+    log_info "Note: Certbot will modify the Nginx configuration to add HTTPS settings."
+    # Temporarily disable 'exit on error' to handle certbot failures gracefully
+    set +e
+    certbot --nginx -d "${DOMAIN}" -d "${WWW_DOMAIN}" --non-interactive --agree-tos --redirect ${CERTBOT_EMAIL_FLAG}
+    CERTBOT_STATUS=$?
+    # Restore 'exit on error' behavior
+    set -e
+    if [ "${CERTBOT_STATUS}" -ne 0 ]; then
         log_warn "Certbot automated installation failed."
         log_info "You can run it manually with:"
         log_info "  sudo certbot --nginx -d ${DOMAIN} -d ${WWW_DOMAIN}"
-    }
+    fi
 else
     log_warn "Skipping SSL certificate installation."
     log_info "You can install it later with:"

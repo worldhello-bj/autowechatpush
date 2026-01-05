@@ -64,7 +64,7 @@ sudo certbot --nginx -d aiwxcreator.cloud -d www.aiwxcreator.cloud
 curl https://www.aiwxcreator.cloud/api/v1/health
 
 # 应该返回类似：
-# {"status":"ok","timestamp":"..."}
+# {"status":"healthy","version":"1.0.0","uptime":123,"timestamp":"2024-01-01T00:00:00.000Z","services":[]}
 ```
 
 ## 自定义域名配置

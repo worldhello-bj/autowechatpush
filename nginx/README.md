@@ -1,6 +1,6 @@
-# Nginx 配置文件
+# Nginx 部署文件
 
-本目录包含用于部署 WeChat AI Publisher 后端服务的 Nginx 配置文件。
+本目录包含用于部署 WeChat AI Publisher 后端服务的 Nginx 配置文件和部署脚本。
 
 ## 文件说明
 
