@@ -18,8 +18,19 @@ const app = express();
 // Trust proxy for rate limiting behind reverse proxy
 app.set('trust proxy', 1);
 
-// Security middleware
-app.use(helmet());
+// Security middleware with CSP configuration for frontend
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.tailwindcss.com", "https://aistudiocdn.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      connectSrc: ["'self'", "https://api.weixin.qq.com", "https://api.ipify.org"],
+    },
+  },
+}));
 
 // CORS configuration
 const corsOrigins = config.CORS_ORIGINS.split(',').map(origin => origin.trim());

@@ -1,8 +1,6 @@
-# This folder should contain the built frontend files
-# 
-# To build and deploy:
-# 1. In the project root, run: npm run build
-# 2. Copy the contents of dist/ folder to this web/ folder
-# 3. Deploy the backend with pm2 or Docker
+# 此文件夹用于存放构建好的前端文件
 #
-# The backend will serve these files when accessing the domain directly.
+# 使用方法:
+# 1. 在项目根目录运行: npm run build
+# 2. 复制构建文件: cp -r dist/* backend/web/
+# 3. 部署后端，访问域名即可看到完整的前端应用（包含登录界面）
