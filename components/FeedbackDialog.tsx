@@ -2,11 +2,13 @@
  * Feedback Dialog Component
  * 
  * A dialog component for users to submit feedback to administrators.
+ * Supports internationalization (Chinese and English).
  */
 
 import React, { useState } from 'react';
 import { getAccessToken } from '../services/apiClient';
 import { getStoredLogs, getStoredLogCount } from '../services/logger';
+import { useI18n } from '../services/i18n';
 
 // API base URL - configurable via environment variable
 const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1';
@@ -19,13 +21,13 @@ interface FeedbackDialogProps {
   onClose: () => void;
 }
 
-// Category options
-const categories: { value: FeedbackCategory; label: string; icon: string }[] = [
-  { value: 'bug', label: '问题反馈', icon: 'bug_report' },
-  { value: 'feature', label: '功能建议', icon: 'lightbulb' },
-  { value: 'question', label: '使用咨询', icon: 'help' },
-  { value: 'other', label: '其他', icon: 'more_horiz' },
-];
+// Category icons mapping
+const categoryIcons: Record<FeedbackCategory, string> = {
+  bug: 'bug_report',
+  feature: 'lightbulb',
+  question: 'help',
+  other: 'more_horiz',
+};
 
 // Default app version when not in Electron
 const DEFAULT_APP_VERSION = '1.0.0';
@@ -51,6 +53,7 @@ const getPlatform = (): string => {
 };
 
 const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
+  const { t } = useI18n();
   const [category, setCategory] = useState<FeedbackCategory>('bug');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -61,16 +64,24 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
   // Get log count for display
   const logCount = getStoredLogCount();
 
+  // Category options with translations
+  const categories: { value: FeedbackCategory; label: string; icon: string }[] = [
+    { value: 'bug', label: t.feedback.categories.bug, icon: categoryIcons.bug },
+    { value: 'feature', label: t.feedback.categories.feature, icon: categoryIcons.feature },
+    { value: 'question', label: t.feedback.categories.question, icon: categoryIcons.question },
+    { value: 'other', label: t.feedback.categories.other, icon: categoryIcons.other },
+  ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!title.trim()) {
-      setMessage({ type: 'error', text: '请输入标题' });
+      setMessage({ type: 'error', text: t.feedback.titleRequired });
       return;
     }
     
     if (!content.trim()) {
-      setMessage({ type: 'error', text: '请输入反馈内容' });
+      setMessage({ type: 'error', text: t.feedback.contentRequired });
       return;
     }
 
@@ -105,7 +116,7 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
       const result = await response.json();
 
       if (result.success) {
-        setMessage({ type: 'success', text: '反馈提交成功，感谢您的反馈！' });
+        setMessage({ type: 'success', text: t.feedback.submitSuccess });
         setTitle('');
         setContent('');
         setCategory('bug');
@@ -116,10 +127,10 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
           setMessage(null);
         }, 2000);
       } else {
-        setMessage({ type: 'error', text: result.error?.message || '提交失败，请重试' });
+        setMessage({ type: 'error', text: result.error?.message || t.feedback.submitError });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: '网络错误，请检查网络连接' });
+      setMessage({ type: 'error', text: t.feedback.networkError });
     } finally {
       setIsSubmitting(false);
     }
@@ -135,7 +146,7 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
               <span className="material-icons text-green-500">feedback</span>
-              提交反馈
+              {t.feedback.title}
             </h3>
             <button
               onClick={onClose}
@@ -145,7 +156,7 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
             </button>
           </div>
           <p className="text-sm text-gray-500 mt-1">
-            您的反馈将帮助我们改进产品，感谢您的支持！
+            {t.feedback.description}
           </p>
         </div>
 
@@ -153,7 +164,7 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Category */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">反馈类型</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t.feedback.categoryLabel}</label>
             <div className="grid grid-cols-2 gap-2">
               {categories.map((cat) => (
                 <button
@@ -176,13 +187,13 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              标题 <span className="text-red-500">*</span>
+              {t.feedback.titleLabel} <span className="text-red-500">{t.feedback.required}</span>
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="简要描述您的反馈"
+              placeholder={t.feedback.titlePlaceholder}
               maxLength={100}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
             />
@@ -192,12 +203,12 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
           {/* Content */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              详细描述 <span className="text-red-500">*</span>
+              {t.feedback.contentLabel} <span className="text-red-500">{t.feedback.required}</span>
             </label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="请详细描述您遇到的问题或建议..."
+              placeholder={t.feedback.contentPlaceholder}
               rows={5}
               maxLength={2000}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent resize-none"
@@ -217,15 +228,15 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <span className="material-icons text-gray-500 text-lg">description</span>
-                  <span className="font-medium text-gray-700">附带日志信息</span>
+                  <span className="font-medium text-gray-700">{t.feedback.attachLogs}</span>
                   {logCount > 0 && (
                     <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                      {logCount} 条记录
+                      {logCount} {t.feedback.logRecords}
                     </span>
                   )}
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
-                  将自动附带应用运行日志，帮助开发者更快定位问题。日志仅包含操作记录，不含敏感信息。
+                  {t.feedback.attachLogsDesc}
                 </p>
               </div>
             </label>
@@ -250,7 +261,7 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
               onClick={onClose}
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
             >
-              取消
+              {t.feedback.cancel}
             </button>
             <button
               type="submit"
@@ -263,12 +274,12 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ isOpen, onClose }) => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  提交中...
+                  {t.feedback.submitting}
                 </>
               ) : (
                 <>
                   <span className="material-icons text-lg">send</span>
-                  提交反馈
+                  {t.feedback.submit}
                 </>
               )}
             </button>
