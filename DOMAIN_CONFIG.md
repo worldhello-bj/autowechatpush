@@ -1,78 +1,148 @@
 # 域名配置指南
 
-## 当前配置（使用 IP 地址）
+## 当前配置（使用 HTTPS + 域名）
 
 ```env
-VITE_API_BASE=http://49.232.11.108:3001/api/v1
+VITE_API_BASE=https://www.aiwxcreator.cloud/api/v1
 ```
 
-## 添加域名后的配置
+## 部署架构
 
-### 步骤 1：配置域名
+```
+┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
+│   浏览器/客户端   │──────▶│     Nginx       │──────▶│   Node.js 后端   │
+│                 │      │   (80/443)      │      │   (端口 3001)    │
+└─────────────────┘      └─────────────────┘      └─────────────────┘
+        ↓                        ↓
+   HTTPS 请求              反向代理 + SSL
+```
 
-假设你的域名是 `api.example.com`，需要在域名 DNS 设置中添加 A 记录：
+**关键点**：
+- **Nginx** 监听 `80` (HTTP) 和 `443` (HTTPS) 端口
+- **Node.js** 监听内部端口 `3001`
+- Nginx 负责 SSL 终止和反向代理
+
+## 当前域名配置 (aiwxcreator.cloud)
+
+### 1. DNS 配置
+
+在域名提供商处添加以下 A 记录：
 
 ```
 类型    主机记录    记录值
-A       api         49.232.11.108
+A       @           49.232.11.108
+A       www         49.232.11.108
 ```
 
-### 步骤 2：配置 Nginx/后端服务器
+### 2. Nginx 配置
 
-确保你的后端服务器配置了 HTTPS 和 CORS：
+项目已提供预配置的 Nginx 配置文件：
+
+```bash
+# 复制配置文件
+sudo cp nginx/aiwxcreator.cloud.conf /etc/nginx/sites-available/aiwxcreator.cloud
+
+# 启用配置
+sudo ln -s /etc/nginx/sites-available/aiwxcreator.cloud /etc/nginx/sites-enabled/
+
+# 测试并重载
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### 3. SSL 证书
+
+使用 Certbot 自动配置 Let's Encrypt 证书：
+
+```bash
+sudo certbot --nginx -d aiwxcreator.cloud -d www.aiwxcreator.cloud
+```
+
+### 4. 验证部署
+
+```bash
+# 测试 HTTPS 连接
+curl https://www.aiwxcreator.cloud/api/v1/health
+
+# 应该返回类似：
+# {"status":"ok","timestamp":"..."}
+```
+
+## 自定义域名配置
+
+如果您使用不同的域名（如 `api.example.com`），需要修改以下配置：
+
+### 步骤 1：配置 DNS
+
+在域名 DNS 设置中添加 A 记录：
+
+```
+类型    主机记录    记录值
+A       api         您的服务器IP
+```
+
+### 步骤 2：配置 Nginx
+
+创建 Nginx 配置文件：
+
+```bash
+sudo nano /etc/nginx/sites-available/api.example.com
+```
 
 ```nginx
-# /etc/nginx/sites-available/api.example.com
-
 server {
     listen 80;
-    listen 443 ssl;
+    listen [::]:80;
     server_name api.example.com;
 
-    ssl_certificate /path/to/cert.pem;
-    ssl_certificate_key /path/to/key.pem;
+    # 开启 gzip 压缩
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
 
-    location /api/v1 {
-        proxy_pass http://localhost:3001/api/v1;
+    location / {
+        proxy_pass http://127.0.0.1:3001;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # CORS headers
-        add_header Access-Control-Allow-Origin *;
-        add_header Access-Control-Allow-Methods 'GET, POST, PUT, DELETE, OPTIONS';
-        add_header Access-Control-Allow-Headers 'Origin, Content-Type, Accept, Authorization';
-        
-        if ($request_method = 'OPTIONS') {
-            return 204;
-        }
+
+        # WebSocket 支持
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_cache_bypass $http_upgrade;
+
+        # SSE 支持
+        proxy_buffering off;
+        proxy_read_timeout 86400;
     }
 }
 ```
 
-### 步骤 3：修改 `.env.production`
+### 步骤 3：启用配置并安装 SSL
+
+```bash
+# 启用配置
+sudo ln -s /etc/nginx/sites-available/api.example.com /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+
+# 安装 SSL 证书
+sudo certbot --nginx -d api.example.com
+```
+
+### 步骤 4：修改 `.env.production`
 
 只需要修改一个地方：
 
 ```env
 # Production Environment Configuration
-# Backend API base URL - used by both Electron and Web deployments
-# 
-# 🎯 统一配置：
-# Electron 桌面应用和网页部署都使用相同的后端地址
-# 无需区分部署类型，简化配置管理
-# 
-# 配置示例：
-#   开发环境: http://localhost:3001/api/v1
-#   生产环境: http://49.232.11.108:3001/api/v1  
-#   域名部署: https://api.example.com/api/v1
-#
-# 当前配置：使用域名（推荐）
-VITE_API_BASE=https://api.example.com/api/v1
+# 当前配置：使用 HTTPS + 域名
+VITE_API_BASE=https://www.aiwxcreator.cloud/api/v1
+
+# 或者使用您自己的域名
+VITE_API_BASE=https://api.your-domain.com/api/v1
 ```
 
-### 步骤 4：重新构建
+### 步骤 5：重新构建
 
 #### 网页部署
 
@@ -144,7 +214,7 @@ npm run electron:build:win
 cat .env.production
 
 # 应该看到
-VITE_API_BASE=https://api.example.com/api/v1
+VITE_API_BASE=https://www.aiwxcreator.cloud/api/v1
 ```
 
 ### 2. 构建后验证
@@ -154,7 +224,7 @@ VITE_API_BASE=https://api.example.com/api/v1
 npm run build
 
 # 检查构建产物中的 URL
-grep -o '"https://api.example.com/api/v1"' dist/assets/*.js
+grep -o '"https://www.aiwxcreator.cloud/api/v1"' dist/assets/*.js
 ```
 
 ### 3. 运行时验证
@@ -162,7 +232,7 @@ grep -o '"https://api.example.com/api/v1"' dist/assets/*.js
 1. 打开应用（Electron 或网页）
 2. 按 F12 打开开发者工具
 3. 查看 Network 标签
-4. 应该看到请求发送到 `https://api.example.com/api/v1/...`
+4. 应该看到请求发送到 `https://www.aiwxcreator.cloud/api/v1/...`
 
 ## 常见问题
 

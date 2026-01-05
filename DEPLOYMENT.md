@@ -278,13 +278,46 @@ pm2 restart wechat-api
 
 如果您希望使用域名访问，需要配置 Nginx 反向代理。
 
-### 6.1 安装 Nginx
+### 6.1 快速部署（aiwxcreator.cloud）
+
+如果您正在部署 `aiwxcreator.cloud` 域名，可以使用预配置的脚本：
+
+```bash
+# 进入项目目录
+cd /opt/wechat-ai-publisher
+
+# 运行部署脚本
+sudo bash nginx/deploy-nginx-https.sh
+```
+
+### 6.2 手动安装 Nginx
 
 ```bash
 sudo apt install -y nginx
 ```
 
-### 6.2 创建 Nginx 配置
+### 6.3 创建 Nginx 配置
+
+#### 对于 aiwxcreator.cloud 域名：
+
+```bash
+# 复制预配置文件
+sudo cp nginx/aiwxcreator.cloud.conf /etc/nginx/sites-available/aiwxcreator.cloud
+
+# 创建软链接
+sudo ln -s /etc/nginx/sites-available/aiwxcreator.cloud /etc/nginx/sites-enabled/
+
+# 删除默认配置（可选）
+sudo rm /etc/nginx/sites-enabled/default
+
+# 测试配置
+sudo nginx -t
+
+# 重启 Nginx
+sudo systemctl reload nginx
+```
+
+#### 对于其他域名：
 
 ```bash
 sudo nano /etc/nginx/sites-available/wechat-api
@@ -297,6 +330,10 @@ server {
     listen 80;
     server_name 您的域名或IP;
 
+    # 开启 gzip 压缩 (优化加载速度)
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
     location / {
         proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
@@ -305,6 +342,7 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
         
         # SSE 支持
@@ -314,7 +352,7 @@ server {
 }
 ```
 
-### 6.3 启用配置
+### 6.4 启用配置
 
 ```bash
 # 创建软链接
@@ -327,7 +365,7 @@ sudo nginx -t
 sudo systemctl restart nginx
 ```
 
-### 6.4 配置 HTTPS（推荐）
+### 6.5 配置 HTTPS（推荐）
 
 使用免费的 Let's Encrypt 证书：
 
@@ -335,9 +373,25 @@ sudo systemctl restart nginx
 # 安装 Certbot
 sudo apt install -y certbot python3-certbot-nginx
 
-# 获取证书（替换为您的域名和邮箱）
-sudo certbot --nginx -d 您的域名 --email 您的邮箱 --agree-tos
+# 获取证书（aiwxcreator.cloud 示例）
+sudo certbot --nginx -d aiwxcreator.cloud -d www.aiwxcreator.cloud
+
+# 或者替换为您的域名
+sudo certbot --nginx -d 您的域名 -d www.您的域名
 ```
+
+Certbot 会自动：
+- 申请 SSL 证书
+- 配置 Nginx 使用 HTTPS
+- 设置 HTTP -> HTTPS 自动重定向
+- 配置证书自动续期
+
+### 6.6 验证 HTTPS
+
+1. 访问 `https://www.aiwxcreator.cloud`（或您的域名）
+2. 检查浏览器地址栏是否显示🔒（安全锁）
+3. 打开开发者工具 (F12)，确认 Network 面板中没有 `ERR_SSL_PROTOCOL_ERROR` 或 `Mixed Content` 报错
+4. 测试 API：`curl https://www.aiwxcreator.cloud/api/v1/health`
 
 ---
 
