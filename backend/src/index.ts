@@ -28,7 +28,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.tailwindcss.com", "https://aistudiocdn.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://fonts.googleapis.com"],
-      imgSrc: ["'self'", "data:", "blob:", "https://aistudiocdn.com", "https://cdn.tailwindcss.com", "https://fonts.gstatic.com", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https://aistudiocdn.com", "https://cdn.tailwindcss.com"],
       connectSrc: ["'self'", "https://api.weixin.qq.com", "https://api.ipify.org"],
     },
   },
@@ -120,7 +120,7 @@ if (hasFrontend) {
   app.use(express.static(webPath));
   
   // SPA fallback - serve index.html for any non-API GET requests
-  app.get(/^(?!\/api).*/, (req, res, next) => {
+  app.get(/^(?!\/api\/).*$/, (req, res, next) => {
     res.sendFile(indexPath, (err) => {
       if (err) {
         next(err);
