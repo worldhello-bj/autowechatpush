@@ -14,6 +14,9 @@
 # Usage:
 #   chmod +x deploy-nginx-https.sh
 #   sudo ./deploy-nginx-https.sh
+#
+# Environment Variables (optional):
+#   CERTBOT_EMAIL - Email address for Let's Encrypt notifications
 # =============================================================================
 
 set -e
@@ -145,10 +148,22 @@ log_info "  - ${DOMAIN}"
 log_info "  - ${WWW_DOMAIN}"
 echo
 
+# Prompt for email if not set via environment variable
+if [ -z "${CERTBOT_EMAIL}" ]; then
+    read -p "Enter your email for Let's Encrypt notifications: " CERTBOT_EMAIL
+fi
+
+if [ -z "${CERTBOT_EMAIL}" ]; then
+    log_warn "No email provided. Using register-unsafely-without-email flag."
+    CERTBOT_EMAIL_FLAG="--register-unsafely-without-email"
+else
+    CERTBOT_EMAIL_FLAG="--email ${CERTBOT_EMAIL}"
+fi
+
 read -p "Proceed with SSL certificate installation? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    certbot --nginx -d "${DOMAIN}" -d "${WWW_DOMAIN}" --non-interactive --agree-tos --redirect --email admin@${DOMAIN} || {
+    certbot --nginx -d "${DOMAIN}" -d "${WWW_DOMAIN}" --non-interactive --agree-tos --redirect ${CERTBOT_EMAIL_FLAG} || {
         log_warn "Certbot automated installation failed."
         log_info "You can run it manually with:"
         log_info "  sudo certbot --nginx -d ${DOMAIN} -d ${WWW_DOMAIN}"
@@ -171,14 +186,14 @@ log_info "Nginx Config: ${NGINX_CONF}"
 echo
 log_info "Next Steps:"
 log_info "1. Ensure your DNS A records point to this server"
-log_info "2. Verify HTTPS access at https://${WWW_DOMAIN}"
+log_info "2. Verify HTTPS access at https://${DOMAIN} or https://${WWW_DOMAIN}"
 log_info "3. Check browser console for any SSL/Mixed Content errors"
-log_info "4. API endpoint: https://${WWW_DOMAIN}/api/v1/health"
+log_info "4. API endpoint: https://${DOMAIN}/api/v1/health"
 echo
 log_info "Useful Commands:"
 log_info "  - View Nginx status: systemctl status nginx"
 log_info "  - View Nginx logs: tail -f /var/log/nginx/access.log"
 log_info "  - Renew SSL cert: sudo certbot renew"
-log_info "  - Test site: curl https://${WWW_DOMAIN}/api/v1/health"
+log_info "  - Test site: curl https://${DOMAIN}/api/v1/health"
 echo
 log_info "✓ Deployment script completed!"
