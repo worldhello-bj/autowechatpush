@@ -33,8 +33,10 @@ RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 
 # Create web folder for frontend static files
-# The .gitkeep file ensures the folder exists in git
-# Place the built frontend files in backend/web/ before building Docker image
+# The .gitkeep file in backend/web/ ensures the folder exists in git even when empty.
+# Place the built frontend static files in backend/web/ before building the Docker image,
+# but keep the .gitkeep file so the directory remains tracked. If only .gitkeep is present,
+# it will be copied to ./dist/web/, and the backend will correctly detect that no index.html exists.
 RUN mkdir -p ./dist/web
 COPY web/ ./dist/web/
 
