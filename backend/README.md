@@ -165,10 +165,48 @@ backend/
 │   ├── types/         # TypeScript types
 │   ├── utils/         # Utility functions
 │   └── index.ts       # Application entry
+├── web/               # Frontend static files (optional)
 ├── dist/              # Compiled JavaScript
 ├── package.json
 └── tsconfig.json
 ```
+
+## Web Folder (Frontend Deployment)
+
+The backend supports serving the frontend application directly. This allows you to deploy both frontend and backend as a single service, accessible through one domain.
+
+### How to Use
+
+1. **Build the frontend** in the project root:
+   ```bash
+   npm run build
+   ```
+
+2. **Copy the built files** to the backend web folder:
+   ```bash
+   cp -r dist/* backend/web/
+   ```
+
+3. **Deploy the backend** - it will automatically serve the frontend files
+
+### Docker Deployment
+
+When building with Docker, place the frontend files in `backend/web/` before building:
+
+```bash
+# Build frontend
+npm run build
+
+# Copy to backend web folder
+cp -r dist/* backend/web/
+
+# Build and run Docker image
+cd backend
+docker build -t wechat-ai-publisher .
+docker run -d -p 3001:80 wechat-ai-publisher
+```
+
+Now accessing `http://your-domain` will serve the frontend application, while `/api/v1/*` routes are handled by the API.
 
 ## Security Features
 

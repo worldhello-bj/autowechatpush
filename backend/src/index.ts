@@ -3,6 +3,9 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 import { config } from './config/index.js';
 import routes from './routes/index.js';
 import { requestIdMiddleware, logger } from './utils/index.js';
@@ -15,8 +18,21 @@ const app = express();
 // Trust proxy for rate limiting behind reverse proxy
 app.set('trust proxy', 1);
 
-// Security middleware
-app.use(helmet());
+// Security middleware with CSP configuration for frontend
+// Note: 'unsafe-inline' and 'unsafe-eval' are required for Tailwind CDN runtime.
+// For production, consider using build-time Tailwind compilation instead.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.tailwindcss.com", "https://aistudiocdn.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https://aistudiocdn.com", "https://cdn.tailwindcss.com"],
+      connectSrc: ["'self'", "https://api.weixin.qq.com", "https://api.ipify.org"],
+    },
+  },
+}));
 
 // CORS configuration
 const corsOrigins = config.CORS_ORIGINS.split(',').map(origin => origin.trim());
@@ -68,10 +84,66 @@ app.use((req, res, next) => {
 // API routes
 app.use('/api/v1', routes);
 
-// 404 handler
-app.use(notFoundHandler);
+// API 404 handler - for unmatched /api/* routes
+app.use('/api', notFoundHandler);
 
-// Global error handler
+// Static file serving for frontend (web folder)
+// The web folder contains the built frontend files.
+// In production (Docker), this typically resolves to /app/dist/web.
+// In development (ts-node / tsx), this usually resolves to <project-root>/web.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const webPath = path.join(__dirname, '..', 'web');
+const indexPath = path.join(webPath, 'index.html');
+
+// Log the resolved webPath to help diagnose environment-specific path issues
+logger.info('Resolved webPath for static assets', {
+  webPath,
+  dirname: __dirname,
+  nodeEnv: process.env.NODE_ENV,
+});
+
+// Check if web folder exists and has index.html
+let hasFrontend = false;
+try {
+  fs.accessSync(indexPath, fs.constants.F_OK);
+  hasFrontend = true;
+} catch (error) {
+  logger.warn('Static frontend index.html not found or inaccessible', {
+    indexPath,
+    error: error instanceof Error ? error.message : String(error),
+  });
+}
+
+if (hasFrontend) {
+  // Serve static files from web folder
+  app.use(express.static(webPath));
+  
+  // SPA fallback - serve index.html for any non-API GET requests
+  app.get(/^(?!\/api\/).*$/, (req, res, next) => {
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        next(err);
+      }
+    });
+  });
+  
+  logger.info('📁 Static file serving enabled from web/ folder');
+} else {
+  // No frontend files, show info message for root path
+  app.get('/', (req, res) => {
+    res.json({
+      message: 'WeChat AI Publisher API',
+      version: '1.0.0',
+      api: '/api/v1',
+      health: '/api/v1/health',
+      docs: 'See README.md for API documentation',
+      frontend: 'Place built frontend files in the web/ folder to enable web access',
+    });
+  });
+}
+
+// Global error handler (must be last)
 app.use(errorHandler);
 
 // Initialize server
