@@ -1,0 +1,8 @@
+# This folder should contain the built frontend files
+# 
+# To build and deploy:
+# 1. In the project root, run: npm run build
+# 2. Copy the contents of dist/ folder to this web/ folder
+# 3. Deploy the backend with pm2 or Docker
+#
+# The backend will serve these files when accessing the domain directly.

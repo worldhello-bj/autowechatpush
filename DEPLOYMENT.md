@@ -253,6 +253,25 @@ curl http://localhost:3001/api/v1/health
 
 **备份建议：** 定期备份 `backend/data/` 目录以防数据丢失。
 
+### 5.5 部署前端到后端（可选）
+
+如果您希望通过一个服务同时提供前端和 API，可以将构建好的前端文件放入后端的 `web/` 目录：
+
+```bash
+# 在项目根目录构建前端
+cd /opt/wechat-ai-publisher
+npm install
+npm run build
+
+# 将构建好的前端复制到后端 web 目录
+cp -r dist/* backend/web/
+
+# 重启后端服务
+pm2 restart wechat-api
+```
+
+现在访问 `http://您的域名:3001/` 将直接显示前端应用，而 `/api/v1/*` 路由仍然处理 API 请求。
+
 ---
 
 ## 6. 配置反向代理（可选）
@@ -447,7 +466,17 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 如果您熟悉 Docker，可以使用容器化部署：
 
 ```bash
-cd /opt/wechat-ai-publisher/backend
+cd /opt/wechat-ai-publisher
+
+# 首先构建前端（可选，如果需要通过后端访问前端）
+npm install
+npm run build
+
+# 将前端复制到后端 web 目录
+cp -r dist/* backend/web/
+
+# 进入后端目录
+cd backend
 
 # 构建镜像
 docker build -t wechat-api .
@@ -464,6 +493,8 @@ docker run -d \
 
 # 验证服务运行
 curl http://localhost:3001/api/v1/health
+
+# 现在访问 http://您的域名:3001/ 将显示前端应用
 ```
 
 ---

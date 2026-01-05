@@ -3,6 +3,9 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 import { config } from './config/index.js';
 import routes from './routes/index.js';
 import { requestIdMiddleware, logger } from './utils/index.js';
@@ -68,10 +71,41 @@ app.use((req, res, next) => {
 // API routes
 app.use('/api/v1', routes);
 
-// 404 handler
-app.use(notFoundHandler);
+// API 404 handler - only for /api/* routes
+app.use('/api', notFoundHandler);
 
-// Global error handler
+// Static file serving for frontend (web folder)
+// The web folder contains the built frontend files
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const webPath = path.join(__dirname, '..', 'web');
+
+// Check if web folder exists and has index.html
+if (fs.existsSync(path.join(webPath, 'index.html'))) {
+  // Serve static files from web folder
+  app.use(express.static(webPath));
+  
+  // SPA fallback - serve index.html for any non-API GET requests
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(webPath, 'index.html'));
+  });
+  
+  logger.info('📁 Static file serving enabled from web/ folder');
+} else {
+  // No frontend files, show info message for root path
+  app.get('/', (req, res) => {
+    res.json({
+      message: 'WeChat AI Publisher API',
+      version: '1.0.0',
+      api: '/api/v1',
+      health: '/api/v1/health',
+      docs: 'See README.md for API documentation',
+      frontend: 'Place built frontend files in the web/ folder to enable web access',
+    });
+  });
+}
+
+// Global error handler (must be last)
 app.use(errorHandler);
 
 // Initialize server

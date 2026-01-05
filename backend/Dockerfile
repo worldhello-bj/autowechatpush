@@ -32,6 +32,12 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
 
+# Create web folder for frontend static files
+# The .gitkeep file ensures the folder exists in git
+# Place the built frontend files in backend/web/ before building Docker image
+RUN mkdir -p ./dist/web
+COPY web/ ./dist/web/
+
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=80
