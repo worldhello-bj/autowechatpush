@@ -80,6 +80,7 @@ location /api/v1/ai/chat/stream {
     # 特殊配置：超长超时（24小时）用于 Server-Sent Events
     proxy_read_timeout 86400;
     proxy_send_timeout 86400;
+    # ... 其他代理配置（proxy_pass、headers 等）省略
 }
 ```
 
@@ -90,6 +91,7 @@ location /api/ {
     # 5分钟超时，支持 WebSocket
     proxy_read_timeout 300;
     proxy_send_timeout 300;
+    # ... 其他代理配置（proxy_pass、headers、WebSocket 支持等）省略
 }
 ```
 
@@ -99,8 +101,12 @@ location / {
     # 前端静态文件和其他请求
     # 60秒超时
     proxy_read_timeout 60;
+    proxy_send_timeout 60;
+    # ... 其他代理配置（proxy_pass、headers、WebSocket 支持等）省略
 }
 ```
+
+> **注意**：以上示例为简化版本，仅展示关键的超时配置差异。完整配置请参考 `nginx/aiwxcreator.cloud.conf` 文件。
 
 **路由优先级说明**：
 - Nginx 按照最长前缀匹配原则处理 location
