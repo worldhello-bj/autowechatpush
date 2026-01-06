@@ -147,7 +147,7 @@ server {
         proxy_buffering off;
     }
 
-    # Reverse proxy to Node.js backend for frontend and other requests
+    # Frontend and other requests
     location / {
         proxy_pass http://127.0.0.1:3001;
 
