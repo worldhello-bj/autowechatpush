@@ -70,6 +70,43 @@ sudo certbot --nginx -d aiwxcreator.cloud -d www.aiwxcreator.cloud
 - `443`: HTTPS（Nginx 处理 SSL）
 - `3001`: Node.js 后端（仅内部访问）
 
+## Nginx 路由配置
+
+Nginx 配置使用了三个 location 块来处理不同类型的请求，按优先级从高到低：
+
+### 1. SSE 流式端点（最高优先级）
+```nginx
+location /api/v1/ai/chat/stream {
+    # 特殊配置：超长超时（24小时）用于 Server-Sent Events
+    proxy_read_timeout 86400;
+    proxy_send_timeout 86400;
+}
+```
+
+### 2. API 请求
+```nginx
+location /api/ {
+    # 所有 API 请求（除了上面的 SSE 端点）
+    # 5分钟超时，支持 WebSocket
+    proxy_read_timeout 300;
+    proxy_send_timeout 300;
+}
+```
+
+### 3. 前端和其他请求（最低优先级）
+```nginx
+location / {
+    # 前端静态文件和其他请求
+    # 60秒超时
+    proxy_read_timeout 60;
+}
+```
+
+**路由优先级说明**：
+- Nginx 按照最长前缀匹配原则处理 location
+- `/api/v1/ai/chat/stream` 优先于 `/api/`，优先于 `/`
+- 这确保了 SSE 流式请求使用超长超时，普通 API 请求使用合理超时，前端请求使用短超时
+
 ## 验证部署
 
 ```bash
