@@ -102,7 +102,7 @@ location / {
     # 60秒超时
     proxy_read_timeout 60;
     proxy_send_timeout 60;
-    # ... 其他代理配置（proxy_pass、headers、WebSocket 支持等）省略
+    # ... 其他代理配置（proxy_pass、headers 等）省略
 }
 ```
 
