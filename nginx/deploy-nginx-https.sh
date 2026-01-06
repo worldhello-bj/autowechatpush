@@ -165,6 +165,7 @@ server {
 
         # Standard timeout for regular requests
         proxy_read_timeout 60;
+        proxy_send_timeout 60;
         proxy_buffering off;
     }
 }
