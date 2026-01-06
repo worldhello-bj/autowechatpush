@@ -125,7 +125,29 @@ server {
         proxy_send_timeout 86400;
     }
 
-    # Reverse proxy to Node.js backend
+    # API proxy - all API requests
+    location /api/ {
+        proxy_pass http://127.0.0.1:3001;
+
+        # Pass real IP and headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support with conditional Connection header
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_cache_bypass $http_upgrade;
+
+        # Reasonable timeout for API requests
+        proxy_read_timeout 300;
+        proxy_send_timeout 300;
+        proxy_buffering off;
+    }
+
+    # Frontend and other requests
     location / {
         proxy_pass http://127.0.0.1:3001;
 
@@ -143,6 +165,7 @@ server {
 
         # Standard timeout for regular requests
         proxy_read_timeout 60;
+        proxy_send_timeout 60;
         proxy_buffering off;
     }
 }
