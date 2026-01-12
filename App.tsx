@@ -562,8 +562,8 @@ const AppLayout: React.FC = () => {
   return (
     <div className="h-screen w-screen flex flex-col bg-gray-50 text-gray-900 font-sans">
       
-      {/* Guest Mode Banner */}
-      {isGuestMode && showGuestBanner && (
+      {/* Guest Mode Banner - Hide on login page */}
+      {isGuestMode && showGuestBanner && location.pathname !== '/login' && (
         <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3 text-center text-xs sm:text-sm font-medium flex justify-between items-center relative z-50 shadow-md animate-slide-in-up">
           <div className="flex-1 flex items-center justify-center gap-2">
             <span className="material-icons text-lg">info</span>
