@@ -60,7 +60,7 @@ const DraftsPage: React.FC = () => {
         <div className="text-center py-12 sm:py-20 bg-white rounded-xl border-2 border-dashed border-gray-200 animate-fade-in">
            <span className="material-icons text-gray-300 text-5xl sm:text-6xl mb-4">drafts</span>
            <p className="text-gray-500 text-base sm:text-lg mb-4 px-4">You don't have any saved drafts.</p>
-           <Link to="/" className="mt-4 inline-block px-5 sm:px-6 py-2 sm:py-2.5 bg-green-600 text-white rounded-full hover:bg-green-700 transition-all duration-200 hover:shadow-lg text-sm sm:text-base">
+           <Link to="/" className="mt-4 inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-3.5 bg-green-600 text-white rounded-full hover:bg-green-700 transition-all duration-200 hover:shadow-lg text-base sm:text-lg font-medium min-h-[48px]">
              Create New Article
            </Link>
         </div>
@@ -113,7 +113,7 @@ const AnalyticsPage: React.FC = () => {
                 <button 
                     onClick={handleSyncData}
                     disabled={loading}
-                    className="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-bold hover:bg-green-700 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 hover:shadow-lg"
+                    className="w-full bg-green-600 text-white py-3.5 sm:py-4 px-6 rounded-lg font-bold hover:bg-green-700 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 hover:shadow-lg text-base sm:text-lg min-h-[52px]"
                 >
                     {loading ? (
                         <>
@@ -238,26 +238,26 @@ const SettingsPage: React.FC = () => {
                     {isEditingProfile ? (
                         <div className="space-y-3 w-full animate-fade-in">
                             <div>
-                                <label className="block text-xs text-gray-500 mb-1">Display Name</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Display Name</label>
                                 <input 
                                     type="text" 
                                     value={profile.name}
                                     onChange={e => setProfile({...profile, name: e.target.value})}
-                                    className="w-full border p-2 rounded text-sm transition-all duration-200 focus:ring-2 focus:ring-green-500"
+                                    className="w-full border border-gray-300 px-4 py-3 rounded-lg text-base transition-all duration-200 focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[48px]"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs text-gray-500 mb-1">Email</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                                 <input 
                                     type="email" 
                                     value={profile.email}
                                     onChange={e => setProfile({...profile, email: e.target.value})}
-                                    className="w-full border p-2 rounded text-sm transition-all duration-200 focus:ring-2 focus:ring-green-500"
+                                    className="w-full border border-gray-300 px-4 py-3 rounded-lg text-base transition-all duration-200 focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[48px]"
                                 />
                             </div>
-                            <div className="flex gap-2">
-                                <button onClick={handleSaveProfile} className="bg-green-600 text-white text-xs sm:text-sm px-3 py-1.5 rounded hover:bg-green-700 transition-colors">Save Profile</button>
-                                <button onClick={() => setIsEditingProfile(false)} className="text-gray-500 text-xs sm:text-sm px-3 py-1.5 hover:text-gray-700 transition-colors">Cancel</button>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                                <button onClick={handleSaveProfile} className="bg-green-600 text-white text-sm sm:text-base px-5 py-2.5 rounded-lg hover:bg-green-700 transition-colors min-h-[44px] font-medium">Save Profile</button>
+                                <button onClick={() => setIsEditingProfile(false)} className="text-gray-500 text-sm sm:text-base px-5 py-2.5 hover:text-gray-700 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50 min-h-[44px]">Cancel</button>
                             </div>
                         </div>
                     ) : (
@@ -268,7 +268,7 @@ const SettingsPage: React.FC = () => {
                     )}
                 </div>
                 {!isEditingProfile && (
-                    <button onClick={() => setIsEditingProfile(true)} className="w-full sm:w-auto sm:ml-auto text-xs sm:text-sm text-green-600 font-medium hover:underline border border-green-600 rounded px-3 py-1.5 sm:py-1 hover:bg-green-50 transition-colors flex-shrink-0">
+                    <button onClick={() => setIsEditingProfile(true)} className="w-full sm:w-auto sm:ml-auto text-sm sm:text-base text-green-600 font-medium hover:underline border-2 border-green-600 rounded-lg px-5 py-2.5 hover:bg-green-50 transition-colors flex-shrink-0 min-h-[44px]">
                         Edit Profile
                     </button>
                 )}
@@ -317,37 +317,37 @@ const SettingsPage: React.FC = () => {
              </p>
              
              {isEditingWechat ? (
-               <div className="space-y-3 animate-fade-in">
+               <div className="space-y-4 animate-fade-in">
                  <div>
-                   <label className="block text-xs text-gray-500 mb-1">AppID</label>
+                   <label className="block text-sm font-medium text-gray-700 mb-2">AppID</label>
                    <input 
                      type="text" 
                      value={wechatCreds.appId}
                      onChange={e => setWechatCreds({...wechatCreds, appId: e.target.value})}
                      placeholder="wx1234567890abcdef"
-                     className="w-full border border-gray-300 p-2 rounded text-sm font-mono transition-all duration-200 focus:ring-2 focus:ring-green-500"
+                     className="w-full border border-gray-300 px-4 py-3 rounded-lg text-base font-mono transition-all duration-200 focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[48px]"
                    />
                  </div>
                  <div>
-                   <label className="block text-xs text-gray-500 mb-1">AppSecret</label>
+                   <label className="block text-sm font-medium text-gray-700 mb-2">AppSecret</label>
                    <input 
                      type="password" 
                      value={wechatCreds.appSecret}
                      onChange={e => setWechatCreds({...wechatCreds, appSecret: e.target.value})}
                      placeholder="••••••••••••••••••••••••••••••••"
-                     className="w-full border border-gray-300 p-2 rounded text-sm font-mono transition-all duration-200 focus:ring-2 focus:ring-green-500"
+                     className="w-full border border-gray-300 px-4 py-3 rounded-lg text-base font-mono transition-all duration-200 focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[48px]"
                    />
                  </div>
                  <div className="flex flex-col sm:flex-row gap-2">
                    <button 
                      onClick={handleSaveWechatCreds} 
-                     className="bg-green-600 text-white text-xs sm:text-sm px-4 py-2 rounded hover:bg-green-700 transition-colors"
+                     className="bg-green-600 text-white text-sm sm:text-base px-5 py-2.5 rounded-lg hover:bg-green-700 transition-colors min-h-[44px] font-medium"
                    >
                      保存配置
                    </button>
                    <button 
                      onClick={() => setIsEditingWechat(false)} 
-                     className="text-gray-500 text-xs sm:text-sm px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                     className="text-gray-500 text-sm sm:text-base px-5 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
                    >
                      取消
                    </button>
@@ -369,7 +369,7 @@ const SettingsPage: React.FC = () => {
                  </div>
                  <button 
                    onClick={() => setIsEditingWechat(true)} 
-                   className="w-full sm:w-auto text-xs sm:text-sm text-green-600 font-medium hover:underline border border-green-600 rounded px-4 py-2 hover:bg-green-50 transition-colors"
+                   className="w-full sm:w-auto text-sm sm:text-base text-green-600 font-medium hover:underline border-2 border-green-600 rounded-lg px-5 py-2.5 hover:bg-green-50 transition-colors min-h-[44px]"
                  >
                    编辑配置
                  </button>
@@ -529,11 +529,11 @@ const AppLayout: React.FC = () => {
       ? "text-green-600 font-bold border-b-2 border-green-600 h-full flex items-center px-1 transition-all duration-200"
       : "text-gray-500 hover:text-gray-900 h-full flex items-center px-1 transition-all duration-200 border-b-2 border-transparent hover:border-gray-200";
   
-  // Mobile NavLink classes
+  // Mobile Drawer NavLink classes - larger touch targets for better UX
   const getMobileNavLinkClass = ({ isActive }: { isActive: boolean }) =>
     isActive
-      ? "flex items-center gap-3 px-4 py-3 text-green-600 bg-green-50 font-medium rounded-lg transition-colors"
-      : "flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors";
+      ? "flex items-center gap-4 px-6 py-4 text-green-600 bg-green-50 font-semibold rounded-xl transition-all duration-200 text-base border-l-4 border-green-600"
+      : "flex items-center gap-4 px-6 py-4 text-gray-700 hover:bg-gray-50 rounded-xl transition-all duration-200 text-base border-l-4 border-transparent hover:border-gray-300";
 
   // Show loading spinner during initial auth check
   if (isLoading) {
@@ -584,9 +584,10 @@ const AppLayout: React.FC = () => {
             {isLoggedIn && (
               <button
                 onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="md:hidden p-3 hover:bg-gray-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                aria-label={showMobileMenu ? '关闭菜单' : '打开菜单'}
               >
-                <span className="material-icons text-gray-700">
+                <span className="material-icons text-gray-700 text-2xl">
                   {showMobileMenu ? 'close' : 'menu'}
                 </span>
               </button>
@@ -596,41 +597,86 @@ const AppLayout: React.FC = () => {
             ) : (
               <Link 
                 to="/login" 
-                className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 text-xs sm:text-sm font-medium hover:shadow-lg"
+                className="flex items-center gap-1 sm:gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 text-sm sm:text-base font-medium hover:shadow-lg min-h-[44px]"
               >
-                <span className="material-icons text-base sm:text-lg">login</span>
+                <span className="material-icons text-lg sm:text-xl">login</span>
                 <span className="hidden xs:inline">登录</span>
               </Link>
             )}
          </div>
       </header>
       
-      {/* Mobile Navigation Menu */}
+      {/* Mobile Navigation Drawer - Redesigned for future feature expansion */}
       {isLoggedIn && showMobileMenu && (
         <>
+          {/* Backdrop with blur */}
           <div 
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden animate-fade-in"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden animate-fade-in"
             onClick={() => setShowMobileMenu(false)}
           />
-          <div className="fixed top-14 left-0 right-0 bg-white border-b border-gray-200 shadow-lg z-50 md:hidden animate-slide-in-up">
-            <nav className="p-4 space-y-1">
-              <NavLink to="/" className={getMobileNavLinkClass}>
-                <span className="material-icons text-xl">edit_note</span>
-                Editor
-              </NavLink>
-              <NavLink to="/drafts" className={getMobileNavLinkClass}>
-                <span className="material-icons text-xl">drafts</span>
-                Drafts
-              </NavLink>
-              <NavLink to="/analytics" className={getMobileNavLinkClass}>
-                <span className="material-icons text-xl">bar_chart</span>
-                Analytics
-              </NavLink>
-              <NavLink to="/settings" className={getMobileNavLinkClass}>
-                <span className="material-icons text-xl">settings</span>
-                Settings
-              </NavLink>
+          
+          {/* Side Drawer - slides from left with larger touch targets */}
+          <div className="fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-white shadow-2xl z-50 md:hidden animate-slide-in-left flex flex-col">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center text-white shadow-md">
+                  <span className="material-icons text-xl">article</span>
+                </div>
+                <div>
+                  <h2 className="font-bold text-gray-900 text-lg">菜单</h2>
+                  <p className="text-xs text-gray-500">WeChat AI Publisher</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowMobileMenu(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="关闭菜单"
+              >
+                <span className="material-icons text-gray-600">close</span>
+              </button>
+            </div>
+            
+            {/* Navigation Links - with space for future features */}
+            <nav className="flex-1 overflow-y-auto p-4 space-y-2">
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-6 mb-2">主要功能</p>
+                <NavLink to="/" className={getMobileNavLinkClass}>
+                  <span className="material-icons text-2xl">edit_note</span>
+                  <span className="flex-1">编辑器</span>
+                  <span className="material-icons text-gray-400 text-lg">chevron_right</span>
+                </NavLink>
+                <NavLink to="/drafts" className={getMobileNavLinkClass}>
+                  <span className="material-icons text-2xl">drafts</span>
+                  <span className="flex-1">草稿箱</span>
+                  <span className="material-icons text-gray-400 text-lg">chevron_right</span>
+                </NavLink>
+                <NavLink to="/analytics" className={getMobileNavLinkClass}>
+                  <span className="material-icons text-2xl">bar_chart</span>
+                  <span className="flex-1">数据分析</span>
+                  <span className="material-icons text-gray-400 text-lg">chevron_right</span>
+                </NavLink>
+              </div>
+              
+              {/* Reserved space for future features */}
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-6 mb-2">其他</p>
+                <NavLink to="/settings" className={getMobileNavLinkClass}>
+                  <span className="material-icons text-2xl">settings</span>
+                  <span className="flex-1">设置</span>
+                  <span className="material-icons text-gray-400 text-lg">chevron_right</span>
+                </NavLink>
+                {/* Future feature placeholders - easy to add more items here */}
+              </div>
             </nav>
+            
+            {/* Drawer Footer - version info and extra actions */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50">
+              <div className="text-center">
+                <p className="text-xs text-gray-500">WeChat AI Publisher</p>
+                <p className="text-xs text-gray-400">v1.3.0</p>
+              </div>
+            </div>
           </div>
         </>
       )}
