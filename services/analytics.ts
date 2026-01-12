@@ -9,6 +9,7 @@ export type EventType =
   | 'user_login'
   | 'user_logout'
   | 'user_register'
+  | 'guest_mode_started'
   | 'article_generate'
   | 'article_publish'
   | 'article_save_draft'
