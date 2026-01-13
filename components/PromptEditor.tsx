@@ -42,7 +42,7 @@ const PromptEditor: React.FC = () => {
           <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
             <span className="material-icons text-gray-400">edit_note</span> 提示词管理
           </h3>
-          <p className="text-sm text-gray-500 mt-1">基于交通运输学院全媒体中心规范，自定义AI生成提示词</p>
+          <p className="text-sm text-gray-500 mt-1">基于通用公众号编辑规范，自定义AI生成提示词</p>
         </div>
         <div className="flex gap-2">
           {saved && (
