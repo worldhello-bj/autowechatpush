@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { sendSuccess, sendError, createLogger } from '../utils/index.js';
-import { scrapeWeChatArticle, parseHtmlToBlocks } from '../services/index.js';
+import { scrapeWeChatArticle, parseHtmlToBlocks, checkQuota, consumeQuota } from '../services/index.js';
 import { parseArticleContent } from '../services/index.js';
 import { AIProvider, BlockType } from '../types/index.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -111,12 +111,28 @@ export const importFromUrl = async (req: Request, res: Response) => {
 
     logger.info('Article import request', { url, mode });
 
+    // Check user quota (authentication is now required)
+    if (!req.user) {
+      return sendError(res, 401, 'AUTH_REQUIRED', 'Authentication required');
+    }
+    
+    const quotaCheck = checkQuota(req.user.userId, 0.5); // Import costs 0.5 credits
+    if (!quotaCheck.allowed) {
+      return sendError(res, 402, 'QUOTA_EXCEEDED', quotaCheck.reason || 'Insufficient quota.');
+    }
+
     // Step 1: Scrape the article
     const scrapedArticle = await scrapeWeChatArticle(url);
 
     // Step 2: Parse content preserving WeChat section structure
     // Use specialized WeChat parser that keeps styled sections intact
     const finalBlocks = parseWeChatSections(scrapedArticle.cleanedHtml, scrapedArticle.svgBlocks);
+
+    // Consume quota (user is guaranteed to exist)
+    consumeQuota(req.user.userId, 0.5, 'material_upload', {
+      importUrl: url,
+      blocksCount: finalBlocks.length,
+    }, req.requestId);
 
     logger.info('Article imported successfully', {
       title: scrapedArticle.title,
