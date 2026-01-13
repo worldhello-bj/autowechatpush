@@ -5,6 +5,7 @@
  */
 
 import { ThemeConfig, applyThemeToStyles } from '../config/theme-config.js';
+import type { SVGDecorator } from '../config/svg-decorators.js';
 import { injectDecorator, getDecorator } from '../config/svg-decorators.js';
 
 /**
@@ -81,7 +82,7 @@ export class ContentTransformer {
     </section>`;
 
     if (block.decorator) {
-      const decorator = getDecorator(block.decorator);
+      const decorator: SVGDecorator | undefined = getDecorator(block.decorator);
       if (decorator) {
         return injectDecorator(headerHtml, decorator, decorator.position || 'before');
       }
