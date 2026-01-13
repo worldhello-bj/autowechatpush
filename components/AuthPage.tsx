@@ -102,7 +102,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
             {/* Name field (register only) */}
             {mode === 'register' && (
               <div className="animate-fade-in">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="register-name" className="block text-sm font-medium text-gray-700 mb-1">
                   用户名
                 </label>
                 <div className="relative">
@@ -110,6 +110,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
                     person
                   </span>
                   <input
+                    id="register-name"
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -123,7 +124,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
 
             {/* Email/Username */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="auth-email" className="block text-sm font-medium text-gray-700 mb-1">
                 {mode === 'login' ? '用户名或邮箱' : '邮箱地址'}
               </label>
               <div className="relative">
@@ -131,6 +132,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
                   {mode === 'login' ? 'person' : 'email'}
                 </span>
                 <input
+                  id="auth-email"
                   type={mode === 'login' ? 'text' : 'email'}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -143,7 +145,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="auth-password" className="block text-sm font-medium text-gray-700 mb-1">
                 密码
               </label>
               <div className="relative">
@@ -151,6 +153,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
                   lock
                 </span>
                 <input
+                  id="auth-password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -162,6 +165,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label={showPassword ? '隐藏密码' : '显示密码'}
                 >
                   <span className="material-icons text-lg sm:text-xl">
                     {showPassword ? 'visibility_off' : 'visibility'}
@@ -173,7 +177,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
             {/* Confirm Password (register only) */}
             {mode === 'register' && (
               <div className="animate-fade-in">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="register-confirm-password" className="block text-sm font-medium text-gray-700 mb-1">
                   确认密码
                 </label>
                 <div className="relative">
@@ -181,6 +185,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
                     lock_outline
                   </span>
                   <input
+                    id="register-confirm-password"
                     type={showPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}

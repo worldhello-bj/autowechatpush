@@ -1757,10 +1757,11 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="editor-topic-input" className="block text-sm font-medium text-gray-700 mb-1">
                     {isFormattingMode ? 'Paste Text to Format' : 'Topic / Prompt'}
                 </label>
                 <textarea 
+                    id="editor-topic-input"
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
                     placeholder={isFormattingMode 
