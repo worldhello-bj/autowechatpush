@@ -41,7 +41,7 @@
                 <span class="material-icons text-[20px]">strikethrough_s</span>
             </button>
             
-            <!-- 文字颜色 -->
+            <!-- 文字颜色（注意：此按钮使用 px-1 而不是 w-8，因为它包含下拉箭头） -->
             <button class="h-8 px-1 flex justify-center items-center gap-0.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" title="文字颜色">
                 <span class="material-icons text-[20px]">format_color_text</span>
                 <span class="material-icons text-[14px] text-gray-500">arrow_drop_down</span>
@@ -153,6 +153,15 @@
                     <li>如果图标显示为空白或显示文字（如 "undo"），说明字体链接没有正确引入</li>
                     <li>如果网络环境无法访问 Google Fonts，可以考虑使用本地字体文件或 CDN 镜像</li>
                     <li>使用时确保 class 名称为 "material-icons"，且内容为有效的图标名称</li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="font-bold mb-2">5. 关于本示例</h4>
+                <ul class="list-disc ml-5 space-y-1">
+                    <li>这是一个静态 UI 演示，按钮点击后没有实际功能</li>
+                    <li>在实际项目中，HTML/可视化切换按钮会有激活状态的样式变化</li>
+                    <li>文字颜色按钮使用 <code class="bg-white px-1 rounded">px-1</code> 而不是 <code class="bg-white px-1 rounded">w-8</code>，因为它包含下拉箭头</li>
                 </ul>
             </div>
         </div>
