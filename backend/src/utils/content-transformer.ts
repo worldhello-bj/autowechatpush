@@ -73,11 +73,11 @@ export class ContentTransformer {
 
     const headerHtml = this.config.simplifyDOM
       ? `<div style="${this.styles.section}">
-  <span style="${this.styles.title}">${content}</span>
-</div>`
+    <span style="${this.styles.title}">${content}</span>
+  </div>`
       : `<section style="${this.styles.section}">
-  <span style="${this.styles.title}">${content}</span>
-</section>`;
+    <span style="${this.styles.title}">${content}</span>
+  </section>`;
 
     if (block.decorator) {
       const decorator = getDecorator(block.decorator);
