@@ -5,8 +5,7 @@
  */
 
 import { ThemeConfig, applyThemeToStyles } from '../config/theme-config.js';
-import type { SVGDecorator } from '../config/svg-decorators';
-import { injectDecorator, getDecorator } from '../config/svg-decorators';
+import { injectDecorator, getDecorator, type SVGDecorator } from '../config/svg-decorators';
 
 /**
  * Content Block Interface
@@ -70,7 +69,6 @@ export class ContentTransformer {
    * Transform header with optional decorator
    */
   private transformHeader(block: ContentBlock): string {
-    const level = block.level || 2;
     const content = this.escapeHtml(block.content);
 
     const headerHtml = this.config.simplifyDOM
