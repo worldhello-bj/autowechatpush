@@ -5,7 +5,7 @@
  */
 
 import { ThemeConfig, applyThemeToStyles } from '../config/theme-config.js';
-import { injectDecorator, getDecorator } from '../config/svg-decorators.js';
+import { injectDecorator, getDecorator } from '../config/svg-decorators';
 
 /**
  * Content Block Interface
