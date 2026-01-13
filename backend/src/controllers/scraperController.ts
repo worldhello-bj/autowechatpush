@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { sendSuccess, sendError, createLogger } from '../utils/index.js';
-import { scrapeWeChatArticle, parseHtmlToBlocks, checkQuota, consumeQuota } from '../services/index.js';
+import { scrapeWeChatArticle, checkQuota, consumeQuota } from '../services/index.js';
 import { parseArticleContent } from '../services/index.js';
 import { AIProvider, BlockType } from '../types/index.js';
 import { v4 as uuidv4 } from 'uuid';
