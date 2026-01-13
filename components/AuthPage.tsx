@@ -15,7 +15,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
-  const { login, register, startGuestMode, canUseFreeAccess } = useAuth();
+  const { login, register } = useAuth();
 
   const validateEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -78,11 +78,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
     setError('');
     setPassword('');
     setConfirmPassword('');
-  };
-
-  const handleTryForFree = () => {
-    startGuestMode();
-    onSuccess?.();
   };
 
   return (
@@ -229,30 +224,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
               )}
             </button>
           </form>
-
-          {/* Divider */}
-          <div className="my-6 flex items-center">
-            <div className="flex-1 border-t border-gray-200"></div>
-            <span className="px-4 text-sm text-gray-400">或者</span>
-            <div className="flex-1 border-t border-gray-200"></div>
-          </div>
-
-          {/* Try for Free Button - Only show in login mode if free access is available */}
-          {mode === 'login' && canUseFreeAccess && (
-            <div className="mb-6">
-              <button
-                type="button"
-                onClick={handleTryForFree}
-                className="w-full flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 text-sm sm:text-base font-medium min-h-[44px] transform hover:scale-[1.02] active:scale-[0.98] animate-fade-in"
-              >
-                <span className="material-icons text-lg sm:text-xl">stars</span>
-                <span>免费试用一次</span>
-              </button>
-              <p className="text-center text-xs text-gray-500 mt-2">
-                无需注册，立即体验所有功能
-              </p>
-            </div>
-          )}
 
           {/* Switch Mode */}
           <div className="text-center">
