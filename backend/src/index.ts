@@ -172,8 +172,10 @@ const startServer = async () => {
 
   // Start server
   const PORT = config.PORT;
-  app.listen(PORT, () => {
+  const HOST = '127.0.0.1'; // Bind to localhost only for security
+  app.listen(PORT, HOST, () => {
     logger.info(`🚀 Server running on http://localhost:${PORT}`);
+    logger.info(`🔒 Security: Bound to ${HOST} (not accessible from public internet)`);
     logger.info(`📊 Environment: ${config.NODE_ENV}`);
     logger.info(`🔗 API Base: http://localhost:${PORT}/api/v1`);
     logger.info(`👤 Admin: ${config.ADMIN_EMAIL}`);

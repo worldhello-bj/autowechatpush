@@ -50,12 +50,14 @@ export const generate = async (req: Request, res: Response) => {
       requestId: req.requestId 
     });
     
-    // Check user quota if authenticated
-    if (req.user) {
-      const quotaCheck = checkQuota(req.user.userId, 1);
-      if (!quotaCheck.allowed) {
-        return sendError(res, 402, 'QUOTA_EXCEEDED', quotaCheck.reason || 'Insufficient quota. Please upgrade your plan.');
-      }
+    // Check user quota (authentication is now required)
+    if (!req.user) {
+      return sendError(res, 401, 'AUTH_REQUIRED', 'Authentication required');
+    }
+    
+    const quotaCheck = checkQuota(req.user.userId, 1);
+    if (!quotaCheck.allowed) {
+      return sendError(res, 402, 'QUOTA_EXCEEDED', quotaCheck.reason || 'Insufficient quota. Please upgrade your plan.');
     }
     
     // API keys are now managed exclusively by the backend pool
@@ -105,15 +107,13 @@ export const generate = async (req: Request, res: Response) => {
       }
     }
     
-    // Consume quota if authenticated
-    if (req.user) {
-      consumeQuota(req.user.userId, 1, 'ai_generation', {
-        provider: usedProvider,
-        requestedProvider: request.provider,
-        blocksCount: result.blocks.length,
-        title: result.title,
-      }, req.requestId);
-    }
+    // Consume quota (user is guaranteed to exist)
+    consumeQuota(req.user.userId, 1, 'ai_generation', {
+      provider: usedProvider,
+      requestedProvider: request.provider,
+      blocksCount: result.blocks.length,
+      title: result.title,
+    }, req.requestId);
     
     logger.info('AI generation completed', { 
       title: result.title,
@@ -151,12 +151,14 @@ export const chatStream = async (req: Request, res: Response) => {
     requestId: req.requestId 
   });
   
-  // Check user quota if authenticated
-  if (req.user) {
-    const quotaCheck = checkQuota(req.user.userId, 1);
-    if (!quotaCheck.allowed) {
-      return sendError(res, 402, 'QUOTA_EXCEEDED', quotaCheck.reason || 'Insufficient quota. Please upgrade your plan.');
-    }
+  // Check user quota (authentication is now required)
+  if (!req.user) {
+    return sendError(res, 401, 'AUTH_REQUIRED', 'Authentication required');
+  }
+  
+  const quotaCheck = checkQuota(req.user.userId, 1);
+  if (!quotaCheck.allowed) {
+    return sendError(res, 402, 'QUOTA_EXCEEDED', quotaCheck.reason || 'Insufficient quota. Please upgrade your plan.');
   }
   
   // Set SSE headers
@@ -268,15 +270,13 @@ export const chatStream = async (req: Request, res: Response) => {
       timestamp: Date.now(),
     });
     
-    // Consume quota if authenticated
-    if (req.user) {
-      consumeQuota(req.user.userId, 1, 'ai_stream', {
-        provider: usedProvider,
-        requestedProvider: request.provider,
-        blocksCount: result.blocks.length,
-        title: result.title,
-      }, req.requestId);
-    }
+    // Consume quota (user is guaranteed to exist)
+    consumeQuota(req.user.userId, 1, 'ai_stream', {
+      provider: usedProvider,
+      requestedProvider: request.provider,
+      blocksCount: result.blocks.length,
+      title: result.title,
+    }, req.requestId);
     
     logger.info('SSE stream completed', { 
       title: result.title,
@@ -387,12 +387,14 @@ export const aiHelper = async (req: Request, res: Response) => {
       requestId: req.requestId 
     });
     
-    // Check user quota if authenticated (helpers use less quota)
-    if (req.user) {
-      const quotaCheck = checkQuota(req.user.userId, 0.1); // Helpers cost 0.1 credits
-      if (!quotaCheck.allowed) {
-        return sendError(res, 402, 'QUOTA_EXCEEDED', quotaCheck.reason || 'Insufficient quota.');
-      }
+    // Check user quota (authentication is now required)
+    if (!req.user) {
+      return sendError(res, 401, 'AUTH_REQUIRED', 'Authentication required');
+    }
+    
+    const quotaCheck = checkQuota(req.user.userId, 0.1); // Helpers cost 0.1 credits
+    if (!quotaCheck.allowed) {
+      return sendError(res, 402, 'QUOTA_EXCEEDED', quotaCheck.reason || 'Insufficient quota.');
     }
     
     const selectedProvider = provider || AIProvider.DEEPSEEK;
@@ -461,14 +463,12 @@ export const aiHelper = async (req: Request, res: Response) => {
       multiRoundMode: false,
     });
     
-    // Consume quota if authenticated
-    if (req.user) {
-      consumeQuota(req.user.userId, 0.1, 'ai_generation', {
-        action,
-        provider: selectedProvider,
-        contentLength: content.length,
-      }, req.requestId);
-    }
+    // Consume quota (user is guaranteed to exist)
+    consumeQuota(req.user.userId, 0.1, 'ai_generation', {
+      action,
+      provider: selectedProvider,
+      contentLength: content.length,
+    }, req.requestId);
     
     // Extract result based on action type
     let responseData: unknown;
