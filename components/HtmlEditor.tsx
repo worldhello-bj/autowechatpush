@@ -632,7 +632,7 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
         <div className="ml-auto flex items-center gap-1">
             <button 
                 onClick={toggleSource} 
-                className="px-2 h-8 flex items-center justify-center hover:bg-gray-200 rounded border border-gray-200 text-xs font-medium text-gray-600 bg-white transition-colors"
+                className={`px-2 h-8 flex items-center justify-center rounded border text-xs font-medium transition-colors ${showSource ? 'bg-green-100 text-green-700 border-green-200' : 'text-gray-600 hover:bg-gray-200 border-gray-200 bg-white'}`}
             >
                 {showSource ? '可视化' : 'HTML'}
             </button>
