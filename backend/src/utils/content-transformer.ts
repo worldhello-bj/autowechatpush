@@ -5,7 +5,7 @@
  */
 
 import { ThemeConfig, applyThemeToStyles } from '../config/theme-config.js';
-import { SVGDecorator, injectDecorator } from '../config/svg-decorators.js';
+import { injectDecorator, getDecorator, type SVGDecorator } from '../config/svg-decorators.js';
 
 /**
  * Content Block Interface
@@ -69,20 +69,24 @@ export class ContentTransformer {
    * Transform header with optional decorator
    */
   private transformHeader(block: ContentBlock): string {
-    const level = block.level || 2;
     const content = this.escapeHtml(block.content);
-    
-    // Use simplified structure if enabled
-    if (this.config.simplifyDOM) {
-      return `<div style="${this.styles.section}">
-        <span style="${this.styles.title}">${content}</span>
-      </div>`;
+
+    const headerHtml = this.config.simplifyDOM
+      ? `<div style="${this.styles.section}">
+    <span style="${this.styles.title}">${content}</span>
+  </div>`
+      : `<section style="${this.styles.section}">
+    <span style="${this.styles.title}">${content}</span>
+  </section>`;
+
+    if (block.decorator) {
+      const decorator = getDecorator(block.decorator);
+      if (decorator) {
+        return injectDecorator(headerHtml, decorator, decorator.position || 'before');
+      }
     }
-    
-    // Standard structure
-    return `<section style="${this.styles.section}">
-      <span style="${this.styles.title}">${content}</span>
-    </section>`;
+
+    return headerHtml;
   }
   
   /**

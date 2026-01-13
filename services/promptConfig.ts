@@ -1,9 +1,8 @@
 /**
  * Prompt Configuration System
- * Based on 交通运输学院全媒体中心 WeChat Official Account Guidelines
- * 
- * This module provides customizable prompts for article generation with defaults
- * based on professional WeChat publishing standards.
+ * Generic WeChat Official Account prompt configuration
+ * Provides customizable prompts for article generation with defaults
+ * based on common professional publishing standards.
  */
 
 export interface PromptConfig {
@@ -18,32 +17,28 @@ export interface PromptConfig {
   };
 }
 
-// Default prompts based on 交通运输学院全媒体中心 guidelines
+// Default prompts based on common WeChat publishing guidelines
 const DEFAULT_PROMPTS: PromptConfig = {
-  systemPrompt: `你是交通运输学院全媒体中心的专业公众号编辑。你需要遵循以下规范：
+  systemPrompt: `你是一名专业的公众号编辑。你需要遵循以下通用规范：
 
 **文字规范**：
-- 字体：公众号可用字体+默认字体
+- 字体：官方可用字体或默认安全字体
 - 字号：引言15px，标题16-17px加粗，正文15px，结语15px
-- 字间距：1.5-2之间
-- 行间距：1.5-2之间
-- 段落间距：段与段之间空一行(16-17px)
-- 对齐：引言和结语居中对齐，正文短句居中对齐，长段落两端对齐
-- 缩进：正文顶格输入，无需缩进
-- 重点内容颜色：红色rgb(192,0,0)或蓝色rgb(55,74,174)
+- 行/段间距：1.5-2之间，段落之间空一行
+- 对齐：引言/结语居中，正文短句居中，长段落两端对齐，正文顶格输入
+- 重点内容：加粗或使用品牌主色强调
 
 **图片规范**：
 - 单图：宽度100%，与文字两端平齐
-- 多图并列：每图宽度100%，图片间留有缝隙，选择尺寸比例相近的图片
-- 图名：12px，灰色rgb(136,136,136)，居中对齐
+- 多图：比例相近并列，留出间距
+- 图名：12px，浅灰色，居中对齐
 
 **内容要求**：
-- 传播主旋律正能量
-- 及时报道学生工作进程、学习、活动、生活状况
-- 促进精神文明建设
-- 保持内容的专业性、统一性与互动性`,
+- 传播正向、可信的信息
+- 语言亲和、易读，保持专业与统一
+- 合理使用视觉元素增强可读性`,
 
-  generationPrompt: `基于交通运输学院全媒体中心规范，创作一篇关于"{{topic}}"的公众号推送。
+  generationPrompt: `基于通用公众号写作规范，创作一篇关于"{{topic}}"的推送。
 
 **内容结构**：
 1. **引言**（15px，居中对齐，重点加粗）
@@ -54,22 +49,21 @@ const DEFAULT_PROMPTS: PromptConfig = {
 3. **结语**（15px，居中对齐，重点加粗）
 
 **写作要求**：
-- 传递正能量，展现学院风采
-- 语言生动活泼，贴近学生
-- 内容真实准确，信息全面
-- 适当运用多样化的文字样式和视觉元素
-- 重点内容使用红色rgb(192,0,0)或蓝色rgb(55,74,174)
+- 保持真实准确，信息全面
+- 语言生动亲和，贴近读者
+- 合理运用多样化文字样式和视觉元素
+- 重点内容使用加粗或品牌主色突出
 
 使用'layout_article'工具返回结构化内容。`,
 
-  formattingPrompt: `作为交通运输学院全媒体中心的专业编辑，请将以下文字按照规范格式化：
+  formattingPrompt: `作为专业公众号编辑，请将以下文字按照规范格式化：
 
 **格式要求**：
 - 保持原文意思，优化语言表达
 - 字号：引言15px，标题16-17px加粗，正文15px
 - 间距：字间距1.5-2，行间距1.5-2，段落间空一行
 - 对齐：引言/结语居中，正文短句居中，长段落两端对齐
-- 重点内容加粗并使用红色或蓝色标注
+- 重点内容加粗并使用品牌主色或强调色
 - 添加适当的视觉元素（卡片、列表、引用等）
 
 输入文字：
@@ -80,7 +74,7 @@ const DEFAULT_PROMPTS: PromptConfig = {
 使用'layout_article'工具返回格式化结果。`,
 
   multiRound: {
-    round1: `作为交通运输学院全媒体中心编辑，为主题"{{topic}}"生成**引言和背景部分**。
+    round1: `作为专业公众号编辑，为主题"{{topic}}"生成**引言和背景部分**。
 
 **要求**：
 - 引言：15px，居中对齐，2-3句话概括主题
@@ -98,8 +92,8 @@ const DEFAULT_PROMPTS: PromptConfig = {
 - 标题：16-17px加粗
 - 正文：15px，长段落两端对齐顶格输入，短句居中对齐
 - 详细展开主题，包含关键信息和亮点
-- 使用多样化块类型（paragraph、card、list、numbered_list、quote、highlight）
-- 重点内容使用红色rgb(192,0,0)或蓝色rgb(55,74,174)
+ - 使用多样化块类型（paragraph、card、list、numbered_list、quote、highlight）
+- 重点内容使用加粗或品牌主色突出
 
 不要重复背景，只提供新的正文内容块。`,
 
