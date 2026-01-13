@@ -508,45 +508,45 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
 
       {/* Toolbar */}
       <div 
-        className="flex items-center gap-0.5 p-2 border-b border-gray-100 bg-gray-50 overflow-x-auto shrink-0 flex-wrap"
+        className="flex flex-wrap items-center gap-1 p-2 border-b border-gray-100 bg-gray-50"
         role="toolbar"
         aria-label="文章格式化工具栏"
       >
         {/* Undo/Redo */}
-        <button onClick={() => execCmd('undo')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Undo (撤销)">
-            <span className="material-icons text-sm">undo</span>
+        <button onClick={() => execCmd('undo')} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="撤销 (Undo)">
+            <span className="material-icons text-[20px]">undo</span>
         </button>
-        <button onClick={() => execCmd('redo')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Redo (重做)">
-            <span className="material-icons text-sm">redo</span>
+        <button onClick={() => execCmd('redo')} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="重做 (Redo)">
+            <span className="material-icons text-[20px]">redo</span>
         </button>
-        <div className="w-px h-4 bg-gray-300 mx-1"></div>
+
+        <div className="w-px h-5 bg-gray-300 mx-1"></div>
         
         {/* Text Formatting */}
-        <button onClick={() => execCmd('bold')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Bold (加粗)">
-            <span className="material-icons text-sm">format_bold</span>
+        <button onClick={() => execCmd('bold')} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="加粗 (Bold)">
+            <span className="material-icons text-[20px]">format_bold</span>
         </button>
-        <button onClick={() => execCmd('italic')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Italic (斜体)">
-            <span className="material-icons text-sm">format_italic</span>
+        <button onClick={() => execCmd('italic')} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="斜体 (Italic)">
+            <span className="material-icons text-[20px]">format_italic</span>
         </button>
-        <button onClick={() => execCmd('underline')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Underline (下划线)">
-            <span className="material-icons text-sm">format_underlined</span>
+        <button onClick={() => execCmd('underline')} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="下划线 (Underline)">
+            <span className="material-icons text-[20px]">format_underlined</span>
         </button>
-        <button onClick={() => execCmd('strikeThrough')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Strikethrough (删除线)">
-            <span className="material-icons text-sm">strikethrough_s</span>
+        <button onClick={() => execCmd('strikeThrough')} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="删除线 (Strikethrough)">
+            <span className="material-icons text-[20px]">strikethrough_s</span>
         </button>
-        <div className="w-px h-4 bg-gray-300 mx-1"></div>
         
         {/* Text Color */}
         <div className="relative" onKeyDown={handleColorPickerKeyDown}>
           <button 
             onClick={() => setShowColorPicker(!showColorPicker)} 
-            className="p-1.5 hover:bg-gray-200 rounded text-gray-700 flex items-center" 
-            title="Text Color (文字颜色)"
+            className="h-8 px-1 flex justify-center items-center gap-0.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" 
+            title="文字颜色"
             aria-haspopup="true"
             aria-expanded={showColorPicker}
           >
-            <span className="material-icons text-sm">format_color_text</span>
-            <span className="material-icons text-[10px]">arrow_drop_down</span>
+            <span className="material-icons text-[20px]">format_color_text</span>
+            <span className="material-icons text-[14px] text-gray-500">arrow_drop_down</span>
           </button>
           {showColorPicker && (
             <div 
@@ -568,65 +568,71 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
             </div>
           )}
         </div>
-        <button onClick={() => execCmd('removeFormat')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Clear Formatting (清除格式)">
-            <span className="material-icons text-sm">format_clear</span>
+        
+        {/* Clear Format */}
+        <button onClick={() => execCmd('removeFormat')} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="清除格式">
+            <span className="material-icons text-[20px]">format_clear</span>
         </button>
-        <div className="w-px h-4 bg-gray-300 mx-1"></div>
+
+        <div className="w-px h-5 bg-gray-300 mx-1"></div>
         
         {/* Headers */}
-        <button onClick={() => execCmd('formatBlock', '<h2>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 font-bold text-xs" title="Heading 2 (标题2)">
+        <button onClick={() => execCmd('formatBlock', '<h2>')} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 font-bold text-sm" title="标题 2">
              H2
         </button>
-        <button onClick={() => execCmd('formatBlock', '<h3>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 font-bold text-xs" title="Heading 3 (标题3)">
+        <button onClick={() => execCmd('formatBlock', '<h3>')} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 font-bold text-sm" title="标题 3">
              H3
         </button>
-        <button onClick={() => execCmd('formatBlock', '<p>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 text-xs" title="Paragraph (段落)">
+        <button onClick={() => execCmd('formatBlock', '<p>')} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 text-sm" title="段落">
              P
         </button>
-        <div className="w-px h-4 bg-gray-300 mx-1"></div>
+
+        <div className="w-px h-5 bg-gray-300 mx-1"></div>
         
         {/* Alignment */}
-        <button onClick={() => execCmd('justifyLeft')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Align Left (左对齐)">
-            <span className="material-icons text-sm">format_align_left</span>
+        <button onClick={() => execCmd('justifyLeft')} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="左对齐">
+            <span className="material-icons text-[20px]">format_align_left</span>
         </button>
-        <button onClick={() => execCmd('justifyCenter')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Align Center (居中)">
-            <span className="material-icons text-sm">format_align_center</span>
+        <button onClick={() => execCmd('justifyCenter')} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="居中对齐">
+            <span className="material-icons text-[20px]">format_align_center</span>
         </button>
-        <button onClick={() => execCmd('justifyRight')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Align Right (右对齐)">
-            <span className="material-icons text-sm">format_align_right</span>
+        <button onClick={() => execCmd('justifyRight')} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="右对齐">
+            <span className="material-icons text-[20px]">format_align_right</span>
         </button>
-        <div className="w-px h-4 bg-gray-300 mx-1"></div>
+
+        <div className="w-px h-5 bg-gray-300 mx-1"></div>
         
         {/* Lists */}
-        <button onClick={() => execCmd('insertUnorderedList')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Bullet List (无序列表)">
-            <span className="material-icons text-sm">format_list_bulleted</span>
+        <button onClick={() => execCmd('insertUnorderedList')} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="无序列表">
+            <span className="material-icons text-[20px]">format_list_bulleted</span>
         </button>
-        <button onClick={() => execCmd('insertOrderedList')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Numbered List (有序列表)">
-            <span className="material-icons text-sm">format_list_numbered</span>
+        <button onClick={() => execCmd('insertOrderedList')} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="有序列表">
+            <span className="material-icons text-[20px]">format_list_numbered</span>
         </button>
-        <div className="w-px h-4 bg-gray-300 mx-1"></div>
+
+        <div className="w-px h-5 bg-gray-300 mx-1"></div>
         
         {/* Insert Elements */}
-        <button onClick={() => setShowLinkDialog(true)} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Link (插入链接)">
-            <span className="material-icons text-sm">link</span>
+        <button onClick={() => setShowLinkDialog(true)} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="插入链接">
+            <span className="material-icons text-[20px]">link</span>
         </button>
-        <button onClick={triggerImageUpload} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Image (插入图片)">
-            <span className="material-icons text-sm">add_photo_alternate</span>
+        <button onClick={triggerImageUpload} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="插入图片">
+            <span className="material-icons text-[20px]">add_photo_alternate</span>
         </button>
-        <button onClick={insertQuote} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Quote (插入引用)">
-            <span className="material-icons text-sm">format_quote</span>
+        <button onClick={insertQuote} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="插入引用">
+            <span className="material-icons text-[20px]">format_quote</span>
         </button>
-        <button onClick={insertCard} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Card (插入卡片)">
-            <span className="material-icons text-sm">dashboard</span>
+        <button onClick={insertCard} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="插入卡片">
+            <span className="material-icons text-[20px]">dashboard</span>
         </button>
-        <button onClick={insertDivider} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Divider (插入分割线)">
-            <span className="material-icons text-sm">horizontal_rule</span>
+        <button onClick={insertDivider} className="w-8 h-8 flex justify-center items-center hover:bg-gray-200 rounded text-gray-700 transition-colors" title="插入分割线">
+            <span className="material-icons text-[20px]">horizontal_rule</span>
         </button>
         
         <div className="ml-auto flex items-center gap-1">
             <button 
                 onClick={toggleSource} 
-                className={`text-xs font-medium px-2 py-1 rounded border transition-colors ${showSource ? 'bg-green-100 text-green-700 border-green-200' : 'text-gray-600 hover:bg-gray-100 border-gray-200'}`}
+                className="px-2 h-8 flex items-center justify-center hover:bg-gray-200 rounded border border-gray-200 text-xs font-medium text-gray-600 bg-white transition-colors"
             >
                 {showSource ? '可视化' : 'HTML'}
             </button>
