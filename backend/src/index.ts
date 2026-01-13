@@ -19,16 +19,14 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Security middleware with CSP configuration for frontend
-// Note: 'unsafe-inline' and 'unsafe-eval' are required for Tailwind CDN runtime.
-// For production, consider using build-time Tailwind compilation instead.
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.tailwindcss.com", "https://aistudiocdn.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://aistudiocdn.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
       fontSrc: ["'self'", "https://cdn.jsdelivr.net"],
-      imgSrc: ["'self'", "data:", "blob:", "https://aistudiocdn.com", "https://cdn.tailwindcss.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https://aistudiocdn.com"],
       connectSrc: ["'self'", "https://api.weixin.qq.com", "https://api.ipify.org"],
     },
   },
