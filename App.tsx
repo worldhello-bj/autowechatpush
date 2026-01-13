@@ -414,7 +414,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 // --- User Menu Component ---
 const UserMenu: React.FC = () => {
-  const { user, logout, isGuestMode } = useAuth();
+  const { user, logout } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   
@@ -422,16 +422,6 @@ const UserMenu: React.FC = () => {
     await logout();
     setShowMenu(false);
   };
-  
-  // Show guest indicator if in guest mode
-  if (isGuestMode) {
-    return (
-      <div className="flex items-center gap-2 h-9 px-3 rounded-full bg-blue-100 border border-blue-300">
-        <span className="material-icons text-blue-600 text-lg">person_outline</span>
-        <span className="text-sm font-medium text-blue-700 hidden sm:block">试用模式</span>
-      </div>
-    );
-  }
   
   if (!user) return null;
   
@@ -518,8 +508,7 @@ const UserMenu: React.FC = () => {
 const AppLayout: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [showGuestBanner, setShowGuestBanner] = useState(true);
-  const { isLoggedIn, isLoading, isGuestMode } = useAuth();
+  const { isLoggedIn, isLoading } = useAuth();
   const location = useLocation();
 
   // Track page views
@@ -560,22 +549,6 @@ const AppLayout: React.FC = () => {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-gray-50 text-gray-900 font-sans">
-      
-      {/* Guest Mode Banner - Hide on login page */}
-      {isGuestMode && showGuestBanner && location.pathname !== '/login' && (
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3 text-center text-xs sm:text-sm font-medium flex justify-between items-center relative z-50 shadow-md animate-slide-in-up">
-          <div className="flex-1 flex items-center justify-center gap-2">
-            <span className="material-icons text-lg">info</span>
-            <span>您正在使用免费试用模式，下次访问需要登录。</span>
-            <Link to="/login" className="ml-2 underline font-bold hover:text-blue-100">
-              立即注册
-            </Link>
-          </div>
-          <button onClick={() => setShowGuestBanner(false)} className="ml-2 sm:ml-4 hover:bg-blue-700 rounded p-1 transition-colors flex-shrink-0">
-            <span className="material-icons text-sm">close</span>
-          </button>
-        </div>
-      )}
       
       {/* Top Notification Bar for Errors */}
       {error && (
