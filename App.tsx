@@ -1,4 +1,3 @@
-import './styles.css';
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Link, NavLink, Navigate, useLocation } from 'react-router-dom';
 import Editor from './components/Editor';
