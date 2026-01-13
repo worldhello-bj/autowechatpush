@@ -513,25 +513,25 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
         aria-label="文章格式化工具栏"
       >
         {/* Undo/Redo */}
-        <button onClick={() => execCmd('undo')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Undo (撤销)">
+        <button onClick={() => execCmd('undo')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Undo (撤销)" aria-label="Undo (撤销)">
             <span className="material-icons text-sm">undo</span>
         </button>
-        <button onClick={() => execCmd('redo')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Redo (重做)">
+        <button onClick={() => execCmd('redo')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Redo (重做)" aria-label="Redo (重做)">
             <span className="material-icons text-sm">redo</span>
         </button>
         <div className="w-px h-4 bg-gray-300 mx-1"></div>
         
         {/* Text Formatting */}
-        <button onClick={() => execCmd('bold')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Bold (加粗)">
+        <button onClick={() => execCmd('bold')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Bold (加粗)" aria-label="Bold (加粗)">
             <span className="material-icons text-sm">format_bold</span>
         </button>
-        <button onClick={() => execCmd('italic')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Italic (斜体)">
+        <button onClick={() => execCmd('italic')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Italic (斜体)" aria-label="Italic (斜体)">
             <span className="material-icons text-sm">format_italic</span>
         </button>
-        <button onClick={() => execCmd('underline')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Underline (下划线)">
+        <button onClick={() => execCmd('underline')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Underline (下划线)" aria-label="Underline (下划线)">
             <span className="material-icons text-sm">format_underlined</span>
         </button>
-        <button onClick={() => execCmd('strikeThrough')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Strikethrough (删除线)">
+        <button onClick={() => execCmd('strikeThrough')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Strikethrough (删除线)" aria-label="Strikethrough (删除线)">
             <span className="material-icons text-sm">strikethrough_s</span>
         </button>
         <div className="w-px h-4 bg-gray-300 mx-1"></div>
@@ -542,6 +542,7 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
             onClick={() => setShowColorPicker(!showColorPicker)} 
             className="p-1.5 hover:bg-gray-200 rounded text-gray-700 flex items-center" 
             title="Text Color (文字颜色)"
+            aria-label="Text Color (文字颜色)"
             aria-haspopup="true"
             aria-expanded={showColorPicker}
           >
@@ -568,55 +569,55 @@ const HtmlEditor = forwardRef<HtmlEditorRef, HtmlEditorProps>(({ initialHtml, on
             </div>
           )}
         </div>
-        <button onClick={() => execCmd('removeFormat')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Clear Formatting (清除格式)">
+        <button onClick={() => execCmd('removeFormat')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Clear Formatting (清除格式)" aria-label="Clear Formatting (清除格式)">
             <span className="material-icons text-sm">format_clear</span>
         </button>
         <div className="w-px h-4 bg-gray-300 mx-1"></div>
         
         {/* Headers */}
-        <button onClick={() => execCmd('formatBlock', '<h2>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 font-bold text-xs" title="Heading 2 (标题2)">
+        <button onClick={() => execCmd('formatBlock', '<h2>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 font-bold text-xs" title="Heading 2 (标题2)" aria-label="Heading 2 (标题2)">
              H2
         </button>
-        <button onClick={() => execCmd('formatBlock', '<h3>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 font-bold text-xs" title="Heading 3 (标题3)">
+        <button onClick={() => execCmd('formatBlock', '<h3>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 font-bold text-xs" title="Heading 3 (标题3)" aria-label="Heading 3 (标题3)">
              H3
         </button>
-        <button onClick={() => execCmd('formatBlock', '<p>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 text-xs" title="Paragraph (段落)">
+        <button onClick={() => execCmd('formatBlock', '<p>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 text-xs" title="Paragraph (段落)" aria-label="Paragraph (段落)">
              P
         </button>
         <div className="w-px h-4 bg-gray-300 mx-1"></div>
         
         {/* Alignment */}
-        <button onClick={() => execCmd('justifyLeft')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Align Left (左对齐)">
+        <button onClick={() => execCmd('justifyLeft')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Align Left (左对齐)" aria-label="Align Left (左对齐)">
             <span className="material-icons text-sm">format_align_left</span>
         </button>
-        <button onClick={() => execCmd('justifyCenter')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Align Center (居中)">
+        <button onClick={() => execCmd('justifyCenter')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Align Center (居中)" aria-label="Align Center (居中)">
             <span className="material-icons text-sm">format_align_center</span>
         </button>
-        <button onClick={() => execCmd('justifyRight')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Align Right (右对齐)">
+        <button onClick={() => execCmd('justifyRight')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Align Right (右对齐)" aria-label="Align Right (右对齐)">
             <span className="material-icons text-sm">format_align_right</span>
         </button>
         <div className="w-px h-4 bg-gray-300 mx-1"></div>
         
         {/* Lists */}
-        <button onClick={() => execCmd('insertUnorderedList')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Bullet List (无序列表)">
+        <button onClick={() => execCmd('insertUnorderedList')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Bullet List (无序列表)" aria-label="Bullet List (无序列表)">
             <span className="material-icons text-sm">format_list_bulleted</span>
         </button>
-        <button onClick={() => execCmd('insertOrderedList')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Numbered List (有序列表)">
+        <button onClick={() => execCmd('insertOrderedList')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Numbered List (有序列表)" aria-label="Numbered List (有序列表)">
             <span className="material-icons text-sm">format_list_numbered</span>
         </button>
         <div className="w-px h-4 bg-gray-300 mx-1"></div>
         
         {/* Insert Elements */}
-        <button onClick={() => setShowLinkDialog(true)} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Link (插入链接)">
+        <button onClick={() => setShowLinkDialog(true)} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Link (插入链接)" aria-label="Insert Link (插入链接)">
             <span className="material-icons text-sm">link</span>
         </button>
-        <button onClick={triggerImageUpload} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Image (插入图片)">
+        <button onClick={triggerImageUpload} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Image (插入图片)" aria-label="Insert Image (插入图片)">
             <span className="material-icons text-sm">add_photo_alternate</span>
         </button>
-        <button onClick={insertQuote} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Quote (插入引用)">
+        <button onClick={insertQuote} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Quote (插入引用)" aria-label="Insert Quote (插入引用)">
             <span className="material-icons text-sm">format_quote</span>
         </button>
-        <button onClick={insertCard} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Card (插入卡片)">
+        <button onClick={insertCard} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Card (插入卡片)" aria-label="Insert Card (插入卡片)">
             <span className="material-icons text-sm">dashboard</span>
         </button>
         <button onClick={insertDivider} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Insert Divider (插入分割线)">
