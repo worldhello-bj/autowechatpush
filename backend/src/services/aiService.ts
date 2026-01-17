@@ -2,6 +2,7 @@ import { config } from '../config/index.js';
 import { createLogger } from '../utils/index.js';
 import { AIProvider, AIChatRequest, GenerationResult, BlockType, ArticleBlock } from '../types/index.js';
 import { getApiKeyFromPool, releaseApiKey } from './aiKeyPoolService.js';
+import { loadPromptConfig, buildCompletePrompt } from './promptService.js';
 
 const logger = createLogger('ai-service');
 
@@ -216,44 +217,31 @@ const callQwenAPI = async (
  */
 
 /**
- * Build prompt for article generation
+ * Build prompt for article generation using backend prompt configuration
  */
-const buildPrompt = (request: AIChatRequest): string => {
-  if (request.isFormattingMode) {
-    return `
-      You are a professional WeChat Official Account editor.
-      Your task is to take the provided raw text and format it into a structured WeChat article layout using the 'layout_article' tool.
-      
-      Guidelines:
-      - Preserve the original meaning
-      - Add Headers with appropriate levels
-      - Convert key points into 'card' blocks
-      - Use different colors to distinguish sections
-      
-      Input Text to Format:
-      """
-      ${request.message}
-      """
-      
-      RETURN ONLY THE FUNCTION CALL.
-    `;
-  }
+const buildPrompt = async (request: AIChatRequest): Promise<{
+  systemPrompt: string;
+  userPrompt: string;
+  validationResult?: any;
+}> => {
+  // Load current prompt configuration
+  const promptConfig = await loadPromptConfig();
 
-  return `
-    You are a professional WeChat Official Account editor.
-    Your task is to write a high-quality article about: "${request.message}".
-    
-    ${request.imageContext ? `Context from uploaded image: ${request.imageContext}` : ''}
-    
-    Guidelines:
-    - Use 'card' blocks for key takeaways
-    - Use headers with levels (1, 2, 3)
-    - Add dividers between sections
-    - Use callouts for important tips
-    - Make each section visually distinct with colors
-    
-    RETURN ONLY THE FUNCTION CALL.
-  `;
+  // Build complete prompt using prompt service
+  const result = await buildCompletePrompt(
+    {
+      message: request.message,
+      isFormattingMode: request.isFormattingMode,
+      userprompt: request.userprompt,
+      imageContext: request.imageContext,
+      useMultiRound: request.multiRoundMode,
+      round: request.multiRoundMode ? 1 : undefined,
+      template: request.template
+    },
+    promptConfig
+  );
+
+  return result;
 };
 
 /**
@@ -262,9 +250,24 @@ const buildPrompt = (request: AIChatRequest): string => {
 export const generateArticle = async (
   request: AIChatRequest
 ): Promise<GenerationResult> => {
-  const systemPrompt =
-    'You are a creative WeChat editor. Use bright colors (blue, red, gold, purple) in your layouts.';
-  const userPrompt = buildPrompt(request);
+  // Handle template fill mode - special case where we fill existing template
+  if (request.template) {
+    return generateTemplateFill(request);
+  }
+
+  // Build prompt using backend prompt configuration
+  const { systemPrompt, userPrompt, validationResult } = await buildPrompt(request);
+
+  // Log validation result if user provided custom prompt
+  if (request.userprompt && validationResult) {
+    logger.info('User prompt validation result', {
+      isValid: validationResult.isValid,
+      score: validationResult.score,
+      issues: validationResult.issues,
+      originalLength: validationResult.originalLength,
+      filteredLength: validationResult.filteredLength
+    });
+  }
 
   const messages = [
     { role: 'system', content: systemPrompt },
@@ -282,6 +285,178 @@ export const generateArticle = async (
     }
     default:
       throw new Error('Unsupported AI provider');
+  }
+};
+
+/**
+ * Generate content to fill existing template blocks
+ */
+const generateTemplateFill = async (request: AIChatRequest): Promise<GenerationResult> => {
+  const template = request.template;
+  const { systemPrompt, userPrompt } = await buildPrompt(request);
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
+  ];
+
+  let newContents: Array<{ index: number; newContent: string }> = [];
+
+  try {
+    // Call AI to generate content for template blocks
+    switch (request.provider) {
+      case AIProvider.DEEPSEEK: {
+        const apiKey = await getApiKeyFromPool(AIProvider.DEEPSEEK);
+        const result = await callDeepSeekForTemplateFill(apiKey, messages, request.thinkingMode);
+        newContents = result;
+        break;
+      }
+      case AIProvider.QWEN: {
+        const apiKey = await getApiKeyFromPool(AIProvider.QWEN);
+        const result = await callQwenForTemplateFill(apiKey, messages);
+        newContents = result;
+        break;
+      }
+      default:
+        throw new Error('Unsupported AI provider');
+    }
+
+    // Fill original blocks with new content
+    const filledBlocks = [...template.originalBlocks];
+    newContents.forEach(({ index, newContent }) => {
+      if (filledBlocks[index]) {
+        filledBlocks[index] = { ...filledBlocks[index], content: newContent };
+      }
+    });
+
+    logger.info('Template fill completed', {
+      totalBlocks: template.originalBlocks.length,
+      filledBlocks: newContents.length
+    });
+
+    return {
+      title: template.title,
+      digest: template.digest || 'Template filled content',
+      blocks: filledBlocks,
+      sources: [],
+    };
+
+  } catch (error) {
+    logger.error('Template fill failed, returning original blocks:', error);
+    // Return original blocks if fill fails
+    return {
+      title: template.title,
+      digest: template.digest || 'Original template content',
+      blocks: template.originalBlocks,
+      sources: [],
+    };
+  }
+};
+
+/**
+ * Call DeepSeek API for template fill
+ */
+const callDeepSeekForTemplateFill = async (
+  apiKey: string,
+  messages: Array<{ role: string; content: string }>,
+  thinkingMode: boolean = false
+): Promise<Array<{ index: number; newContent: string }>> => {
+  logger.info('Calling DeepSeek API for template fill');
+
+  const requestBody: Record<string, unknown> = {
+    model: 'deepseek-chat',
+    messages,
+  };
+
+  if (thinkingMode) {
+    requestBody.thinking = { type: 'enabled' };
+  }
+
+  let success = false;
+  let errorMessage: string | undefined;
+
+  try {
+    const response = await fetch(`https://api.deepseek.com/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } };
+      errorMessage = `DeepSeek API Error: ${errorData.error?.message || response.statusText}`;
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+    const content = data.choices?.[0]?.message?.content;
+
+    if (!content) {
+      errorMessage = 'DeepSeek did not return content';
+      throw new Error(errorMessage);
+    }
+
+    // Parse JSON response
+    const parsed = JSON.parse(content);
+    success = true;
+    return Array.isArray(parsed) ? parsed : [];
+
+  } finally {
+    // Release the API key back to the pool
+    releaseApiKey(apiKey, success, errorMessage);
+  }
+};
+
+/**
+ * Call Qwen API for template fill
+ */
+const callQwenForTemplateFill = async (
+  apiKey: string,
+  messages: Array<{ role: string; content: string }>
+): Promise<Array<{ index: number; newContent: string }>> => {
+  logger.info('Calling Qwen API for template fill');
+
+  let success = false;
+  let errorMessage: string | undefined;
+
+  try {
+    const response = await fetch(`https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'qwen-plus',
+        messages,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } };
+      errorMessage = `Qwen API Error: ${errorData.error?.message || response.statusText}`;
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+    const content = data.choices?.[0]?.message?.content;
+
+    if (!content) {
+      errorMessage = 'Qwen did not return content';
+      throw new Error(errorMessage);
+    }
+
+    // Parse JSON response
+    const parsed = JSON.parse(content);
+    success = true;
+    return Array.isArray(parsed) ? parsed : [];
+
+  } finally {
+    // Release the API key back to the pool
+    releaseApiKey(apiKey, success, errorMessage);
   }
 };
 

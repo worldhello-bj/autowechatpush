@@ -1,238 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WeChat AI Publisher</title>
-    
-    <!-- Material Icons served locally to avoid external blocking -->
-    <link href="/material-icons/material-design-icons.css" rel="stylesheet">
-    
+
+    <link href="https://cdn.bootcdn.net/ajax/libs/material-design-icons/3.0.1/iconfont/material-icons.min.css" rel="stylesheet">
+
     <script src="https://cdn.tailwindcss.com"></script>
+
     <style>
-      /* Material Icons - Defensive CSS to handle loading failures */
-      .material-icons {
-        font-family: 'Material Icons';
-        font-weight: normal;
-        font-style: normal;
-        font-size: 24px;
-        line-height: 1;
-        letter-spacing: normal;
-        text-transform: none;
-        display: inline-block;
-        white-space: nowrap;
-        word-wrap: normal;
-        direction: ltr;
-        -webkit-font-feature-settings: 'liga';
-        -webkit-font-smoothing: antialiased;
-        /* Hide text if font fails to load */
-        font-display: swap;
-      }
-      
-      /* Fallback: if Material Icons font fails, hide the ligature text */
-      .material-icons:not([data-loaded]) {
-        max-width: 24px;
-        max-height: 24px;
-        overflow: hidden;
-        text-indent: -9999px;
-      }
-      
-      /* When font loads successfully, show icons properly */
-      @supports (font-variation-settings: normal) {
+        /* 2. 核心修复：简单的样式定义，去掉那些导致“隐形”的复杂代码 */
         .material-icons {
-          text-indent: 0;
+            font-family: 'Material Icons';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+            /* 开启连字功能 (关键) */
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+            -moz-osx-font-smoothing: grayscale;
+            font-feature-settings: 'liga';
+            /* 确保垂直居中 */
+            vertical-align: middle;
         }
-      }
-      
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      }
-      /* Custom scrollbar for webkit */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #f1f1f1;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #c1c1c1;
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #a8a8a8;
-      }
-      /* Custom slider styles */
-      input[type="range"] {
-        -webkit-appearance: none;
-        appearance: none;
-        height: 8px;
-        border-radius: 9999px;
-        outline: none;
-        cursor: pointer;
-      }
-      input[type="range"]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        cursor: pointer;
-        border: 2px solid white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      }
-      input[type="range"]::-moz-range-thumb {
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        cursor: pointer;
-        border: 2px solid white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      }
-      input[type="range"]::-moz-range-track {
-        height: 8px;
-        border-radius: 9999px;
-      }
-      /* WeChat section styles - force visibility */
-      .wechat-section,
-      .wechat-section * {
-        visibility: visible !important;
-        opacity: 1 !important;
-      }
-      /* Ensure rich media content is visible */
-      .rich_media_content {
-        visibility: visible !important;
-        opacity: 1 !important;
-      }
-      
-      /* Modern UI Animations - Fade Effects */
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
+
+            /* 针对小号图标的适配 */
+            .material-icons.text-sm {
+                font-size: 18px;
+            }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
         }
-        to {
-          opacity: 1;
-          transform: translateY(0);
+
+        /* 保持你原有的滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
-      }
-      
-      @keyframes fadeOut {
-        from {
-          opacity: 1;
-          transform: translateY(0);
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
         }
-        to {
-          opacity: 0;
-          transform: translateY(10px);
+
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
         }
-      }
-      
-      @keyframes slideInRight {
-        from {
-          opacity: 0;
-          transform: translateX(20px);
+
+            ::-webkit-scrollbar-thumb:hover {
+                background: #a8a8a8;
+            }
+
+        /* 保持你原有的滑块样式 */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            border-radius: 9999px;
+            outline: none;
+            cursor: pointer;
         }
-        to {
-          opacity: 1;
-          transform: translateX(0);
+
+            input[type="range"]::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                cursor: pointer;
+                border: 2px solid white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
+
+        /* 动画样式保持不变 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-      }
-      
-      @keyframes slideInLeft {
-        from {
-          opacity: 0;
-          transform: translateX(-20px);
+
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
         }
-        to {
-          opacity: 1;
-          transform: translateX(0);
+
+        .animate-scale-in {
+            animation: scaleIn 0.3s ease-out forwards;
         }
-      }
-      
-      @keyframes slideInUp {
-        from {
-          opacity: 0;
-          transform: translateY(20px);
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
-        to {
-          opacity: 1;
-          transform: translateY(0);
+
+        .animate-slide-in-up {
+            animation: slideInUp 0.4s ease-out forwards;
         }
-      }
-      
-      @keyframes scaleIn {
-        from {
-          opacity: 0;
-          transform: scale(0.95);
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        to {
-          opacity: 1;
-          transform: scale(1);
-        }
-      }
-      
-      @keyframes pulse {
-        0%, 100% {
-          opacity: 1;
-        }
-        50% {
-          opacity: 0.7;
-        }
-      }
-      
-      /* Animation utility classes */
-      .animate-fade-in {
-        animation: fadeIn 0.3s ease-out forwards;
-      }
-      
-      .animate-fade-in-slow {
-        animation: fadeIn 0.5s ease-out forwards;
-      }
-      
-      .animate-slide-in-right {
-        animation: slideInRight 0.4s ease-out forwards;
-      }
-      
-      .animate-slide-in-left {
-        animation: slideInLeft 0.4s ease-out forwards;
-      }
-      
-      .animate-slide-in-up {
-        animation: slideInUp 0.4s ease-out forwards;
-      }
-      
-      .animate-scale-in {
-        animation: scaleIn 0.3s ease-out forwards;
-      }
-      
-      /* Smooth transitions for all interactive elements */
-      button, a, input, select, textarea {
-        transition: all 0.2s ease-in-out;
-      }
-      
-      /* Enhanced backdrop blur for modals */
-      .backdrop-blur-sm {
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
-      }
-      
-      /* Mobile-optimized touch targets */
-      @media (max-width: 768px) {
-        button, a[role="button"], input[type="checkbox"], input[type="radio"] {
-          min-height: 44px;
-          min-width: 44px;
-        }
-      }
-      
-      /* Smooth page transitions */
-      .page-transition {
-        animation: fadeIn 0.3s ease-out;
-      }
     </style>
-  </head>
-  <body class="bg-gray-50 text-gray-900 h-screen overflow-hidden">
+</head>
+<body class="bg-gray-50 text-gray-900 h-screen overflow-hidden">
     <div id="root" class="h-full"></div>
     <script type="module" src="/index.tsx"></script>
-  </body>
+</body>
 </html>

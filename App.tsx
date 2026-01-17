@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import './public/material-icons/material-design-icons.min.css';
 import { HashRouter, Routes, Route, Link, NavLink, Navigate, useLocation } from 'react-router-dom';
 import Editor from './components/Editor';
 import LogSettings from './components/LogSettings';
-import PromptEditor from './components/PromptEditor';
 import AuthPage from './components/AuthPage';
 import FeedbackDialog from './components/FeedbackDialog';
 import UpdateNotification from './components/UpdateNotification';
 import { AuthProvider, useAuth } from './components/AuthContext';
-import { WeChatCredentials } from './types';
 import analytics from './services/analytics';
 
 // --- Shared Types ---
@@ -185,39 +184,14 @@ const SettingsPage: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile>({ name: 'Admin', email: 'admin@example.com', avatar: 'https://picsum.photos/100/100' });
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
-  // WeChat Credentials State
-  const [wechatCreds, setWechatCreds] = useState<WeChatCredentials>({ appId: '', appSecret: '' });
-  const [isEditingWechat, setIsEditingWechat] = useState(false);
-
   useEffect(() => {
     const savedProfile = localStorage.getItem('user_profile');
     if (savedProfile) setProfile(JSON.parse(savedProfile));
-
-    const savedWechatCreds = localStorage.getItem('wechat_creds');
-    if (savedWechatCreds) {
-      try {
-        setWechatCreds(JSON.parse(savedWechatCreds));
-      } catch (e) {
-        console.error('Failed to parse WeChat credentials', e);
-      }
-    }
   }, []);
 
   const handleSaveProfile = () => {
     localStorage.setItem('user_profile', JSON.stringify(profile));
     setIsEditingProfile(false);
-  };
-
-  const handleSaveWechatCreds = () => {
-    localStorage.setItem('wechat_creds', JSON.stringify(wechatCreds));
-    setIsEditingWechat(false);
-    
-    // Track settings update event
-    analytics.track('settings_update', {
-      type: 'wechat_credentials',
-      hasAppId: !!wechatCreds.appId,
-      hasAppSecret: !!wechatCreds.appSecret,
-    });
   };
 
   return (
@@ -301,81 +275,9 @@ const SettingsPage: React.FC = () => {
              </div>
           </div>
 
-          {/* Prompt Configuration */}
-          <div className="border-t border-gray-100">
-             <PromptEditor />
-          </div>
 
-          {/* WeChat Public Account Configuration */}
-          <div className="p-4 sm:p-6">
-             <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="material-icons text-gray-400 text-xl sm:text-2xl">cloud</span> 
-                <span>微信公众号配置</span>
-             </h3>
-             <p className="text-xs sm:text-sm text-gray-500 mb-4">
-                配置您的微信公众号 AppID 和 AppSecret，用于发布文章到微信公众平台。每个用户可以配置自己的公众号。
-             </p>
-             
-             {isEditingWechat ? (
-               <div className="space-y-4 animate-fade-in">
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-2">AppID</label>
-                   <input 
-                     type="text" 
-                     value={wechatCreds.appId}
-                     onChange={e => setWechatCreds({...wechatCreds, appId: e.target.value})}
-                     placeholder="wx1234567890abcdef"
-                     className="w-full border border-gray-300 px-4 py-3 rounded-lg text-base font-mono transition-all duration-200 focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[48px]"
-                   />
-                 </div>
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-2">AppSecret</label>
-                   <input 
-                     type="password" 
-                     value={wechatCreds.appSecret}
-                     onChange={e => setWechatCreds({...wechatCreds, appSecret: e.target.value})}
-                     placeholder="••••••••••••••••••••••••••••••••"
-                     className="w-full border border-gray-300 px-4 py-3 rounded-lg text-base font-mono transition-all duration-200 focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[48px]"
-                   />
-                 </div>
-                 <div className="flex flex-col sm:flex-row gap-2">
-                   <button 
-                     onClick={handleSaveWechatCreds} 
-                     className="bg-green-600 text-white text-sm sm:text-base px-5 py-2.5 rounded-lg hover:bg-green-700 transition-colors min-h-[44px] font-medium"
-                   >
-                     保存配置
-                   </button>
-                   <button 
-                     onClick={() => setIsEditingWechat(false)} 
-                     className="text-gray-500 text-sm sm:text-base px-5 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
-                   >
-                     取消
-                   </button>
-                 </div>
-               </div>
-             ) : (
-               <div className="space-y-3">
-                 <div className="bg-gray-50 rounded p-3 border border-gray-200">
-                   <div className="text-xs text-gray-500 mb-1">AppID</div>
-                   <div className="font-mono text-sm text-gray-800 break-all">
-                     {wechatCreds.appId || <span className="text-gray-400 italic">未配置</span>}
-                   </div>
-                 </div>
-                 <div className="bg-gray-50 rounded p-3 border border-gray-200">
-                   <div className="text-xs text-gray-500 mb-1">AppSecret</div>
-                   <div className="font-mono text-sm text-gray-800">
-                     {wechatCreds.appSecret ? '••••••••••••••••••••••••••••••••' : <span className="text-gray-400 italic">未配置</span>}
-                   </div>
-                 </div>
-                 <button 
-                   onClick={() => setIsEditingWechat(true)} 
-                   className="w-full sm:w-auto text-sm sm:text-base text-green-600 font-medium hover:underline border-2 border-green-600 rounded-lg px-5 py-2.5 hover:bg-green-50 transition-colors min-h-[44px]"
-                 >
-                   编辑配置
-                 </button>
-               </div>
-             )}
-          </div>
+
+
 
           {/* Log Settings */}
           <div className="p-4 sm:p-6">
@@ -383,7 +285,11 @@ const SettingsPage: React.FC = () => {
           </div>
           
            <div className="p-4 sm:p-6 bg-gray-50">
-               <div className="text-xs sm:text-sm text-gray-500 text-center">WeChat AI Publisher v1.3.0</div>
+               <div className="text-xs sm:text-sm text-gray-500 text-center space-y-1">
+                 <p>WeChat AI Publisher v1.3.0</p>
+                 <p className="text-xs text-gray-400">本网站仅供个人使用</p>
+                 <p className="text-xs text-gray-400">备案号：京ICP备2026002161号</p>
+               </div>
            </div>
        </div>
     </div>
@@ -504,17 +410,66 @@ const UserMenu: React.FC = () => {
   );
 };
 
+// --- Disclaimer Dialog Component ---
+const DisclaimerDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+}> = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+
+  return (
+    <>
+      <div 
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-fade-in"
+        onClick={onClose}
+      />
+      <div className="fixed inset-0 flex items-center justify-center z-50 p-4 animate-scale-in">
+        <div 
+          className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 border border-gray-200"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="material-icons text-green-600 text-3xl">info</span>
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">使用声明</h3>
+            <p className="text-gray-600">本网站仅供个人使用</p>
+          </div>
+          
+          <div className="bg-gray-50 rounded-lg p-4 mb-6 text-center">
+            <p className="text-sm text-gray-700">备案号：京ICP备2026002161号</p>
+          </div>
+          
+          <button
+            onClick={onClose}
+            className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-all duration-200 shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40"
+          >
+            我知道了
+          </button>
+        </div>
+      </div>
+    </>
+  );
+};
+
 // --- Main App Layout Component ---
 const AppLayout: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
   const { isLoggedIn, isLoading } = useAuth();
   const location = useLocation();
 
-  // Track page views
+  // Track page views and show disclaimer on first home page visit
   useEffect(() => {
     if (isLoggedIn) {
       analytics.track('page_view', { path: location.pathname });
+    }
+
+    // Show disclaimer on first visit to home page
+    if (location.pathname === '/' && !localStorage.getItem('hasSeenDisclaimer')) {
+      setShowDisclaimer(true);
+      localStorage.setItem('hasSeenDisclaimer', 'true');
     }
   }, [location.pathname, isLoggedIn]);
   
@@ -549,6 +504,11 @@ const AppLayout: React.FC = () => {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-gray-50 text-gray-900 font-sans">
+      {/* Disclaimer Dialog */}
+      <DisclaimerDialog 
+        isOpen={showDisclaimer} 
+        onClose={() => setShowDisclaimer(false)} 
+      />
       
       {/* Top Notification Bar for Errors */}
       {error && (

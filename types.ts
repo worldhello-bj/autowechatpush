@@ -75,6 +75,16 @@ export interface WeChatCredentials {
   appSecret: string;
 }
 
+export interface WeChatAccount {
+  id: string;
+  name: string;
+  appId: string;
+  appSecret: string;
+  isDefault: boolean;
+  createdAt: string;
+  lastUsed?: string;
+}
+
 export interface WechatPayload {
   articles: {
     title: string;

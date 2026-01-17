@@ -4,8 +4,6 @@ const logger = createLogger('config-service');
 
 // API Configuration types
 export interface ApiConfig {
-  wechatAppId: string;
-  wechatAppSecret: string;
   deepSeekApiKey: string;
   dashScopeApiKey: string;
   updatedAt: Date;
@@ -23,8 +21,6 @@ export interface ApiConfig {
  * 4. Never logged in plain text
  */
 let apiConfig: ApiConfig = {
-  wechatAppId: '',
-  wechatAppSecret: '',
   deepSeekApiKey: '',
   dashScopeApiKey: '',
   updatedAt: new Date(),
@@ -43,13 +39,11 @@ export const getApiConfig = (): ApiConfig => {
  * Only returns whether keys are configured, not the actual values
  */
 export const getApiConfigStatus = (): {
-  wechatConfigured: boolean;
   deepSeekConfigured: boolean;
   dashScopeConfigured: boolean;
   updatedAt: Date;
 } => {
   return {
-    wechatConfigured: !!(apiConfig.wechatAppId && apiConfig.wechatAppSecret),
     deepSeekConfigured: !!apiConfig.deepSeekApiKey,
     dashScopeConfigured: !!apiConfig.dashScopeApiKey,
     updatedAt: apiConfig.updatedAt,
@@ -59,17 +53,12 @@ export const getApiConfigStatus = (): {
 /**
  * Get specific API key for internal use (e.g., AI generation)
  */
-export const getApiKey = (keyType: 'deepseek' | 'dashscope' | 'wechat'): string | { appId: string; appSecret: string } | null => {
+export const getApiKey = (keyType: 'deepseek' | 'dashscope'): string | null => {
   switch (keyType) {
     case 'deepseek':
       return apiConfig.deepSeekApiKey || null;
     case 'dashscope':
       return apiConfig.dashScopeApiKey || null;
-    case 'wechat':
-      if (apiConfig.wechatAppId && apiConfig.wechatAppSecret) {
-        return { appId: apiConfig.wechatAppId, appSecret: apiConfig.wechatAppSecret };
-      }
-      return null;
     default:
       return null;
   }
@@ -101,7 +90,7 @@ export const updateApiConfig = (
  * Clear a specific API key (admin only)
  */
 export const clearApiKey = (
-  keyType: 'wechatAppId' | 'wechatAppSecret' | 'deepSeekApiKey' | 'dashScopeApiKey',
+  keyType: 'deepSeekApiKey' | 'dashScopeApiKey',
   adminUserId: string
 ): ApiConfig => {
   logger.info('Clearing API key', { adminUserId, keyType });
@@ -122,12 +111,6 @@ export const clearApiKey = (
 export const initApiConfigFromEnv = (): void => {
   const envConfig: Partial<ApiConfig> = {};
   
-  if (process.env.WECHAT_APP_ID) {
-    envConfig.wechatAppId = process.env.WECHAT_APP_ID;
-  }
-  if (process.env.WECHAT_APP_SECRET) {
-    envConfig.wechatAppSecret = process.env.WECHAT_APP_SECRET;
-  }
   if (process.env.DEEPSEEK_API_KEY) {
     envConfig.deepSeekApiKey = process.env.DEEPSEEK_API_KEY;
   }

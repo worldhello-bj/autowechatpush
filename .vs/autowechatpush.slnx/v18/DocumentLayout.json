@@ -1,0 +1,277 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\autowechatpush\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\autowechatpush\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\autowechatpush\\styles.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:styles.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\autowechatpush\\start-prod.bat||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:start-prod.bat||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\autowechatpush\\package-lock.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:package-lock.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\autowechatpush\\index.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:index.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\autowechatpush\\App.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:App.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\autowechatpush\\types.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:types.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\autowechatpush\\TRANSFORMATION_PLAN.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:TRANSFORMATION_PLAN.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\autowechatpush\\tailwind.config.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:tailwind.config.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\autowechatpush\\IMPLEMENTATION_SUMMARY.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:IMPLEMENTATION_SUMMARY.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\autowechatpush\\start.bat||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:start.bat||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\autowechatpush\\metadata.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:metadata.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\autowechatpush\\ARCHITECTURE.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:ARCHITECTURE.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 13,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:1:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:129:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:130:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:134:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:130:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:132:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{40ea2e6b-2121-4bb8-a43e-c83c04b51041}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{75188d03-9892-4ae2-abf1-207126247ce5}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "start-prod.bat",
+              "DocumentMoniker": "D:\\autowechatpush\\start-prod.bat",
+              "RelativeDocumentMoniker": "start-prod.bat",
+              "ToolTip": "D:\\autowechatpush\\start-prod.bat",
+              "RelativeToolTip": "start-prod.bat",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAH/SURBVEhL7dU/aBNhHMbxby5pgjo6WK1DaGOJ8Q8qFmxBWnGxaqk4OIriWBChKTEBFam0SkEdRByEDp3VRYqKDoJSMCpW0VoaTawWXJNo7tL7XV6XKvY1ryUYB8HPcvB7n/ee9ziOg79JKaWP/j2\u002BZGIgCyqsL9SHL2fV4\u002Bb7eg5UvYIK\u002B5KJuDo7OPRTvH7OnEph6UOdKx73Hj3lzsMnuCL68pKMBSWnzJuZHNPvZ3FsB8dxyGQ/8Tg9ydeSrceNjAWTUxkyH\u002BbI5D7iiiAivHo7w\u002BzcZ569nNLjRsaCWCSM5QMRj\u002B6uHXTvakcWijZFI3rcyFiglMK2HTwRlFIopRAR/BZUVEWPGxkLXk\u002B/Wzixy83xB9y4fR9PhJJtM5F\u002BoceNjAVbNrSyZtVKNkZbEHERzyW6rplYawudHW163MhYsGL5Mjrbt7M\u002B0ozfsghYFts2x\u002Bho28rV0TGGL13Rt1QV0Ae6YLCBw4d6Abg1fpeJ9HOKxSLiztPXn2B3104O9uzXt/1gfIJqQqEQhUKBc6kBhk\u002BnyOfzKO/3L7ymAm/exZ0vo1QFpSq45TKyxNddU0FFeTT4/RyPn6TvRJxgwM\u002BXYkGPLVJTQe/ePVy7PELT6kbWNjUyNnqdY0eP6LFFair4bmRokIsXzuvjqnzJRH8WfH/8T6hO5fTJf7/4Bn2yzOdgnYQEAAAAAElFTkSuQmCC",
+              "WhenOpened": "2026-01-14T04:21:34.786Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "types.ts",
+              "DocumentMoniker": "D:\\autowechatpush\\types.ts",
+              "RelativeDocumentMoniker": "types.ts",
+              "ToolTip": "D:\\autowechatpush\\types.ts",
+              "RelativeToolTip": "types.ts",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-01-14T04:09:22.698Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "TRANSFORMATION_PLAN.md",
+              "DocumentMoniker": "D:\\autowechatpush\\TRANSFORMATION_PLAN.md",
+              "RelativeDocumentMoniker": "TRANSFORMATION_PLAN.md",
+              "ToolTip": "D:\\autowechatpush\\TRANSFORMATION_PLAN.md",
+              "RelativeToolTip": "TRANSFORMATION_PLAN.md",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2026-01-14T04:09:22.079Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "tailwind.config.js",
+              "DocumentMoniker": "D:\\autowechatpush\\tailwind.config.js",
+              "RelativeDocumentMoniker": "tailwind.config.js",
+              "ToolTip": "D:\\autowechatpush\\tailwind.config.js",
+              "RelativeToolTip": "tailwind.config.js",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
+              "WhenOpened": "2026-01-14T04:09:19.58Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "index.html",
+              "DocumentMoniker": "D:\\autowechatpush\\index.html",
+              "RelativeDocumentMoniker": "index.html",
+              "ToolTip": "D:\\autowechatpush\\index.html",
+              "RelativeToolTip": "index.html",
+              "ViewState": "AgIAAFQAAAAAAAAAAAAQwIkAAAAHAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
+              "WhenOpened": "2026-01-14T04:02:12.231Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "IMPLEMENTATION_SUMMARY.md",
+              "DocumentMoniker": "D:\\autowechatpush\\IMPLEMENTATION_SUMMARY.md",
+              "RelativeDocumentMoniker": "IMPLEMENTATION_SUMMARY.md",
+              "ToolTip": "D:\\autowechatpush\\IMPLEMENTATION_SUMMARY.md",
+              "RelativeToolTip": "IMPLEMENTATION_SUMMARY.md",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2026-01-14T04:02:11.275Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "start.bat",
+              "DocumentMoniker": "D:\\autowechatpush\\start.bat",
+              "RelativeDocumentMoniker": "start.bat",
+              "ToolTip": "D:\\autowechatpush\\start.bat",
+              "RelativeToolTip": "start.bat",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAH/SURBVEhL7dU/aBNhHMbxby5pgjo6WK1DaGOJ8Q8qFmxBWnGxaqk4OIriWBChKTEBFam0SkEdRByEDp3VRYqKDoJSMCpW0VoaTawWXJNo7tL7XV6XKvY1ryUYB8HPcvB7n/ee9ziOg79JKaWP/j2\u002BZGIgCyqsL9SHL2fV4\u002Bb7eg5UvYIK\u002B5KJuDo7OPRTvH7OnEph6UOdKx73Hj3lzsMnuCL68pKMBSWnzJuZHNPvZ3FsB8dxyGQ/8Tg9ydeSrceNjAWTUxkyH\u002BbI5D7iiiAivHo7w\u002BzcZ569nNLjRsaCWCSM5QMRj\u002B6uHXTvakcWijZFI3rcyFiglMK2HTwRlFIopRAR/BZUVEWPGxkLXk\u002B/Wzixy83xB9y4fR9PhJJtM5F\u002BoceNjAVbNrSyZtVKNkZbEHERzyW6rplYawudHW163MhYsGL5Mjrbt7M\u002B0ozfsghYFts2x\u002Bho28rV0TGGL13Rt1QV0Ae6YLCBw4d6Abg1fpeJ9HOKxSLiztPXn2B3104O9uzXt/1gfIJqQqEQhUKBc6kBhk\u002BnyOfzKO/3L7ymAm/exZ0vo1QFpSq45TKyxNddU0FFeTT4/RyPn6TvRJxgwM\u002BXYkGPLVJTQe/ePVy7PELT6kbWNjUyNnqdY0eP6LFFair4bmRokIsXzuvjqnzJRH8WfH/8T6hO5fTJf7/4Bn2yzOdgnYQEAAAAAElFTkSuQmCC",
+              "WhenOpened": "2026-01-14T03:52:53.226Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "styles.css",
+              "DocumentMoniker": "D:\\autowechatpush\\styles.css",
+              "RelativeDocumentMoniker": "styles.css",
+              "ToolTip": "D:\\autowechatpush\\styles.css",
+              "RelativeToolTip": "styles.css",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
+              "WhenOpened": "2026-01-14T03:52:52.412Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "metadata.json",
+              "DocumentMoniker": "D:\\autowechatpush\\metadata.json",
+              "RelativeDocumentMoniker": "metadata.json",
+              "ToolTip": "D:\\autowechatpush\\metadata.json",
+              "RelativeToolTip": "metadata.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-01-14T03:52:49.99Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "package-lock.json",
+              "DocumentMoniker": "D:\\autowechatpush\\package-lock.json",
+              "RelativeDocumentMoniker": "package-lock.json",
+              "ToolTip": "D:\\autowechatpush\\package-lock.json",
+              "RelativeToolTip": "package-lock.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-01-14T03:52:49.39Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "index.tsx",
+              "DocumentMoniker": "D:\\autowechatpush\\index.tsx",
+              "RelativeDocumentMoniker": "index.tsx",
+              "ToolTip": "D:\\autowechatpush\\index.tsx",
+              "RelativeToolTip": "index.tsx",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAA0AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-01-14T03:52:42.525Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "ARCHITECTURE.md",
+              "DocumentMoniker": "D:\\autowechatpush\\ARCHITECTURE.md",
+              "RelativeDocumentMoniker": "ARCHITECTURE.md",
+              "ToolTip": "D:\\autowechatpush\\ARCHITECTURE.md",
+              "RelativeToolTip": "ARCHITECTURE.md",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2026-01-14T03:52:40.852Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "App.tsx",
+              "DocumentMoniker": "D:\\autowechatpush\\App.tsx",
+              "RelativeDocumentMoniker": "App.tsx",
+              "ToolTip": "D:\\autowechatpush\\App.tsx",
+              "RelativeToolTip": "App.tsx",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAMAAAAgAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-01-14T03:51:59.97Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

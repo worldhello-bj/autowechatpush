@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import PromptsConfig from './components/PromptsConfig';
 import FeedbackManagement from './components/FeedbackManagement';
 
 // API configuration
 const API_BASE = '/api/v1';
 
 // Types
-type AdminTab = 'dashboard' | 'users' | 'apiconfig' | 'prompts' | 'analytics' | 'feedback';
+type AdminTab = 'dashboard' | 'users' | 'apiconfig' | 'analytics' | 'feedback';
 
 interface User {
   id: string;
@@ -26,8 +25,6 @@ interface AdminStats {
 }
 
 interface ApiConfig {
-  wechatAppId: string;
-  wechatAppSecret: string;
   googleApiKey: string;
   deepSeekApiKey: string;
   dashScopeApiKey: string;
@@ -218,8 +215,6 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
   
   // API Config State
   const [apiConfig, setApiConfig] = useState<ApiConfig>({
-    wechatAppId: '',
-    wechatAppSecret: '',
     googleApiKey: '',
     deepSeekApiKey: '',
     dashScopeApiKey: '',
@@ -387,17 +382,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
               <span className="material-icons text-sm mr-2 align-middle">api</span>
               API设置
             </button>
-            <button
-              onClick={() => setActiveTab('prompts')}
-              className={`px-6 py-3 font-medium rounded-t-lg transition ${
-                activeTab === 'prompts' 
-                  ? 'bg-gray-100 text-gray-800' 
-                  : 'text-white/70 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              <span className="material-icons text-sm mr-2 align-middle">edit_note</span>
-              提示词配置
-            </button>
+
             <button
               onClick={() => setActiveTab('analytics')}
               className={`px-6 py-3 font-medium rounded-t-lg transition ${
@@ -574,36 +559,6 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
             </div>
             
             <div className="p-6 space-y-6">
-              {/* WeChat Configuration */}
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                  <span className="material-icons text-green-500 text-lg">chat</span>
-                  微信公众号配置
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">AppID</label>
-                    <input
-                      type="text"
-                      value={apiConfig.wechatAppId}
-                      onChange={(e) => setApiConfig({ ...apiConfig, wechatAppId: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 font-mono text-sm"
-                      placeholder="wx..."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">AppSecret</label>
-                    <input
-                      type="password"
-                      value={apiConfig.wechatAppSecret}
-                      onChange={(e) => setApiConfig({ ...apiConfig, wechatAppSecret: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 font-mono text-sm"
-                      placeholder="••••••••"
-                    />
-                  </div>
-                </div>
-              </div>
-
               {/* AI API Keys */}
               <div className="border border-gray-200 rounded-lg p-4">
                 <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -694,9 +649,6 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
               </div>
             </div>
           </div>
-        ) : activeTab === 'prompts' ? (
-          /* Prompts Configuration Tab */
-          <PromptsConfig />
         ) : activeTab === 'analytics' ? (
           /* Analytics Tab */
           <div className="space-y-6">

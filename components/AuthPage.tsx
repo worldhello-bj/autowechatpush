@@ -7,6 +7,8 @@ interface AuthPageProps {
 
 const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
   const [mode, setMode] = useState<'login' | 'register'>('login');
+  // 暂时隐藏注册功能
+  const showRegister = false;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -91,16 +93,16 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
             WeChat <span className="text-green-600">AI Publisher</span>
           </h1>
-          <p className="text-sm sm:text-base text-gray-500 mt-2">
-            {mode === 'login' ? '登录您的账户' : '创建新账户'}
-          </p>
+            <p className="text-sm sm:text-base text-gray-500 mt-2">
+              登录您的账户
+            </p>
         </div>
 
         {/* Auth Form */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 sm:p-8 animate-slide-in-up">
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Name field (register only) */}
-            {mode === 'register' && (
+            {/* Name field (register only) - 暂时隐藏 */}
+            {showRegister && mode === 'register' && (
               <div className="animate-fade-in">
                 <label htmlFor="register-name" className="block text-sm font-medium text-gray-700 mb-1">
                   用户名
@@ -125,19 +127,19 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
             {/* Email/Username */}
             <div>
               <label htmlFor="auth-email" className="block text-sm font-medium text-gray-700 mb-1">
-                {mode === 'login' ? '用户名或邮箱' : '邮箱地址'}
+                用户名或邮箱
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-gray-400 text-lg sm:text-xl">
-                  {mode === 'login' ? 'person' : 'email'}
+                  person
                 </span>
                 <input
                   id="auth-email"
-                  type={mode === 'login' ? 'text' : 'email'}
+                  type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base"
-                  placeholder={mode === 'login' ? '用户名或邮箱' : 'your@email.com'}
+                  placeholder="用户名或邮箱"
                   disabled={isLoading}
                 />
               </div>
@@ -174,8 +176,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
               </div>
             </div>
 
-            {/* Confirm Password (register only) */}
-            {mode === 'register' && (
+            {/* Confirm Password (register only) - 暂时隐藏 */}
+            {showRegister && mode === 'register' && (
               <div className="animate-fade-in">
                 <label htmlFor="register-confirm-password" className="block text-sm font-medium text-gray-700 mb-1">
                   确认密码
@@ -222,32 +224,36 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
               ) : (
                 <>
                   <span className="material-icons text-lg">
-                    {mode === 'login' ? 'login' : 'person_add'}
+                    login
                   </span>
-                  {mode === 'login' ? '登录' : '注册'}
+                  登录
                 </>
               )}
             </button>
           </form>
 
-          {/* Switch Mode */}
-          <div className="text-center">
-            <p className="text-gray-600">
-              {mode === 'login' ? '还没有账户？' : '已有账户？'}
-              <button
-                type="button"
-                onClick={switchMode}
-                className="ml-1 text-green-600 font-medium hover:text-green-700 hover:underline"
-              >
-                {mode === 'login' ? '立即注册' : '立即登录'}
-              </button>
-            </p>
-          </div>
+          {/* Switch Mode - 暂时隐藏 */}
+          {showRegister && (
+            <div className="text-center">
+              <p className="text-gray-600">
+                {mode === 'login' ? '还没有账户？' : '已有账户？'}
+                <button
+                  type="button"
+                  onClick={switchMode}
+                  className="ml-1 text-green-600 font-medium hover:text-green-700 hover:underline"
+                >
+                  {mode === 'login' ? '立即注册' : '立即登录'}
+                </button>
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-6 text-sm text-gray-400">
+        <div className="text-center mt-6 text-sm text-gray-400 space-y-1">
           <p>WeChat AI Publisher v1.3.0</p>
+          <p className="text-xs text-gray-400">本网站仅供个人使用</p>
+          <p className="text-xs text-gray-400">备案号：京ICP备2026002161号</p>
         </div>
       </div>
     </div>

@@ -203,6 +203,8 @@ export interface GenerationRequest {
   isFormattingMode?: boolean;
   thinkingMode?: boolean;
   multiRoundMode?: boolean;
+  userprompt?: string; // Custom user prompt for personalized generation
+  template?: any; // Article template structure for generation guidance
 }
 
 // Import ArticleBlock from types.ts to maintain consistency
