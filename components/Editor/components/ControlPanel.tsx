@@ -52,6 +52,7 @@ interface ControlPanelProps {
   templateUrl: string;
   setTemplateUrl: (url: string) => void;
   isExtractingTemplate: boolean;
+  onOpenUserTemplatePicker: () => void;
 
   // WeChat Manager
   wechatAccounts: any[];
@@ -111,6 +112,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   templateUrl,
   setTemplateUrl,
   isExtractingTemplate,
+  onOpenUserTemplatePicker,
   wechatAccounts,
   openWeChatAccountManager,
   setShowAITools,
@@ -138,16 +140,16 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   const templateCategories = getCategories();
 
   return (
-    <div className="w-full lg:w-1/2 p-6 flex flex-col gap-6 overflow-y-auto bg-white border-r border-gray-200">
-      <div className="flex justify-between items-start">
+    <div className="w-full lg:w-1/2 p-6 flex flex-col gap-6 overflow-y-auto bg-white rounded-2xl shadow-lg border border-gray-100/50">
+      <div className="flex justify-between items-start border-b border-gray-100 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold text-gray-800">Editor Workspace</h2>
+            <h2 className="text-2xl font-bold text-gray-800">编辑器工作区</h2>
             <button
               onClick={() => setShowGuide(true)}
               className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 flex items-center gap-1"
             >
-              <span className="material-icons text-[14px]">help_outline</span> Guide
+              <span className="material-icons text-[14px]">help_outline</span> 指南
             </button>
           </div>
           <div className="flex items-center gap-2 mt-1">
@@ -159,7 +161,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
           <button
             onClick={saveLocalDraft}
             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition"
-            title="Save Local Draft"
+            title="保存草稿到服务器"
           >
             <span className="material-icons">save</span>
           </button>
@@ -175,95 +177,103 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition ${!isFormattingMode ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
             <span className="material-icons text-sm">auto_awesome</span>
-            Create New
+            创建新内容
           </button>
           <button
             onClick={() => setIsFormattingMode(true)}
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition ${isFormattingMode ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
             <span className="material-icons text-sm">format_paint</span>
-            Format Existing
+            格式化现有内容
           </button>
           <button
             onClick={() => setShowImportDialog(true)}
             className="flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition"
           >
             <span className="material-icons text-sm">download</span>
-            Import Article
+            导入文章
           </button>
         </div>
 
         <div>
           <label htmlFor="editor-topic-input" className="block text-sm font-medium text-gray-700 mb-1">
-            {isFormattingMode ? 'Paste Text to Format' : 'Topic / Prompt'}
+            {isFormattingMode ? '粘贴要格式化的文本' : '主题/提示词'}
           </label>
           <textarea
             id="editor-topic-input"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             placeholder={isFormattingMode
-              ? "Paste your article content here. The AI will format it into a rich WeChat layout..."
-              : "e.g. Write a guide about traveling to Kyoto in Autumn..."}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent min-h-[80px] max-h-[150px] overflow-y-auto resize-y"
+              ? "将您的文章内容粘贴到此处。AI将为您转换为丰富的微信布局..."
+              : "例如：写一篇关于秋季京都旅行的指南..."}
+            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all min-h-[80px] max-h-[150px] overflow-y-auto resize-y text-gray-800"
           />
         </div>
 
         {/* Custom User Prompt Input */}
         <div>
           <label htmlFor="editor-userprompt-input" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-            <span>Custom Prompt (Optional)</span>
+            <span>自定义Prompt（可选）</span>
             <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">个性化</span>
           </label>
           <textarea
             id="editor-userprompt-input"
             value={userprompt}
             onChange={(e) => setUserprompt(e.target.value)}
-            placeholder="Enter your custom prompt to override the default AI behavior..."
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[60px] max-h-[120px] overflow-y-auto resize-y text-sm"
+            placeholder="输入自定义prompt以覆盖默认的AI行为..."
+            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all min-h-[60px] max-h-[120px] overflow-y-auto resize-y text-sm text-gray-800"
           />
           <p className="text-xs text-gray-500 mt-1">
             输入自定义prompt将覆盖默认的AI行为，支持个性化内容生成
           </p>
         </div>
 
-        {/* Import Template Option */}
-        {!isFormattingMode && (
-          <div className="border border-orange-200 rounded-lg p-4 bg-orange-50">
-            <label className="flex items-center gap-2 cursor-pointer mb-3">
-              <input
-                type="checkbox"
-                checked={useTemplate}
-                onChange={(e) => setUseTemplate(e.target.checked)}
-                className="rounded text-orange-600 focus:ring-orange-500 w-4 h-4"
-              />
-              <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                <span className="material-icons text-orange-500 text-sm">article</span>
-                导入文章作为模板
-              </span>
-              <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full">可选</span>
-            </label>
+        {/* Use Template Option */}
+        <div className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+          <label className="flex items-center gap-2 cursor-pointer mb-3">
+            <input
+              type="checkbox"
+              checked={useTemplate}
+              onChange={(e) => setUseTemplate(e.target.checked)}
+              className="rounded text-orange-600 focus:ring-orange-500 w-4 h-4"
+            />
+            <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+              <span className="material-icons text-orange-500 text-sm">style</span>
+              {isFormattingMode ? '套用设计模板' : '使用排版模板'}
+            </span>
+            <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full">可选</span>
+          </label>
 
-            {useTemplate && (
-              <div className="space-y-2 animate-fade-in">
-                <label htmlFor="template-url-input" className="block text-sm font-medium text-gray-700">
-                  参考文章链接
-                </label>
-                <input
-                  id="template-url-input"
-                  type="text"
-                  value={templateUrl}
-                  onChange={(e) => setTemplateUrl(e.target.value)}
-                  placeholder="https://mp.weixin.qq.com/s/..."
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
-                />
-                <p className="text-xs text-gray-600">
-                  系统将提取该文章的结构框架，并在相同结构下生成新内容。
-                  {isExtractingTemplate && <span className="text-orange-600 ml-2">正在提取模板...</span>}
-                </p>
+          {useTemplate && (
+            <div className="space-y-3 animate-fade-in">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setShowDesignTemplates(true)}
+                  className="py-2 bg-white border border-pink-300 text-pink-700 rounded-lg hover:bg-pink-50 transition flex items-center justify-center gap-1 text-sm font-medium shadow-sm"
+                >
+                  <span className="material-icons text-sm">palette</span>
+                  系统模板
+                </button>
+                <button
+                  onClick={onOpenUserTemplatePicker}
+                  className="py-2 bg-white border border-orange-300 text-orange-700 rounded-lg hover:bg-orange-50 transition flex items-center justify-center gap-1 text-sm font-medium shadow-sm"
+                >
+                  <span className="material-icons text-sm">folder_open</span>
+                  我的模板
+                </button>
               </div>
-            )}
-          </div>
-        )}
+              
+              {!isFormattingMode && (
+                <p className="text-xs text-gray-500 bg-white/50 p-2 rounded border border-orange-100">
+                  <span className="font-bold text-orange-600">提示：</span> 
+                  如需添加新模板，请点击上方的“导入文章”按钮，勾选“作为模板导入”，并在导入后保存。
+                </p>
+              )}
+              
+              {isExtractingTemplate && <p className="text-xs text-orange-600">正在准备模板...</p>}
+            </div>
+          )}
+        </div>
 
         <div className="flex gap-4 items-center flex-wrap">
           <label className={`flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 transition ${aiProvider === AIProvider.DEEPSEEK || isFormattingMode ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:bg-gray-100'}`}>
@@ -275,7 +285,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               className="rounded text-green-600 focus:ring-green-500 w-4 h-4"
             />
             <span className="text-sm font-medium text-gray-700">
-              Use Web Search
+              使用网页搜索
             </span>
           </label>
 
@@ -331,7 +341,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               <div className="relative">
                 <img src={uploadedImagePreview} alt="Context" className="h-24 object-contain rounded shadow-sm mb-2" />
                 <span className={`text-xs px-2 py-0.5 rounded-full ${analyzingImage ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
-                  {analyzingImage ? 'Analyzing...' : (aiProvider !== AIProvider.DEEPSEEK ? 'Analyzed & Ready' : 'Cover Only')}
+                  {analyzingImage ? '分析中...' : (aiProvider !== AIProvider.DEEPSEEK ? '已分析并准备就绪' : '仅封面')}
                 </span>
               </div>
             ) : (
@@ -339,8 +349,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 <svg className="w-6 h-6 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <span className="text-xs text-gray-500 font-medium">Upload Image (Cover)</span>
-                {aiProvider !== AIProvider.DEEPSEEK && <span className="text-[10px] text-gray-400 mt-0.5">+ Image Analysis ({getProviderName()})</span>}
+                <span className="text-xs text-gray-500 font-medium">上传图片（封面）</span>
+                {aiProvider !== AIProvider.DEEPSEEK && <span className="text-[10px] text-gray-400 mt-0.5">+ 图片分析 ({getProviderName()})</span>}
               </>
             )}
           </div>
@@ -386,12 +396,12 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              {useDualAI && !isFormattingMode ? '双AI处理中...' : (isFormattingMode ? 'Formatting...' : 'Generating...')}
+              {useDualAI && !isFormattingMode ? '双AI处理中...' : (isFormattingMode ? '格式化中...' : '生成中...')}
             </>
           ) : (
             <>
               <span className="material-icons">{isFormattingMode ? 'brush' : (useDualAI ? 'psychology' : 'auto_awesome')}</span>
-              {isFormattingMode ? 'Format Article' : (useDualAI ? '双AI生成' : 'Generate Article')}
+              {isFormattingMode ? '格式化文章' : (useDualAI ? '双AI生成' : '生成文章')}
             </>
           )}
         </button>
@@ -400,7 +410,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
       {/* References */}
       {sources.length > 0 && (
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-          <h3 className="text-xs font-bold text-blue-800 uppercase mb-2">Sources Used</h3>
+          <h3 className="text-xs font-bold text-blue-800 uppercase mb-2">使用的来源</h3>
           <ul className="text-xs space-y-1">
             {sources.map((s: any, idx: number) => (
               <li key={idx}>
@@ -413,65 +423,59 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         </div>
       )}
 
-      {/* WeChat Account Manager - Button Only */}
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
+      {/* Quick Tools Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* WeChat Account Manager */}
         <button
           onClick={openWeChatAccountManager}
-          className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition"
+          className="group flex flex-col p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-green-50 hover:border-green-200 transition text-left"
         >
-          <div className="flex items-center gap-2">
-            <span className="material-icons text-green-600 text-lg">account_circle</span>
-            <span className="font-medium text-sm text-gray-800">微信账号管理</span>
-            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
-              {wechatAccounts.length > 0 ? `${wechatAccounts.length}个账号` : '未配置'}
+          <div className="flex items-center justify-between w-full mb-1">
+            <span className="material-icons text-green-600 text-2xl group-hover:scale-110 transition-transform">account_circle</span>
+            <span className="text-[10px] bg-white text-gray-500 px-1.5 py-0.5 rounded-full border border-gray-100">
+              {wechatAccounts.length}
             </span>
           </div>
-          <span className="material-icons text-gray-500 text-sm">open_in_new</span>
+          <span className="font-semibold text-sm text-gray-800">微信账号</span>
+          <span className="text-xs text-gray-500 mt-0.5">管理与配置</span>
         </button>
-      </div>
 
-      {/* Material Library Panel - Button Only */}
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
+        {/* Material Library */}
         <button
           onClick={() => setShowMaterialLibrary(true)}
-          className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition"
+          className="group flex flex-col p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 transition text-left"
         >
-          <div className="flex items-center gap-2">
-            <span className="material-icons text-blue-600 text-lg">folder_special</span>
-            <span className="font-medium text-sm text-gray-800">素材库</span>
+          <div className="flex items-center justify-between w-full mb-1">
+            <span className="material-icons text-blue-600 text-2xl group-hover:scale-110 transition-transform">folder_special</span>
             <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">NEW</span>
           </div>
-          <span className="material-icons text-gray-500 text-sm">open_in_new</span>
+          <span className="font-semibold text-sm text-gray-800">素材库</span>
+          <span className="text-xs text-gray-500 mt-0.5">图片/视频/SVG</span>
         </button>
-      </div>
 
-      {/* AI Tools Panel - Button Only */}
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
+        {/* AI Tools Panel */}
         <button
           onClick={() => setShowAITools(true)}
-          className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100 transition"
+          className="group flex flex-col p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-purple-50 hover:border-purple-200 transition text-left"
         >
-          <div className="flex items-center gap-2">
-            <span className="material-icons text-purple-600 text-lg">psychology</span>
-            <span className="font-medium text-sm text-gray-800">AI 智能工具</span>
-            <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">含滑动条</span>
+          <div className="flex items-center justify-between w-full mb-1">
+            <span className="material-icons text-purple-600 text-2xl group-hover:scale-110 transition-transform">psychology</span>
           </div>
-          <span className="material-icons text-gray-500 text-sm">open_in_new</span>
+          <span className="font-semibold text-sm text-gray-800">AI 工具箱</span>
+          <span className="text-xs text-gray-500 mt-0.5">润色/摘要/扩写</span>
         </button>
-      </div>
 
-      {/* Design Templates Panel - Button Only */}
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
+        {/* Design Templates Panel */}
         <button
           onClick={() => setShowDesignTemplates(true)}
-          className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-pink-50 to-orange-50 hover:from-pink-100 hover:to-orange-100 transition"
+          className="group flex flex-col p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-pink-50 hover:border-pink-200 transition text-left"
         >
-          <div className="flex items-center gap-2">
-            <span className="material-icons text-pink-600 text-lg">palette</span>
-            <span className="font-medium text-sm text-gray-800">精美设计格式库</span>
+          <div className="flex items-center justify-between w-full mb-1">
+            <span className="material-icons text-pink-600 text-2xl group-hover:scale-110 transition-transform">palette</span>
             <span className="text-[10px] bg-pink-100 text-pink-700 px-1.5 py-0.5 rounded-full">{allDesignTemplates.length}+</span>
           </div>
-          <span className="material-icons text-gray-500 text-sm">open_in_new</span>
+          <span className="font-semibold text-sm text-gray-800">设计模板</span>
+          <span className="text-xs text-gray-500 mt-0.5">精美排版库</span>
         </button>
       </div>
     </div>

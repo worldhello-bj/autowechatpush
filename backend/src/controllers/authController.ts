@@ -3,6 +3,7 @@ import { sendSuccess, sendError, createLogger } from '../utils/index.js';
 import { 
   registerUser, 
   loginUser, 
+  loginWithWeChat,
   refreshAccessToken, 
   logoutUser,
   getUserById 
@@ -50,6 +51,28 @@ export const login = async (req: Request, res: Response) => {
     logger.warn('Login failed', { error: message, requestId: req.requestId });
     
     sendError(res, 401, 'INVALID_CREDENTIALS', 'Invalid email or password');
+  }
+};
+
+/**
+ * WeChat Login
+ * POST /api/v1/auth/wechat
+ */
+export const wechatLogin = async (req: Request, res: Response) => {
+  try {
+    const { code } = req.body;
+    if (!code) {
+        return sendError(res, 400, 'MISSING_CODE', 'WeChat code is required');
+    }
+    logger.info('WeChat login request', { requestId: req.requestId });
+    
+    const result = await loginWithWeChat(code);
+    sendSuccess(res, result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'WeChat login failed';
+    logger.warn('WeChat login failed', { error: message, requestId: req.requestId });
+    
+    sendError(res, 500, 'WECHAT_AUTH_FAILED', message);
   }
 };
 

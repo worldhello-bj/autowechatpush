@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { generate, chatStream, getQuota, aiHelper, getFeaturesAvailability, importFromUrl } from '../controllers/index.js';
+import { generate, chatStream, getQuota, aiHelper, getFeaturesAvailability, importFromUrl, rewriteArticle } from '../controllers/index.js';
 import { validate, authGuard, aiRateLimit } from '../middleware/index.js';
 import { aiChatRequestSchema } from '../types/index.js';
 
@@ -25,6 +25,13 @@ router.post('/chat/stream', authGuard, aiRateLimit, validate(aiChatRequestSchema
  * @access Private (requires authentication)
  */
 router.post('/helper', authGuard, aiRateLimit, aiHelper);
+
+/**
+ * @route POST /api/v1/ai/rewrite
+ * @desc Rewrite article content based on DOM structure
+ * @access Private (requires authentication)
+ */
+router.post('/rewrite', authGuard, aiRateLimit, rewriteArticle);
 
 /**
  * @route POST /api/v1/ai/import-url

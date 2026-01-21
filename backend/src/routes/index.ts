@@ -8,6 +8,8 @@ import adminRoutes from './adminRoutes.js';
 import utilityRoutes from './utilityRoutes.js';
 import analyticsRoutes from './analyticsRoutes.js';
 import feedbackRoutes from './feedbackRoutes.js';
+import templateRoutes from './templateRoutes.js';
+import draftRoutes from './draftRoutes.js';
 
 const router = Router();
 
@@ -21,5 +23,7 @@ router.use('/admin', adminRoutes);
 router.use('/utility', utilityRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/feedback', feedbackRoutes);
+router.use('/templates', templateRoutes);
+router.use('/drafts', draftRoutes);
 
 export default router;

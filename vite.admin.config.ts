@@ -6,6 +6,9 @@ import path from 'path'
 // Runs on a separate port (5174) from the main frontend (5173)
 export default defineConfig({
   plugins: [react()],
+  css: {
+    postcss: path.resolve(__dirname, 'postcss.config.js')
+  },
   root: path.resolve(__dirname, 'admin'),
   build: {
     outDir: path.resolve(__dirname, 'dist-admin'),
@@ -15,9 +18,12 @@ export default defineConfig({
     host: true,
     port: 5174,
     strictPort: true,
+    watch: {
+      ignored: ['**/backend/data/**']
+    },
     proxy: {
       '/api/v1': {
-        target: 'http://49.232.11.108:3001',
+        target: 'http://localhost:3001',
         changeOrigin: true
       }
     }

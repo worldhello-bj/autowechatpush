@@ -1,7 +1,6 @@
 import * as cheerio from 'cheerio';
 import { createLogger } from '../utils/index.js';
 import { v4 as uuidv4 } from 'uuid';
-import { BlockType, ArticleBlock } from '../types/index.js';
 
 const logger = createLogger('scraper-service');
 
@@ -10,11 +9,6 @@ const PLACEHOLDER_WIDTH = 600;
 const PLACEHOLDER_HEIGHT = 400;
 const PLACEHOLDER_BORDER_MARGIN = 50;
 const PLACEHOLDER_BORDER_RADIUS = 10;
-
-// HTML parsing constants
-const MAX_HEADER_LEVEL = 3;
-const MIN_TEXT_LENGTH = 10;
-const MAX_RECURSION_DEPTH = 5;
 
 // SVG placeholder configuration
 const PLACEHOLDER_SVG_CONTENT = `
@@ -73,22 +67,22 @@ const fetchWeChatArticle = async (url: string): Promise<string> => {
  */
 const extractMetadata = ($: cheerio.CheerioAPI): { title: string; author: string; digest: string } => {
   // Try to extract title from various possible locations
-  let title = $('#activity-name').text().trim() || 
-              $('h1.rich_media_title').text().trim() ||
-              $('meta[property="og:title"]').attr('content')?.trim() ||
-              'Untitled Article';
+  let title = $('#activity-name').text().trim() ||
+    $('h1.rich_media_title').text().trim() ||
+    $('meta[property="og:title"]').attr('content')?.trim() ||
+    'Untitled Article';
 
   // Extract author
   let author = $('#js_name').text().trim() ||
-               $('.rich_media_meta_text').text().trim() ||
-               $('meta[property="og:article:author"]').attr('content')?.trim() ||
-               'Unknown Author';
+    $('.rich_media_meta_text').text().trim() ||
+    $('meta[property="og:article:author"]').attr('content')?.trim() ||
+    'Unknown Author';
 
   // Extract digest/summary
   let digest = $('#js_content').find('p').first().text().trim() ||
-               $('meta[property="og:description"]').attr('content')?.trim() ||
-               $('meta[name="description"]').attr('content')?.trim() ||
-               'No summary available';
+    $('meta[property="og:description"]').attr('content')?.trim() ||
+    $('meta[name="description"]').attr('content')?.trim() ||
+    'No summary available';
 
   // Limit digest length
   if (digest.length > 200) {
@@ -103,10 +97,10 @@ const extractMetadata = ($: cheerio.CheerioAPI): { title: string; author: string
  */
 const cleanContent = ($: cheerio.CheerioAPI): { cleanedHtml: string; svgBlocks: Array<{ id: string; content: string }> } => {
   const svgBlocks: Array<{ id: string; content: string }> = [];
-  
+
   // Find the main content area
   const contentArea = $('#js_content, .rich_media_content, #img-content').first();
-  
+
   if (contentArea.length === 0) {
     logger.warn('Could not find main content area');
     return { cleanedHtml: '', svgBlocks: [] };
@@ -114,10 +108,24 @@ const cleanContent = ($: cheerio.CheerioAPI): { cleanedHtml: string; svgBlocks: 
 
   // Remove all script tags for XSS prevention
   contentArea.find('script').remove();
-  
+
   // Remove visibility:hidden and opacity:0 styles that hide content
   // WeChat articles often use these for lazy loading
-  contentArea.removeAttr('style');
+  // Do NOT remove all styles, as it breaks the article layout
+  
+  // Clean container styles
+  let containerStyle = contentArea.attr('style') || '';
+  if (containerStyle) {
+    containerStyle = containerStyle.replace(/visibility\s*:\s*hidden\s*;?/gi, '');
+    containerStyle = containerStyle.replace(/opacity\s*:\s*0\s*;?/gi, '');
+    containerStyle = containerStyle.trim();
+    if (containerStyle) {
+      contentArea.attr('style', containerStyle);
+    } else {
+      contentArea.removeAttr('style');
+    }
+  }
+
   contentArea.find('[style*="visibility"]').each((_, element) => {
     const $el = $(element);
     let style = $el.attr('style') || '';
@@ -131,23 +139,37 @@ const cleanContent = ($: cheerio.CheerioAPI): { cleanedHtml: string; svgBlocks: 
       $el.removeAttr('style');
     }
   });
-  
+
   // Extract SVG blocks
   contentArea.find('svg').each((_, element) => {
     const svgHtml = $.html(element);
     const id = uuidv4();
     svgBlocks.push({ id, content: svgHtml });
-    
+
     // Replace SVG with a marker that can be identified later
     $(element).replaceWith(`<div data-svg-block-id="${id}" class="svg-placeholder"></div>`);
   });
 
-  // Replace all images with placeholder
+  // Replace all images with placeholder - fix lazy loading first
   contentArea.find('img').each((_, element) => {
     const $img = $(element);
-    // Preserve the img tag structure but replace src with data URL
-    $img.attr('src', PLACEHOLDER_IMAGE_DATA_URL);
-    // Remove data-src and other lazy loading attributes
+
+    // 图片懒加载修复：优先读取 data-src 或 data-original
+    const realSrc = $img.attr('data-src') ||
+      $img.attr('data-original') ||
+      $img.attr('data-lazy-src') ||
+      $img.attr('src');
+
+    // 如果有真实的图片链接，先保存到 src，然后再替换为占位符
+    if (realSrc && !realSrc.includes('data:image')) {
+      // 这里可以选择保存真实链接或直接替换为占位符
+      // 为保持向后兼容，我们替换为占位符，但可以考虑在后续版本中保存原始链接
+      $img.attr('src', PLACEHOLDER_IMAGE_DATA_URL);
+    } else {
+      $img.attr('src', PLACEHOLDER_IMAGE_DATA_URL);
+    }
+
+    // 移除懒加载属性，防止干扰
     $img.removeAttr('data-src');
     $img.removeAttr('data-original');
     $img.removeAttr('data-lazy-src');
@@ -155,7 +177,7 @@ const cleanContent = ($: cheerio.CheerioAPI): { cleanedHtml: string; svgBlocks: 
 
   // Get cleaned HTML
   const cleanedHtml = contentArea.html() || '';
-  
+
   logger.info('Content cleaned', { svgBlocksCount: svgBlocks.length });
   return { cleanedHtml, svgBlocks };
 };
@@ -183,11 +205,6 @@ export const scrapeWeChatArticle = async (url: string): Promise<ScrapedArticle> 
   // Clean content
   const { cleanedHtml, svgBlocks } = cleanContent($);
 
-  logger.info('Article scraped successfully', {
-    title: metadata.title,
-    svgBlocks: svgBlocks.length,
-  });
-
   return {
     ...metadata,
     cleanedHtml,
@@ -195,142 +212,10 @@ export const scrapeWeChatArticle = async (url: string): Promise<ScrapedArticle> 
   };
 };
 
-/**
- * Simple HTML to blocks parser (fallback when AI is not available)
- * Converts basic HTML structure to ArticleBlock format
- * Optimized for WeChat article structures
- */
-export const parseHtmlToBlocks = (html: string, depth: number = 0): ArticleBlock[] => {
-  const $ = cheerio.load(html);
-  const blocks: ArticleBlock[] = [];
-  
-  // Prevent deep recursion
-  if (depth > MAX_RECURSION_DEPTH) {
-    logger.warn('Max recursion depth reached in HTML parser');
-    return blocks;
-  }
-  
-  // Process each top-level element in the content
-  $('body').children().each((_, element) => {
-    const $el = $(element);
-    const tagName = element.tagName?.toLowerCase();
-    
-    if (!tagName) return;
-    
-    // Handle headers
-    if (tagName.match(/^h[1-6]$/)) {
-      const level = parseInt(tagName.charAt(1));
-      const text = $el.text().trim();
-      if (text) {
-        blocks.push({
-          id: uuidv4(),
-          type: BlockType.HEADER,
-          content: text,
-          level: level <= MAX_HEADER_LEVEL ? level as 1 | 2 | 3 : MAX_HEADER_LEVEL as 3,
-        });
-      }
-    }
-    // Handle paragraphs
-    else if (tagName === 'p') {
-      const text = $el.text().trim();
-      const imgCount = $el.find('img').length;
-      
-      // If paragraph contains images, create separate blocks
-      if (imgCount > 0) {
-        $el.find('img').each((_, img) => {
-          const imgSrc = $(img).attr('src');
-          if (imgSrc) {
-            blocks.push({
-              id: uuidv4(),
-              type: BlockType.IMAGE,
-              content: imgSrc,
-            });
-          }
-        });
-        
-        // Add text content if any (excluding image alt text)
-        const textContent = $el.clone().find('img').remove().end().text().trim();
-        if (textContent && textContent.length > MIN_TEXT_LENGTH) {
-          blocks.push({
-            id: uuidv4(),
-            type: BlockType.PARAGRAPH,
-            content: textContent,
-          });
-        }
-      } else if (text) {
-        blocks.push({
-          id: uuidv4(),
-          type: BlockType.PARAGRAPH,
-          content: text,
-        });
-      }
-    }
-    // Handle standalone images
-    else if (tagName === 'img') {
-      const imgSrc = $el.attr('src');
-      if (imgSrc) {
-        blocks.push({
-          id: uuidv4(),
-          type: BlockType.IMAGE,
-          content: imgSrc,
-        });
-      }
-    }
-    // Handle sections/divs with images
-    else if ((tagName === 'div' || tagName === 'section') && $el.find('img').length > 0) {
-      // Extract all images from the section
-      $el.find('img').each((_, img) => {
-        const imgSrc = $(img).attr('src');
-        if (imgSrc) {
-          blocks.push({
-            id: uuidv4(),
-            type: BlockType.IMAGE,
-            content: imgSrc,
-          });
-        }
-      });
-      
-      // Get text content excluding images
-      const textContent = $el.clone().find('img').remove().end().text().trim();
-      if (textContent && textContent.length > MIN_TEXT_LENGTH) {
-        blocks.push({
-          id: uuidv4(),
-          type: BlockType.PARAGRAPH,
-          content: textContent,
-        });
-      }
-    }
-    // Handle SVG markers
-    else if ($el.attr('data-svg-block-id')) {
-      // Keep the marker in the content for later SVG insertion
-      blocks.push({
-        id: uuidv4(),
-        type: BlockType.PARAGRAPH,
-        content: `<div data-svg-block-id="${$el.attr('data-svg-block-id')}" class="svg-placeholder"></div>`,
-      });
-    }
-    // Handle divs/sections with text content
-    else if (tagName === 'div' || tagName === 'section') {
-      const text = $el.text().trim();
-      // Only add if it has substantial text and no nested block elements
-      if (text && text.length > MIN_TEXT_LENGTH && $el.find('p, h1, h2, h3, h4, h5, h6').length === 0) {
-        blocks.push({
-          id: uuidv4(),
-          type: BlockType.PARAGRAPH,
-          content: text,
-        });
-      } else if ($el.children().length > 0) {
-        // Process children recursively with depth limit
-        $el.children().each((_, child) => {
-          const childHtml = $(child).prop('outerHTML') || '';
-          if (childHtml) {
-            const childBlocks = parseHtmlToBlocks(childHtml, depth + 1);
-            blocks.push(...childBlocks);
-          }
-        });
-      }
-    }
-  });
-  
-  return blocks;
-};
+// NOTE: HTML-to-Block parsing has been moved to frontend for backend performance optimization.
+// The frontend uses 'components/Editor/utils/htmlParser.ts' with browser DOM APIs which is more efficient.
+// This reduces server CPU load for each article import request.
+//
+// If you need to parse HTML to ArticleBlocks on backend in the future:
+// 1. Import the frontend parser logic, or
+// 2. Re-implement using the same logic from htmlParser.ts with cheerio

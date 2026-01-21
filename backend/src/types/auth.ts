@@ -10,6 +10,7 @@ export interface User {
   updatedAt: Date;
   quota: number;       // Remaining AI generation quota
   role: 'user' | 'admin';
+  openId?: string;     // WeChat OpenID
 }
 
 export interface UserSession {

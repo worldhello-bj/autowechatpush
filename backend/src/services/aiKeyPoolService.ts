@@ -323,6 +323,28 @@ export const isQwenAvailable = (): boolean => {
 };
 
 /**
+ * Check if a specific provider is available
+ * Returns true if there are keys configured in the pool or environment
+ */
+export const isProviderAvailable = (provider: AIProvider): boolean => {
+  const providerKey = provider === AIProvider.DEEPSEEK ? 'deepseek' : 'qwen';
+  
+  // Check if there are enabled keys in the pool
+  if (keyPool[providerKey] && keyPool[providerKey].some(k => k.enabled)) {
+    return true;
+  }
+  
+  // Check if there's a fallback environment variable
+  if (provider === AIProvider.DEEPSEEK) {
+    const envKey = config.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY;
+    return !!envKey;
+  } else {
+    const envKey = config.DASHSCOPE_API_KEY || process.env.DASHSCOPE_API_KEY;
+    return !!envKey;
+  }
+};
+
+/**
  * Update key pool configuration (for admin purposes)
  */
 export const updateKeyPoolConfig = async (newConfig: AIKeyPoolConfig): Promise<void> => {

@@ -32,7 +32,7 @@ const DATA_DIR = path.resolve(__dirname, '..', '..', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'quota.json');
 let persistTimer: NodeJS.Timeout | null = null;
 let persistInFlight: Promise<void> | null = null;
-const USAGE_TYPES: UsageRecord['type'][] = ['ai_generation', 'material_upload', 'ai_stream'];
+const USAGE_TYPES: UsageRecord['type'][] = ['ai_generation', 'material_upload', 'ai_stream', 'ai_rewrite'];
 // Maximum usage records to keep in memory
 const MAX_USAGE_RECORDS = 10000;
 

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import './public/material-icons/material-design-icons.min.css';
 import { HashRouter, Routes, Route, Link, NavLink, Navigate, useLocation } from 'react-router-dom';
 import Editor from './components/Editor';
 import LogSettings from './components/LogSettings';
 import AuthPage from './components/AuthPage';
+import WelcomePage from './components/WelcomePage';
 import FeedbackDialog from './components/FeedbackDialog';
 import UpdateNotification from './components/UpdateNotification';
+import EasterEggModal from './components/EasterEggModal';
 import { AuthProvider, useAuth } from './components/AuthContext';
 import analytics from './services/analytics';
 
@@ -410,66 +411,52 @@ const UserMenu: React.FC = () => {
   );
 };
 
-// --- Disclaimer Dialog Component ---
-const DisclaimerDialog: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-}> = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
 
-  return (
-    <>
-      <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-fade-in"
-        onClick={onClose}
-      />
-      <div className="fixed inset-0 flex items-center justify-center z-50 p-4 animate-scale-in">
-        <div 
-          className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 border border-gray-200"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="material-icons text-green-600 text-3xl">info</span>
-            </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">使用声明</h3>
-            <p className="text-gray-600">本网站仅供个人使用</p>
-          </div>
-          
-          <div className="bg-gray-50 rounded-lg p-4 mb-6 text-center">
-            <p className="text-sm text-gray-700">备案号：京ICP备2026002161号</p>
-          </div>
-          
-          <button
-            onClick={onClose}
-            className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-all duration-200 shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40"
-          >
-            我知道了
-          </button>
-        </div>
-      </div>
-    </>
-  );
-};
 
 // --- Main App Layout Component ---
 const AppLayout: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [showDisclaimer, setShowDisclaimer] = useState(false);
   const { isLoggedIn, isLoading } = useAuth();
   const location = useLocation();
 
-  // Track page views and show disclaimer on first home page visit
+  // Easter Egg Logic
+  const [clickCounts, setClickCounts] = useState({ editor: 0, drafts: 0, analytics: 0, settings: 0, startTime: 0 });
+  const [showEasterEgg, setShowEasterEgg] = useState(false);
+  const [easterEggContent, setEasterEggContent] = useState('');
+
+  const handleNavClick = (key: 'editor' | 'drafts' | 'analytics' | 'settings') => {
+    setClickCounts(prev => {
+      const now = Date.now();
+      let newCounts = { ...prev };
+
+      // Reset if more than 5 seconds have passed since the first click
+      if (prev.startTime === 0 || now - prev.startTime > 5000) {
+        newCounts = { editor: 0, drafts: 0, analytics: 0, settings: 0, startTime: now };
+      }
+
+      newCounts[key] = newCounts[key] + 1;
+      
+      if (newCounts.editor === 2 && newCounts.drafts === 4 && newCounts.analytics === 2 && newCounts.settings === 5) {
+         fetch('/api/v1/utility/watermark')
+           .then(res => res.json())
+           .then(data => {
+             if (data.success && data.data && data.data.signature) {
+               setEasterEggContent(data.data.signature);
+               setShowEasterEgg(true);
+             }
+           })
+           .catch(err => console.error(err));
+         return { editor: 0, drafts: 0, analytics: 0, settings: 0, startTime: 0 };
+      }
+      return newCounts;
+    });
+  };
+
+  // Track page views
   useEffect(() => {
     if (isLoggedIn) {
       analytics.track('page_view', { path: location.pathname });
-    }
-
-    // Show disclaimer on first visit to home page
-    if (location.pathname === '/' && !localStorage.getItem('hasSeenDisclaimer')) {
-      setShowDisclaimer(true);
-      localStorage.setItem('hasSeenDisclaimer', 'true');
     }
   }, [location.pathname, isLoggedIn]);
   
@@ -504,11 +491,6 @@ const AppLayout: React.FC = () => {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-gray-50 text-gray-900 font-sans">
-      {/* Disclaimer Dialog */}
-      <DisclaimerDialog 
-        isOpen={showDisclaimer} 
-        onClose={() => setShowDisclaimer(false)} 
-      />
       
       {/* Top Notification Bar for Errors */}
       {error && (
@@ -533,10 +515,10 @@ const AppLayout: React.FC = () => {
          
          {isLoggedIn && (
            <nav className="hidden md:flex gap-6 lg:gap-8 text-sm font-medium h-full items-center">
-              <NavLink to="/" className={getNavLinkClass}>Editor</NavLink>
-              <NavLink to="/drafts" className={getNavLinkClass}>Drafts</NavLink>
-              <NavLink to="/analytics" className={getNavLinkClass}>Analytics</NavLink>
-              <NavLink to="/settings" className={getNavLinkClass}>Settings</NavLink>
+              <NavLink to="/" className={getNavLinkClass} onClick={() => handleNavClick('editor')}>编辑器</NavLink>
+              <NavLink to="/drafts" className={getNavLinkClass} onClick={() => handleNavClick('drafts')}>草稿</NavLink>
+              <NavLink to="/analytics" className={getNavLinkClass} onClick={() => handleNavClick('analytics')}>分析</NavLink>
+              <NavLink to="/settings" className={getNavLinkClass} onClick={() => handleNavClick('settings')}>设置</NavLink>
            </nav>
          )}
          
@@ -601,17 +583,17 @@ const AppLayout: React.FC = () => {
             <nav className="flex-1 overflow-y-auto p-4 space-y-2">
               <div className="mb-4">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-6 mb-2">主要功能</p>
-                <NavLink to="/" className={getMobileNavLinkClass}>
+                <NavLink to="/" className={getMobileNavLinkClass} onClick={() => handleNavClick('editor')}>
                   <span className="material-icons text-2xl">edit_note</span>
                   <span className="flex-1">编辑器</span>
                   <span className="material-icons text-gray-400 text-lg">chevron_right</span>
                 </NavLink>
-                <NavLink to="/drafts" className={getMobileNavLinkClass}>
+                <NavLink to="/drafts" className={getMobileNavLinkClass} onClick={() => handleNavClick('drafts')}>
                   <span className="material-icons text-2xl">drafts</span>
                   <span className="flex-1">草稿箱</span>
                   <span className="material-icons text-gray-400 text-lg">chevron_right</span>
                 </NavLink>
-                <NavLink to="/analytics" className={getMobileNavLinkClass}>
+                <NavLink to="/analytics" className={getMobileNavLinkClass} onClick={() => handleNavClick('analytics')}>
                   <span className="material-icons text-2xl">bar_chart</span>
                   <span className="flex-1">数据分析</span>
                   <span className="material-icons text-gray-400 text-lg">chevron_right</span>
@@ -621,7 +603,7 @@ const AppLayout: React.FC = () => {
               {/* Reserved space for future features */}
               <div className="mb-4">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-6 mb-2">其他</p>
-                <NavLink to="/settings" className={getMobileNavLinkClass}>
+                <NavLink to="/settings" className={getMobileNavLinkClass} onClick={() => handleNavClick('settings')}>
                   <span className="material-icons text-2xl">settings</span>
                   <span className="flex-1">设置</span>
                   <span className="material-icons text-gray-400 text-lg">chevron_right</span>
@@ -644,13 +626,15 @@ const AppLayout: React.FC = () => {
       {/* Main Workspace */}
       <main className="flex-1 overflow-hidden relative">
          <Routes>
+           <Route path="/" element={
+             isLoggedIn ? (
+               <Editor onError={(msg) => setError(msg)} />
+             ) : (
+               <WelcomePage onEnter={() => window.location.hash = '#/login'} />
+             )
+           } />
            <Route path="/login" element={
              isLoggedIn ? <Navigate to="/" replace /> : <AuthPage />
-           } />
-           <Route path="/" element={
-             <ProtectedRoute>
-               <Editor onError={(msg) => setError(msg)} />
-             </ProtectedRoute>
            } />
            <Route path="/drafts" element={
              <ProtectedRoute>
@@ -672,6 +656,12 @@ const AppLayout: React.FC = () => {
       
       {/* Update Notification (only shown in Electron) */}
       <UpdateNotification />
+      
+      <EasterEggModal 
+        isOpen={showEasterEgg} 
+        onClose={() => setShowEasterEgg(false)} 
+        signature={easterEggContent} 
+      />
     </div>
   );
 };

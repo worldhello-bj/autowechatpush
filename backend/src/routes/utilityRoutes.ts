@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { stitchImages } from '../controllers/index.js';
+import { stitchImages, getWatermark } from '../controllers/index.js';
 
 const router = Router();
 
@@ -9,5 +9,12 @@ const router = Router();
  * @access Public (no auth required for this utility endpoint)
  */
 router.post('/stitch-images', stitchImages);
+
+/**
+ * @route GET /api/v1/utility/watermark
+ * @desc Get system watermark
+ * @access Public
+ */
+router.get('/watermark', getWatermark);
 
 export default router;

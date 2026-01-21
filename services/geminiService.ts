@@ -167,18 +167,18 @@ const layoutArticleFunction: FunctionDeclaration = {
         items: {
           type: Type.OBJECT,
           properties: {
-            type: { 
-              type: Type.STRING, 
-              enum: ['header', 'paragraph', 'card', 'list', 'quote', 'image', 'divider', 'code', 'callout', 'numbered_list', 'highlight', 'table', 'qrcode', 'faq', 'countdown', 'progress', 'gift', 'contact', 'stats', 'testimonial', 'steps', 'svg'], 
-              description: 'Block type. Use "header" for section titles, "paragraph" for body text, "card" for key points, "list" for bullet points, "numbered_list" for steps, "quote" for citations, "image" for visual placeholders, "divider" for section breaks, "code" for code snippets, "callout" for important notices, "highlight" for emphasized text, "table" for structured data. Special types: "qrcode" for QR code sections, "faq" for Q&A blocks, "countdown" for timers, "progress" for progress bars, "gift" for promotional boxes, "contact" for contact info, "stats" for statistics display, "testimonial" for user reviews, "steps" for step-by-step flows, "svg" for decorative SVG graphics (icons, badges, dividers, arrows).' 
+            type: {
+              type: Type.STRING,
+              enum: ['header', 'paragraph', 'card', 'list', 'quote', 'image', 'divider', 'code', 'callout', 'numbered_list', 'highlight', 'table', 'qrcode', 'faq', 'countdown', 'progress', 'gift', 'contact', 'stats', 'testimonial', 'steps', 'svg'],
+              description: 'Block type. Use "header" for section titles, "paragraph" for body text, "card" for key points, "list" for bullet points, "numbered_list" for steps, "quote" for citations, "image" for visual placeholders, "divider" for section breaks, "code" for code snippets, "callout" for important notices, "highlight" for emphasized text, "table" for structured data. Special types: "qrcode" for QR code sections, "faq" for Q&A blocks, "countdown" for timers, "progress" for progress bars, "gift" for promotional boxes, "contact" for contact info, "stats" for statistics display, "testimonial" for user reviews, "steps" for step-by-step flows, "svg" for decorative SVG graphics (icons, badges, dividers, arrows).'
             },
             content: { type: Type.STRING, description: 'The main text content. For "image" type, provide a visual description. For "divider", this can be empty. For "svg" type, provide SVG code or a description of desired graphic.' },
             title: { type: Type.STRING, description: 'Title for card, header, callout, gift, faq, or table blocks.' },
             items: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'List items for "list" or "numbered_list" types. Also used for FAQ questions or step descriptions.' },
-            style: { 
-              type: Type.STRING, 
-              enum: ['default', 'primary', 'warning', 'quote', 'red', 'blue', 'purple', 'orange', 'gold', 'green', 'pink', 'cyan', 'gradient'], 
-              description: 'Visual color style. Use varied colors for different sections to make content visually engaging.' 
+            style: {
+              type: Type.STRING,
+              enum: ['default', 'primary', 'warning', 'quote', 'red', 'blue', 'purple', 'orange', 'gold', 'green', 'pink', 'cyan', 'gradient'],
+              description: 'Visual color style. Use varied colors for different sections to make content visually engaging.'
             },
             level: { type: Type.STRING, enum: ['1', '2', '3'], description: 'Header level as string ("1"=large, "2"=medium, "3"=small). Only for "header" type.' },
             alignment: { type: Type.STRING, enum: ['left', 'center', 'right'], description: 'Text alignment. Useful for quotes or highlights.' },
@@ -242,7 +242,7 @@ export const generateArticleStructure = async (
   isFormattingMode: boolean = false
 ): Promise<GenerationResult> => {
   const modelId = 'gemini-2.5-flash';
-  
+
   let prompt = "";
 
   if (isFormattingMode) {
@@ -362,7 +362,7 @@ export const generateArticleStructure = async (
       logger.info('Blocks count:', args.blocks?.length || 0);
       logger.debug('Blocks detail:', args.blocks);
       logger.groupEnd();
-      
+
       const blocks = (args.blocks || []).map((b: any, index: number) => ({
         id: `gen-${Date.now()}-${index}`,
         ...b
@@ -388,508 +388,45 @@ export const generateArticleStructure = async (
 };
 
 export const generateSpeech = async (text: string, apiKey?: string): Promise<ArrayBuffer> => {
-    try {
-        const ai = getAI(apiKey);
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash-preview-tts",
-            contents: [{ parts: [{ text }] }],
-            config: {
-                responseModalities: [Modality.AUDIO],
-                speechConfig: {
-                    voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: 'Kore' },
-                    },
-                },
-            },
-        });
+  try {
+    const ai = getAI(apiKey);
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text }] }],
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Kore' },
+          },
+        },
+      },
+    });
 
-        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-        if (!base64Audio) {
-            throw new Error("No audio data returned");
-        }
-
-        const binaryString = atob(base64Audio);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-        return bytes.buffer;
-    } catch (error) {
-        console.error("TTS failed:", error);
-        throw error;
+    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    if (!base64Audio) {
+      throw new Error("No audio data returned");
     }
-};
 
-// --- New AI Methods for Design Richness ---
-
-/**
- * Generate multiple attractive title suggestions for an article
- */
-export const generateTitleSuggestions = async (
-  content: string,
-  count: number = 5,
-  apiKey?: string
-): Promise<string[]> => {
-  try {
-    const ai = getAI(apiKey);
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `
-        Based on the following article content, generate ${count} attractive and engaging title suggestions suitable for a WeChat Official Account article.
-        
-        Requirements:
-        - Each title should be unique and capture different angles of the content
-        - Titles should be catchy, clickable, and suitable for Chinese social media
-        - Include a mix of styles: informative, emotional, question-based, and surprising
-        - Keep titles concise (preferably under 30 characters)
-        
-        Article Content:
-        """
-        ${content.slice(0, 2000)}
-        """
-        
-        Return ONLY a JSON array of title strings, like: ["Title 1", "Title 2", ...]
-      `,
-      config: {
-        temperature: 0.8,
-      }
-    });
-    
-    const text = response.text || "[]";
-    // Extract JSON array from response
-    const match = text.match(/\[[\s\S]*\]/);
-    if (match) {
-      return JSON.parse(match[0]);
+    const binaryString = atob(base64Audio);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
     }
-    return [];
+    return bytes.buffer;
   } catch (error) {
-    console.error("Title generation failed:", error);
+    console.error("TTS failed:", error);
     throw error;
   }
 };
 
-/**
- * Generate a concise summary/digest for an article
- */
-export const generateSummary = async (
-  content: string,
-  maxLength: number = 120,
-  apiKey?: string
-): Promise<string> => {
-  try {
-    const ai = getAI(apiKey);
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `
-        Generate a concise and engaging summary for the following article content.
-        The summary should be suitable as a WeChat article digest/description.
-        
-        Requirements:
-        - Maximum ${maxLength} characters
-        - Capture the main essence of the article
-        - Make it compelling to encourage readers to click
-        - Write in the same language as the content
-        
-        Article Content:
-        """
-        ${content.slice(0, 3000)}
-        """
-        
-        Return ONLY the summary text, nothing else.
-      `,
-      config: {
-        temperature: 0.5,
-      }
-    });
-    
-    return response.text?.trim() || "";
-  } catch (error) {
-    console.error("Summary generation failed:", error);
-    throw error;
-  }
-};
 
-/**
- * Expand a paragraph or section with more details
- */
-export const expandContent = async (
-  content: string,
-  style: 'detailed' | 'examples' | 'storytelling' = 'detailed',
-  apiKey?: string
-): Promise<string> => {
-  try {
-    const ai = getAI(apiKey);
-    
-    const stylePrompts = {
-      detailed: 'Add more detailed explanations, facts, and depth to the content.',
-      examples: 'Expand with concrete examples, case studies, and practical applications.',
-      storytelling: 'Expand using storytelling techniques, anecdotes, and narrative elements.'
-    };
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `
-        Expand the following content while maintaining its core message and tone.
-        
-        Expansion Style: ${stylePrompts[style]}
-        
-        Original Content:
-        """
-        ${content}
-        """
-        
-        Requirements:
-        - Expand to approximately 2-3x the original length
-        - Maintain the original voice and style
-        - Add valuable information, not just filler
-        - Keep it suitable for a WeChat article
-        
-        Return ONLY the expanded content, nothing else.
-      `,
-      config: {
-        temperature: 0.7,
-      }
-    });
-    
-    return response.text?.trim() || content;
-  } catch (error) {
-    console.error("Content expansion failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Polish and improve content style and grammar
- */
-export const polishContent = async (
-  content: string,
-  tone: 'professional' | 'casual' | 'formal' | 'creative' = 'professional',
-  apiKey?: string
-): Promise<string> => {
-  try {
-    const ai = getAI(apiKey);
-    
-    const toneDescriptions = {
-      professional: 'professional, clear, and authoritative',
-      casual: 'friendly, conversational, and approachable',
-      formal: 'formal, academic, and scholarly',
-      creative: 'creative, vivid, and engaging with literary flair'
-    };
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `
-        Polish and improve the following content while making it sound more ${toneDescriptions[tone]}.
-        
-        Original Content:
-        """
-        ${content}
-        """
-        
-        Requirements:
-        - Fix any grammar or spelling errors
-        - Improve sentence structure and flow
-        - Enhance word choice for better impact
-        - Maintain the original meaning
-        - Keep approximately the same length
-        
-        Return ONLY the polished content, nothing else.
-      `,
-      config: {
-        temperature: 0.5,
-      }
-    });
-    
-    return response.text?.trim() || content;
-  } catch (error) {
-    console.error("Content polish failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Extract keywords from content for SEO purposes
- */
-export const extractKeywords = async (
-  content: string,
-  count: number = 10,
-  apiKey?: string
-): Promise<string[]> => {
-  try {
-    const ai = getAI(apiKey);
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `
-        Extract the ${count} most important keywords or key phrases from the following content.
-        These keywords should be useful for SEO and content tagging.
-        
-        Content:
-        """
-        ${content.slice(0, 3000)}
-        """
-        
-        Requirements:
-        - Include both single words and short phrases
-        - Focus on topics, themes, and important concepts
-        - Prioritize by relevance and search potential
-        
-        Return ONLY a JSON array of keyword strings, like: ["keyword1", "keyword2", ...]
-      `,
-      config: {
-        temperature: 0.3,
-      }
-    });
-    
-    const text = response.text || "[]";
-    const match = text.match(/\[[\s\S]*\]/);
-    if (match) {
-      return JSON.parse(match[0]);
-    }
-    return [];
-  } catch (error) {
-    console.error("Keyword extraction failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Translate content between Chinese and English
- */
-export const translateContent = async (
-  content: string,
-  targetLanguage: 'zh' | 'en',
-  apiKey?: string
-): Promise<string> => {
-  try {
-    const ai = getAI(apiKey);
-    
-    const targetLangName = targetLanguage === 'zh' ? 'Chinese (Simplified)' : 'English';
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `
-        Translate the following content to ${targetLangName}.
-        
-        Content:
-        """
-        ${content}
-        """
-        
-        Requirements:
-        - Provide a natural, fluent translation
-        - Maintain the original tone and style
-        - Preserve any formatting markers if present
-        - Adapt idioms and expressions appropriately
-        
-        Return ONLY the translated content, nothing else.
-      `,
-      config: {
-        temperature: 0.3,
-      }
-    });
-    
-    return response.text?.trim() || content;
-  } catch (error) {
-    console.error("Translation failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Suggest visual styles based on content theme
- */
-export interface StyleSuggestion {
-  style: string;
-  reason: string;
-  colorScheme: string[];
-  mood: string;
-}
-
-export const suggestStyles = async (
-  content: string,
-  apiKey?: string
-): Promise<StyleSuggestion[]> => {
-  try {
-    const ai = getAI(apiKey);
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `
-        Analyze the following article content and suggest appropriate visual styles for a WeChat article.
-        
-        Content:
-        """
-        ${content.slice(0, 2000)}
-        """
-        
-        Return a JSON array with 3 style suggestions. Each suggestion should have:
-        - style: The main style name (e.g., "professional", "playful", "elegant", "tech", "nature")
-        - reason: Brief explanation of why this style fits
-        - colorScheme: Array of 3-4 recommended colors (use names like "blue", "red", "gold", etc.)
-        - mood: The overall mood this style conveys
-        
-        Available colors: red, blue, purple, orange, gold, green, pink, cyan, gradient
-        
-        Return ONLY a valid JSON array like:
-        [{"style": "...", "reason": "...", "colorScheme": ["...", "..."], "mood": "..."}, ...]
-      `,
-      config: {
-        temperature: 0.6,
-      }
-    });
-    
-    const text = response.text || "[]";
-    const match = text.match(/\[[\s\S]*\]/);
-    if (match) {
-      return JSON.parse(match[0]);
-    }
-    return [];
-  } catch (error) {
-    console.error("Style suggestion failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Generate an engaging article opening/hook
- */
-export const generateHook = async (
-  topic: string,
-  style: 'question' | 'story' | 'statistic' | 'quote' | 'surprising' = 'question',
-  apiKey?: string
-): Promise<string> => {
-  try {
-    const ai = getAI(apiKey);
-    
-    const styleDescriptions = {
-      question: 'Start with a thought-provoking question that engages the reader',
-      story: 'Begin with a short, compelling anecdote or mini-story',
-      statistic: 'Open with a surprising or impactful statistic or fact',
-      quote: 'Start with an inspiring or relevant quote',
-      surprising: 'Begin with a surprising or counterintuitive statement'
-    };
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `
-        Generate an engaging article opening/hook for an article about: "${topic}"
-        
-        Style: ${styleDescriptions[style]}
-        
-        Requirements:
-        - Keep it concise (2-4 sentences)
-        - Make it immediately captivating
-        - Create curiosity to continue reading
-        - Suitable for WeChat article audience
-        
-        Return ONLY the opening paragraph, nothing else.
-      `,
-      config: {
-        temperature: 0.8,
-      }
-    });
-    
-    return response.text?.trim() || "";
-  } catch (error) {
-    console.error("Hook generation failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Generate a compelling call-to-action for article ending
- */
-export const generateCTA = async (
-  articleContext: string,
-  ctaType: 'subscribe' | 'share' | 'comment' | 'action' | 'reflection' = 'share',
-  apiKey?: string
-): Promise<string> => {
-  try {
-    const ai = getAI(apiKey);
-    
-    const ctaDescriptions = {
-      subscribe: 'Encourage readers to follow/subscribe to the account',
-      share: 'Encourage readers to share the article with others',
-      comment: 'Encourage readers to leave comments and engage in discussion',
-      action: 'Encourage readers to take a specific action related to the content',
-      reflection: 'End with a reflective thought or question for the reader to ponder'
-    };
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `
-        Generate a compelling call-to-action ending for an article with this context:
-        """
-        ${articleContext.slice(0, 1000)}
-        """
-        
-        CTA Type: ${ctaDescriptions[ctaType]}
-        
-        Requirements:
-        - Keep it natural and not too salesy
-        - Make it relevant to the article content
-        - Be warm and engaging
-        - 2-3 sentences maximum
-        
-        Return ONLY the CTA text, nothing else.
-      `,
-      config: {
-        temperature: 0.7,
-      }
-    });
-    
-    return response.text?.trim() || "";
-  } catch (error) {
-    console.error("CTA generation failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Rewrite content in a different style or perspective
- */
-export const rewriteContent = async (
-  content: string,
-  newStyle: 'humorous' | 'serious' | 'inspirational' | 'educational' | 'conversational',
-  apiKey?: string
-): Promise<string> => {
-  try {
-    const ai = getAI(apiKey);
-    
-    const styleDescriptions = {
-      humorous: 'witty, playful, with appropriate humor and light-hearted tone',
-      serious: 'serious, thoughtful, with gravitas and depth',
-      inspirational: 'uplifting, motivational, with emotional resonance',
-      educational: 'informative, clear, with structured explanations',
-      conversational: 'friendly, casual, as if talking to a friend'
-    };
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `
-        Rewrite the following content in a ${styleDescriptions[newStyle]} style.
-        
-        Original Content:
-        """
-        ${content}
-        """
-        
-        Requirements:
-        - Completely transform the tone and style
-        - Keep the core message and facts intact
-        - Maintain approximately the same length
-        - Make it suitable for WeChat article format
-        
-        Return ONLY the rewritten content, nothing else.
-      `,
-      config: {
-        temperature: 0.8,
-      }
-    });
-    
-    return response.text?.trim() || content;
-  } catch (error) {
-    console.error("Content rewrite failed:", error);
-    throw error;
-  }
-};
+// NOTE: AI helper functions (generateTitleSuggestions, generateSummary, expandContent, etc.)
+// have been consolidated into backendAIClient.ts. Use callAIHelper() directly:
+//
+// import { callAIHelper } from './backendAIClient';
+// const result = await callAIHelper({ action: 'generateTitles', content, provider: 'gemini' });
+// Supported actions: generateTitles, generateSummary, expandContent, polishContent,
+//                   extractKeywords, translateContent, suggestStyles, generateHook,
+//                   generateCTA, rewriteContent

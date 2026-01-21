@@ -1,5 +1,6 @@
 import React from 'react';
 import HtmlEditor, { HtmlEditorRef } from '../../HtmlEditor';
+import EditorToolbar from './EditorToolbar';
 import { AIProvider } from '../../../types';
 
 interface PreviewPanelProps {
@@ -35,8 +36,13 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   handlePublish
 }) => {
   return (
-    <div className="w-full lg:w-1/2 bg-gray-100 p-8 flex flex-col items-center justify-center relative overflow-y-auto">
-      <div className="absolute top-4 right-4 flex gap-2">
+    <div className="w-full lg:w-1/2 p-4 lg:p-8 flex flex-col items-center relative overflow-y-auto rounded-2xl bg-slate-50/50">
+      {/* Floating Toolbar */}
+      <div className="sticky top-0 z-40 mb-6">
+        <EditorToolbar editorRef={htmlEditorRef} />
+      </div>
+
+      <div className="absolute top-4 right-4 flex gap-2 z-20">
         {/* TTS Button - only show if feature is available */}
         {featuresAvailable.textToSpeech && (
           <button
@@ -53,9 +59,12 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
       </div>
 
       {/* Phone Mockup with HTML Editor */}
-      <div className="w-[390px] h-[844px] bg-white rounded-[3.5rem] border-[12px] border-gray-900 shadow-2xl overflow-hidden relative flex flex-col shrink-0">
+      <div className="w-[430px] h-[932px] bg-white rounded-[3.5rem] border-[14px] border-gray-900 shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden relative flex flex-col shrink-0 transition-transform hover:scale-[1.005] duration-500 mb-20">
+        {/* Dynamic Island / Notch Area (iPhone 14 Pro Max style) */}
+        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 h-[35px] w-[126px] bg-black rounded-b-3xl z-20"></div>
+        
         {/* Status Bar */}
-        <div className="h-6 bg-white w-full flex justify-between items-center px-6 pt-2 z-10 shrink-0">
+        <div className="h-12 bg-white w-full flex justify-between items-center px-8 pt-4 z-10 shrink-0 select-none">
           <span className="text-[10px] font-bold">9:41</span>
           <div className="flex gap-1">
             <div className="w-4 h-1.5 bg-black rounded-sm"></div>
@@ -86,13 +95,14 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
         </div>
       </div>
 
-      <div className="mt-8 flex gap-4">
+      <div className="fixed bottom-8 right-8 lg:absolute lg:bottom-8 lg:right-auto flex gap-4 z-50">
         <button
           onClick={handlePublish}
           disabled={isPublishing}
-          className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full shadow-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
+          className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8 py-3 rounded-full shadow-xl hover:shadow-2xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:-translate-y-1 flex items-center gap-2"
         >
-          {isPublishing ? 'Publishing...' : 'Publish to WeChat'}
+          <span className="material-icons">send</span>
+          {isPublishing ? '发布中...' : '发布到微信'}
         </button>
       </div>
     </div>

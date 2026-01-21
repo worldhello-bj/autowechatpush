@@ -72,9 +72,16 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
   // State for preset materials tabs
-  const [activeTab, setActiveTab] = useState<'user' | 'preset' | 'media'>('user');
+  const [activeTab, setActiveTab] = useState<'user' | 'preset' | 'media' | 'external'>('user');
   const [selectedPresetCategory, setSelectedPresetCategory] = useState<TextMaterialCategory>('opening');
   const [selectedMediaCategory, setSelectedMediaCategory] = useState<PresetMediaCategory>('icons');
+  
+  // State for External Library (Pexels)
+  const [pexelsApiKey, setPexelsApiKey] = useState('');
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+  const [externalImages, setExternalImages] = useState<any[]>([]);
+  const [externalLoading, setExternalLoading] = useState(false);
+
   const presetCategories = getTextMaterialCategories();
   const mediaCategories = getPresetMediaCategories();
   
@@ -97,12 +104,51 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
         console.error('Failed to load materials:', e);
       }
     }
+    
+    const savedKey = localStorage.getItem('wechat_pexels_api_key');
+    if (savedKey) {
+      setPexelsApiKey(savedKey);
+    }
   }, []);
 
   // Save materials to localStorage
   const saveMaterials = (newMaterials: Material[]) => {
     setMaterials(newMaterials);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newMaterials));
+  };
+
+  // Save Pexels API Key
+  const handleSaveApiKey = (key: string) => {
+    setPexelsApiKey(key);
+    localStorage.setItem('wechat_pexels_api_key', key);
+    setShowApiKeyInput(false);
+  };
+
+  // Search Pexels
+  const searchPexels = async () => {
+    if (!searchQuery.trim()) return;
+    if (!pexelsApiKey) {
+      setShowApiKeyInput(true);
+      return;
+    }
+
+    setExternalLoading(true);
+    try {
+      const response = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(searchQuery)}&per_page=30&locale=zh-CN`, {
+        headers: {
+          Authorization: pexelsApiKey
+        }
+      });
+      const data = await response.json();
+      if (data.photos) {
+        setExternalImages(data.photos);
+      }
+    } catch (error) {
+      console.error('Failed to fetch from Pexels:', error);
+      alert('搜索失败，请检查API密钥或网络连接');
+    } finally {
+      setExternalLoading(false);
+    }
   };
 
   // Handle image file upload
@@ -366,13 +412,23 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex bg-gray-100 p-1 rounded-lg mb-3">
+        <div className="relative flex bg-gray-100 p-1 rounded-lg mb-3">
+          {/* Animated Background Pill */}
+          <div 
+            className="absolute top-1 bottom-1 bg-white shadow-sm rounded-md transition-all duration-300 ease-in-out"
+            style={{
+              width: 'calc(25% - 6px)',
+              left: activeTab === 'user' ? '4px' 
+                  : activeTab === 'preset' ? 'calc(25% + 2px)' 
+                  : activeTab === 'media' ? 'calc(50% + 0px)' 
+                  : 'calc(75% - 2px)' // Fine-tuned visual alignment
+            }}
+          />
+
           <button
             onClick={() => setActiveTab('user')}
-            className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-md transition ${
-              activeTab === 'user' 
-                ? 'bg-white text-blue-600 shadow-sm' 
-                : 'text-gray-500 hover:text-gray-700'
+            className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-md transition relative z-10 ${
+              activeTab === 'user' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             <span className="material-icons text-sm">cloud_upload</span>
@@ -380,10 +436,8 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('preset')}
-            className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-md transition ${
-              activeTab === 'preset' 
-                ? 'bg-white text-purple-600 shadow-sm' 
-                : 'text-gray-500 hover:text-gray-700'
+            className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-md transition relative z-10 ${
+              activeTab === 'preset' ? 'text-purple-600' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             <span className="material-icons text-sm">text_snippet</span>
@@ -391,31 +445,84 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('media')}
-            className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-md transition ${
-              activeTab === 'media' 
-                ? 'bg-white text-green-600 shadow-sm' 
-                : 'text-gray-500 hover:text-gray-700'
+            className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-md transition relative z-10 ${
+              activeTab === 'media' ? 'text-green-600' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             <span className="material-icons text-sm">interests</span>
             SVG组件
-            <span className="text-[10px] bg-green-100 text-green-700 px-1 rounded">NEW</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('external')}
+            className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-md transition relative z-10 ${
+              activeTab === 'external' ? 'text-teal-600' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <span className="material-icons text-sm">public</span>
+            开源图库
+            <span className="text-[10px] bg-teal-100 text-teal-700 px-1 rounded ml-1">NEW</span>
           </button>
         </div>
 
         {/* Search */}
-        <div className="relative mb-3">
-          <span className="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-            search
-          </span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={activeTab === 'user' ? "搜索素材..." : activeTab === 'preset' ? "搜索预设文案..." : "搜索SVG组件..."}
-            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+        <div className="relative mb-3 flex gap-2">
+          <div className="relative flex-1">
+            <span className="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+              search
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={
+                activeTab === 'user' ? "搜索素材..." : 
+                activeTab === 'preset' ? "搜索预设文案..." : 
+                activeTab === 'media' ? "搜索SVG组件..." :
+                "搜索 Pexels 开源图库 (按回车)..."
+              }
+              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && activeTab === 'external') {
+                  searchPexels();
+                }
+              }}
+            />
+          </div>
+          {activeTab === 'external' && (
+            <button
+              onClick={() => setShowApiKeyInput(!showApiKeyInput)}
+              className={`p-2 rounded-lg border transition ${pexelsApiKey ? 'border-teal-200 bg-teal-50 text-teal-600' : 'border-gray-200 bg-gray-50 text-gray-400'}`}
+              title="配置 Pexels API Key"
+            >
+              <span className="material-icons text-sm">settings</span>
+            </button>
+          )}
         </div>
+
+        {/* API Key Input for External */}
+        {activeTab === 'external' && showApiKeyInput && (
+          <div className="mb-3 p-3 bg-teal-50 rounded-lg border border-teal-100 animate-fade-in">
+            <label className="block text-xs font-bold text-teal-800 mb-1">Pexels API Key</label>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={pexelsApiKey}
+                onChange={(e) => setPexelsApiKey(e.target.value)}
+                placeholder="在此粘贴您的 Key..."
+                className="flex-1 p-1.5 text-xs border border-teal-200 rounded focus:ring-1 focus:ring-teal-500 focus:border-transparent"
+              />
+              <button
+                onClick={() => handleSaveApiKey(pexelsApiKey)}
+                className="px-3 py-1 bg-teal-600 text-white text-xs rounded hover:bg-teal-700"
+              >
+                保存
+              </button>
+            </div>
+            <p className="text-[10px] text-teal-600 mt-1">
+              * 需要 <a href="https://www.pexels.com/api/" target="_blank" rel="noopener noreferrer" className="underline font-bold">Pexels API Key</a> 才能搜索。您的 Key 仅保存在本地。
+            </p>
+          </div>
+        )}
 
         {/* Category tabs - for user materials */}
         {activeTab === 'user' && (
@@ -814,6 +921,75 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* External Library Section (Pexels) */}
+      {activeTab === 'external' && (
+        <div className="flex-1 overflow-y-auto p-3">
+          {!pexelsApiKey ? (
+            <div className="text-center py-12 px-4">
+              <span className="material-icons text-teal-200 text-6xl mb-4 block">vpn_key</span>
+              <h4 className="text-gray-800 font-bold mb-2">需要配置 API Key</h4>
+              <p className="text-gray-500 text-sm mb-4">
+                为了使用 Pexels 开源高清图库，您需要提供一个免费的 API Key。<br/>
+                您的密钥仅存储在本地浏览器中。
+              </p>
+              <button
+                onClick={() => setShowApiKeyInput(true)}
+                className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700"
+              >
+                配置 Key
+              </button>
+            </div>
+          ) : externalLoading ? (
+            <div className="text-center py-12">
+              <span className="material-icons animate-spin text-teal-500 text-4xl mb-3 block">sync</span>
+              <p className="text-gray-500 text-sm">正在搜索 Pexels...</p>
+            </div>
+          ) : externalImages.length === 0 ? (
+            <div className="text-center py-12">
+              <span className="material-icons text-gray-300 text-5xl mb-3 block">image_search</span>
+              <p className="text-gray-500 text-sm">输入关键词并按回车搜索</p>
+              <p className="text-gray-400 text-xs mt-1">例如："风景", "商务", "科技"</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {externalImages.map((img) => (
+                <div
+                  key={img.id}
+                  className="group relative aspect-auto bg-gray-100 rounded-lg overflow-hidden cursor-pointer"
+                  onClick={() => onInsertImage(img.src.large2x)}
+                >
+                  <img
+                    src={img.src.medium}
+                    alt={img.alt}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                  
+                  {/* Photographer info */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 group-hover:opacity-100 transition">
+                    <p className="text-white text-[10px] truncate">By {img.photographer}</p>
+                  </div>
+                  
+                  {/* Insert overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                    <span className="bg-white/90 text-teal-700 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                      <span className="material-icons text-sm">add_circle</span>
+                      插入图片
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Pexels Attribution */}
+          <div className="mt-6 text-center pb-2">
+            <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 opacity-50 hover:opacity-80 transition">
+              <img src="https://images.pexels.com/lib/api/pexels.png" alt="Pexels" className="h-4" />
+            </a>
+          </div>
         </div>
       )}
 

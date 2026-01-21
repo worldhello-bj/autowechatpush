@@ -35,7 +35,7 @@ export interface UserQuotaStatus {
 export interface UsageRecord {
   id: string;
   userId: string;
-  type: 'ai_generation' | 'material_upload' | 'ai_stream';
+  type: 'ai_generation' | 'material_upload' | 'ai_stream' | 'ai_rewrite';
   provider?: string;
   cost: number;             // Credits consumed
   details?: Record<string, unknown>;

@@ -75,80 +75,11 @@ export const setMultiRoundLayoutMode = (enabled: boolean): void => {
   logger.info(`DeepSeek multi-round layout mode set to: ${enabled}`);
 };
 
-// Re-use the structure but adapted for OpenAI-compatible tool definitions
+import { LAYOUT_ARTICLE_TOOL_DEF } from './aiToolDefinitions';
+
+// Re-use the shared structure for OpenAI-compatible tool definitions
 const tools = [
-  {
-    type: "function",
-    function: {
-      name: "layout_article",
-      description: "Generates a structured layout for a WeChat article based on content. Use various block types for rich formatting.",
-      parameters: {
-        type: "object",
-        properties: {
-          title: { type: "string", description: "The main title of the article." },
-          digest: { type: "string", description: "A short summary (digest) of the article." },
-          blocks: {
-            type: "array",
-            description: "The content blocks of the article. Use diverse block types for visual variety.",
-            items: {
-              type: "object",
-              properties: {
-                type: { 
-                  type: "string", 
-                  enum: ["header", "paragraph", "card", "list", "quote", "image", "divider", "code", "callout", "numbered_list", "highlight", "table", "qrcode", "faq", "countdown", "progress", "gift", "contact", "stats", "testimonial", "steps", "svg"], 
-                  description: "Block type. Use 'header' for section titles, 'paragraph' for body text, 'card' for key points, 'list' for bullets, 'numbered_list' for steps, 'quote' for citations, 'image' for visual placeholders, 'divider' for section breaks, 'code' for code snippets, 'callout' for notices, 'highlight' for emphasized text, 'table' for structured data, 'svg' for decorative SVG graphics. Special types: 'qrcode' for QR code sections, 'faq' for Q&A blocks, 'countdown' for timers, 'progress' for progress bars, 'gift' for promotional boxes, 'contact' for contact info, 'stats' for statistics display, 'testimonial' for user reviews, 'steps' for step-by-step flows." 
-                },
-                content: { type: "string", description: "The main text content. For images, this is the description/prompt. For divider, this can be empty. For svg, provide SVG code or description." },
-                title: { type: "string", description: "Title for card, header, callout, gift, faq, or table blocks." },
-                items: { 
-                  type: "array", 
-                  items: { type: "string" }, 
-                  description: "List items for 'list' or 'numbered_list' types. Also used for FAQ questions or step descriptions." 
-                },
-                style: { 
-                  type: "string", 
-                  enum: ["default", "primary", "warning", "quote", "red", "blue", "purple", "orange", "gold", "green", "pink", "cyan", "gradient"], 
-                  description: "Visual style color. Use varied colors for different sections." 
-                },
-                level: { type: "number", enum: [1, 2, 3], description: "Header level (1=large, 2=medium, 3=small). Only for 'header' type." },
-                alignment: { type: "string", enum: ["left", "center", "right"], description: "Text alignment." },
-                language: { type: "string", description: "Programming language for 'code' blocks." },
-                icon: { type: "string", enum: ["info", "warning", "success", "error", "tip", "note"], description: "Icon type for 'callout' blocks." },
-                rows: { type: "array", items: { type: "array", items: { type: "string" } }, description: "Table data rows for 'table' type." },
-                headers: { type: "array", items: { type: "string" }, description: "Table header row for 'table' type." },
-                // New properties for special blocks
-                values: { type: "array", items: { type: "string" }, description: "Values for stats blocks (e.g., ['1000+', '50%', '99%'])." },
-                labels: { type: "array", items: { type: "string" }, description: "Labels for stats/progress/steps blocks (e.g., ['用户数', '增长率', '满意度'])." },
-                answers: { type: "array", items: { type: "string" }, description: "Answers for FAQ blocks, matching items array." },
-                countdown: { type: "object", description: "Countdown values: {days, hours, minutes, seconds}." },
-                percentage: { type: "number", description: "Progress percentage (0-100) for progress blocks." },
-                author: { type: "string", description: "Author name for testimonial blocks." },
-                role: { type: "string", description: "Author role/position for testimonial blocks." },
-                // Typography properties for emphasis
-                fontSize: { 
-                  type: "string", 
-                  enum: ["small", "normal", "large", "xlarge"], 
-                  description: "Font size for visual hierarchy. Use 'large' or 'xlarge' for important text, 'small' for footnotes or secondary info." 
-                },
-                fontWeight: { 
-                  type: "string", 
-                  enum: ["normal", "bold", "light"], 
-                  description: "Font weight for emphasis. Use 'bold' for key points and important statements." 
-                },
-                fontStyle: { 
-                  type: "string", 
-                  enum: ["normal", "italic"], 
-                  description: "Font style. Use 'italic' for quotes, emphasis, or foreign words." 
-                }
-              },
-              required: ["type", "content"]
-            }
-          }
-        },
-        required: ["title", "digest", "blocks"]
-      }
-    }
-  }
+  LAYOUT_ARTICLE_TOOL_DEF
 ];
 
 /**
@@ -247,7 +178,7 @@ const extractLayoutFromResponse = (data: any): { title: string; digest: string; 
           id: `ds-${timestamp}-${index}-${random}`,
           ...b
         }));
-        
+
         return {
           title: args.title || "",
           digest: args.digest || "",
@@ -274,10 +205,10 @@ export const generateArticleStructureDeepSeek = async (
   if (apiKey && apiKey.trim() !== '') {
     logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
   }
-  
+
   // Determine whether to use thinking mode
   const useThinking = useReasonerMode !== undefined ? useReasonerMode : thinkingModeEnabled;
-  
+
   logger.info(`Using DeepSeek via backend with thinking mode: ${useThinking}`, { multiRound: multiRoundLayoutModeEnabled });
 
   try {
@@ -290,12 +221,12 @@ export const generateArticleStructureDeepSeek = async (
       thinkingMode: useThinking,
       multiRoundMode: multiRoundLayoutModeEnabled,
     });
-    
+
     logger.info('Backend AI service completed', {
       title: result.title,
       blocksCount: result.blocks?.length || 0
     });
-    
+
     return result;
   } catch (error) {
     logger.error("DeepSeek generation via backend failed:", error);
@@ -313,8 +244,8 @@ export const generateArticleStructureDeepSeek = async (
  * @returns The content from the AI response
  */
 const callDeepSeekAPI = async (
-  apiKey: string, 
-  messages: any[], 
+  apiKey: string,
+  messages: any[],
   temperature: number = 0.7,
   useThinkingMode?: boolean
 ): Promise<string> => {
@@ -358,283 +289,12 @@ const callDeepSeekAPI = async (
   return message?.content || "";
 };
 
-// --- New AI Methods for Design Richness ---
-
-/**
- * Generate multiple attractive title suggestions for an article
- */
-export const generateTitleSuggestionsDeepSeek = async (
-  content: string,
-  count: number = 5,
-  apiKey: string = ''
-): Promise<string[]> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
-
-  try {
-    const result = await callAIHelper({
-      action: 'generateTitles',
-      content,
-      provider: 'deepseek',
-      options: { count }
-    });
-    
-    // Result should be an array of strings
-    return Array.isArray(result) ? result as string[] : [];
-  } catch (error) {
-    logger.error("DeepSeek title generation via backend failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Generate a concise summary/digest for an article
- */
-export const generateSummaryDeepSeek = async (
-  content: string,
-  maxLength: number = 120,
-  apiKey: string = ''
-): Promise<string> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
-
-  try {
-    const result = await callAIHelper({
-      action: 'generateSummary',
-      content,
-      provider: 'deepseek',
-      options: { maxLength }
-    });
-    
-    return typeof result === 'string' ? result : '';
-  } catch (error) {
-    logger.error("DeepSeek summary generation via backend failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Expand a paragraph or section with more details
- */
-export const expandContentDeepSeek = async (
-  content: string,
-  style: 'detailed' | 'examples' | 'storytelling' = 'detailed',
-  apiKey: string = ''
-): Promise<string> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
-
-  try {
-    const result = await callAIHelper({
-      action: 'expandContent',
-      content,
-      provider: 'deepseek',
-      options: { style }
-    });
-    
-    return typeof result === 'string' ? result : content;
-  } catch (error) {
-    logger.error("DeepSeek content expansion via backend failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Polish and improve content style and grammar
- */
-export const polishContentDeepSeek = async (
-  content: string,
-  tone: 'professional' | 'casual' | 'formal' | 'creative' = 'professional',
-  apiKey: string = ''
-): Promise<string> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
-
-  try {
-    const result = await callAIHelper({
-      action: 'polishContent',
-      content,
-      provider: 'deepseek',
-      options: { tone }
-    });
-    
-    return typeof result === 'string' ? result : content;
-  } catch (error) {
-    logger.error("DeepSeek content polish via backend failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Extract keywords from content for SEO purposes
- */
-export const extractKeywordsDeepSeek = async (
-  content: string,
-  count: number = 10,
-  apiKey: string = ''
-): Promise<string[]> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
-
-  try {
-    const result = await callAIHelper({
-      action: 'extractKeywords',
-      content,
-      provider: 'deepseek',
-      options: { count }
-    });
-    
-    return Array.isArray(result) ? result as string[] : [];
-  } catch (error) {
-    logger.error("DeepSeek keyword extraction via backend failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Translate content between Chinese and English
- */
-export const translateContentDeepSeek = async (
-  content: string,
-  targetLanguage: 'zh' | 'en',
-  apiKey: string = ''
-): Promise<string> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
-
-  try {
-    const result = await callAIHelper({
-      action: 'translateContent',
-      content,
-      provider: 'deepseek',
-      options: { targetLanguage }
-    });
-    
-    return typeof result === 'string' ? result : content;
-  } catch (error) {
-    logger.error("DeepSeek translation via backend failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Suggest visual styles based on content theme
- */
-export const suggestStylesDeepSeek = async (
-  content: string,
-  apiKey: string = ''
-): Promise<StyleSuggestion[]> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
-
-  try {
-    const result = await callAIHelper({
-      action: 'suggestStyles',
-      content,
-      provider: 'deepseek'
-    });
-    
-    return Array.isArray(result) ? result as StyleSuggestion[] : [];
-  } catch (error) {
-    logger.error("DeepSeek style suggestion via backend failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Generate an engaging article opening/hook
- */
-export const generateHookDeepSeek = async (
-  topic: string,
-  style: 'question' | 'story' | 'statistic' | 'quote' | 'surprising' = 'question',
-  apiKey: string = ''
-): Promise<string> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
-
-  try {
-    const result = await callAIHelper({
-      action: 'generateHook',
-      content: topic,
-      provider: 'deepseek',
-      options: { style }
-    });
-    
-    return typeof result === 'string' ? result : '';
-  } catch (error) {
-    logger.error("DeepSeek hook generation via backend failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Generate a compelling call-to-action for article ending
- */
-export const generateCTADeepSeek = async (
-  articleContext: string,
-  ctaType: 'subscribe' | 'share' | 'comment' | 'action' | 'reflection' = 'share',
-  apiKey: string = ''
-): Promise<string> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
-
-  try {
-    const result = await callAIHelper({
-      action: 'generateCTA',
-      content: articleContext,
-      provider: 'deepseek',
-      options: { type: ctaType }
-    });
-    
-    return typeof result === 'string' ? result : '';
-  } catch (error) {
-    logger.error("DeepSeek CTA generation via backend failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Rewrite content in a different style or perspective
- */
-export const rewriteContentDeepSeek = async (
-  content: string,
-  newStyle: 'humorous' | 'serious' | 'inspirational' | 'educational' | 'conversational',
-  apiKey: string = ''
-): Promise<string> => {
-  // API keys are no longer accepted from frontend
-  if (apiKey && apiKey.trim() !== '') {
-    logger.warn('⚠️  API keys should not be provided from frontend. Using backend service instead.');
-  }
-
-  try {
-    const result = await callAIHelper({
-      action: 'rewriteContent',
-      content,
-      provider: 'deepseek',
-      options: { style: newStyle }
-    });
-    
-    return typeof result === 'string' ? result : content;
-  } catch (error) {
-    logger.error("DeepSeek content rewrite via backend failed:", error);
-    throw error;
-  }
-};
+// NOTE: AI helper functions (generateTitleSuggestions, generateSummary, expandContent, etc.)
+// have been consolidated into backendAIClient.ts. Use callAIHelper() directly:
+//
+// import { callAIHelper } from './backendAIClient';
+// const result = await callAIHelper({ action: 'generateTitles', content, provider: 'deepseek' });
+//
+// Supported actions: generateTitles, generateSummary, expandContent, polishContent,
+//                   extractKeywords, translateContent, suggestStyles, generateHook,
+//                   generateCTA, rewriteContent

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { sendSuccess, sendError, createLogger } from '../utils/index.js';
-import { scrapeWeChatArticle, checkQuota, consumeQuota } from '../services/index.js';
+import { scrapeWeChatArticle, checkQuota, consumeQuota, smartFillArticle } from '../services/index.js';
 import { parseArticleContent } from '../services/index.js';
 import { AIProvider, BlockType } from '../types/index.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -126,7 +126,24 @@ export const importFromUrl = async (req: Request, res: Response) => {
 
     // Step 2: Parse content preserving WeChat section structure
     // Use specialized WeChat parser that keeps styled sections intact
-    const finalBlocks = parseWeChatSections(scrapedArticle.cleanedHtml, scrapedArticle.svgBlocks);
+    let finalBlocks = parseWeChatSections(scrapedArticle.cleanedHtml, scrapedArticle.svgBlocks);
+    let finalDigest = scrapedArticle.digest;
+
+    // Step 3: AI Smart Fill (if not skipped)
+    const { skipAIFill } = req.body;
+    if (!skipAIFill) {
+        logger.info('Performing AI Smart Fill on imported article');
+        try {
+            const filledResult = await smartFillArticle(
+                finalBlocks, 
+                { title: scrapedArticle.title, digest: scrapedArticle.digest }
+            );
+            finalBlocks = filledResult.blocks;
+            finalDigest = filledResult.digest;
+        } catch (err) {
+            logger.warn('AI Smart Fill failed, proceeding with original content', { err });
+        }
+    }
 
     // Consume quota (user is guaranteed to exist)
     consumeQuota(req.user.userId, 0.5, 'material_upload', {
@@ -138,13 +155,17 @@ export const importFromUrl = async (req: Request, res: Response) => {
       title: scrapedArticle.title,
       blocksCount: finalBlocks.length,
       svgBlocksCount: scrapedArticle.svgBlocks.length,
+      aiFilled: !skipAIFill
     });
 
+    // 返回完整数据用于模板功能
     return sendSuccess(res, {
       title: scrapedArticle.title,
       author: scrapedArticle.author,
-      digest: scrapedArticle.digest,
+      digest: finalDigest,
       blocks: finalBlocks,
+      cleanedHtml: scrapedArticle.cleanedHtml, // 完整HTML结构用于模板复制
+      svgBlocks: scrapedArticle.svgBlocks, // SVG块信息
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

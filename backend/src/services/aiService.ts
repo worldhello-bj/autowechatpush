@@ -6,9 +6,64 @@ import { loadPromptConfig, buildCompletePrompt } from './promptService.js';
 
 const logger = createLogger('ai-service');
 
+/**
+ * Extract JSON from AI response text that may contain additional content
+ */
+const parseJsonFromText = (text: string): any => {
+  try {
+    // First try direct parsing
+    return JSON.parse(text);
+  } catch {
+    // If direct parsing fails, try to extract JSON from text
+    // Look for JSON array or object patterns
+    const jsonPatterns = [
+      // Match JSON arrays: [{"key": "value"}, ...]
+      /\[[\s\S]*?\]/g,
+      // Match JSON objects: {"key": "value", ...}
+      /\{[\s\S]*?\}/g
+    ];
+
+    for (const pattern of jsonPatterns) {
+      const matches = text.match(pattern);
+      if (matches) {
+        // Try each match until we find valid JSON
+        for (const match of matches) {
+          try {
+            const parsed = JSON.parse(match);
+            // Additional validation for template fill format
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              // Check if array contains objects with index and newContent
+              const hasValidStructure = parsed.every(item =>
+                typeof item === 'object' &&
+                item !== null &&
+                typeof item.index === 'number' &&
+                typeof item.newContent === 'string'
+              );
+              if (hasValidStructure) {
+                return parsed;
+              }
+            }
+            // Return any valid JSON as fallback
+            return parsed;
+          } catch {
+            // Continue to next match
+            continue;
+          }
+        }
+      }
+    }
+
+    // If no valid JSON found, log and return empty array
+    logger.warn('Could not extract valid JSON from AI response', { text: text.substring(0, 200) });
+    return [];
+  }
+};
+
 // API configuration
 const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/chat/completions';
 const QWEN_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+
+import { LAYOUT_ARTICLE_TOOL_DEF } from './aiToolDefinitions.js';
 
 type LayoutFunctionArgs = {
   title?: string;
@@ -17,51 +72,7 @@ type LayoutFunctionArgs = {
 };
 
 // Tool definition for article layout
-const layoutArticleFunction = {
-  type: 'function',
-  function: {
-    name: 'layout_article',
-    description: 'Generates a structured layout for a WeChat article based on content.',
-    parameters: {
-      type: 'object',
-      properties: {
-        title: { type: 'string', description: 'The main title of the article.' },
-        digest: { type: 'string', description: 'A short summary of the article.' },
-        blocks: {
-          type: 'array',
-          description: 'The content blocks of the article.',
-          items: {
-            type: 'object',
-            properties: {
-              type: {
-                type: 'string',
-                enum: Object.values(BlockType),
-                description: 'Block type for formatting.',
-              },
-              content: { type: 'string', description: 'The main text content.' },
-              title: { type: 'string', description: 'Title for card, header, callout blocks.' },
-              items: {
-                type: 'array',
-                items: { type: 'string' },
-                description: 'List items for list or numbered_list types.',
-              },
-              style: {
-                type: 'string',
-                enum: ['default', 'primary', 'warning', 'quote', 'red', 'blue', 'purple', 'orange', 'gold', 'green', 'pink', 'cyan', 'gradient'],
-                description: 'Visual color style.',
-              },
-              level: { type: 'number', enum: [1, 2, 3], description: 'Header level.' },
-              alignment: { type: 'string', enum: ['left', 'center', 'right'], description: 'Text alignment.' },
-              icon: { type: 'string', enum: ['info', 'warning', 'success', 'error', 'tip', 'note'], description: 'Icon type for callout blocks.' },
-            },
-            required: ['type', 'content'],
-          },
-        },
-      },
-      required: ['title', 'digest', 'blocks'],
-    },
-  },
-};
+const layoutArticleFunction = LAYOUT_ARTICLE_TOOL_DEF;
 
 /**
  * Interface for streaming callbacks
@@ -399,8 +410,8 @@ const callDeepSeekForTemplateFill = async (
       throw new Error(errorMessage);
     }
 
-    // Parse JSON response
-    const parsed = JSON.parse(content);
+    // Enhanced JSON parsing - extract JSON from AI response text
+    const parsed = parseJsonFromText(content);
     success = true;
     return Array.isArray(parsed) ? parsed : [];
 
@@ -449,8 +460,8 @@ const callQwenForTemplateFill = async (
       throw new Error(errorMessage);
     }
 
-    // Parse JSON response
-    const parsed = JSON.parse(content);
+    // Enhanced JSON parsing - extract JSON from AI response text
+    const parsed = parseJsonFromText(content);
     success = true;
     return Array.isArray(parsed) ? parsed : [];
 
@@ -547,7 +558,7 @@ Return structured blocks using the layout_article tool. For each image placehold
   ];
 
   let result: GenerationResult;
-  
+
   switch (provider) {
     case AIProvider.DEEPSEEK: {
       const apiKey = await getApiKeyFromPool(AIProvider.DEEPSEEK);
@@ -565,4 +576,118 @@ Return structured blocks using the layout_article tool. For each image placehold
 
   logger.info('Content parsed successfully', { blocksCount: result.blocks.length });
   return result.blocks;
+};
+
+/**
+ * Smart fill missing content in article blocks
+ * - Generates image captions based on surrounding context
+ * - Fills in empty or short descriptions
+ * - Summarizes content if digest is missing
+ */
+export const smartFillArticle = async (
+  blocks: Array<{ id: string; type: BlockType; content: string; level?: number }>,
+  metadata: { title: string; digest: string },
+  provider: AIProvider = AIProvider.DEEPSEEK
+): Promise<{ blocks: Array<{ id: string; type: BlockType; content: string; level?: number }>; digest: string }> => {
+  logger.info('Smart filling article content');
+
+  // 1. Identify context for images and placeholders
+  // We'll prepare a simplified text representation of the article for the AI
+  const articleText = blocks.map((b, idx) => `[Block ${idx} - ${b.type}]: ${b.content.substring(0, 200)}`).join('\n');
+
+  // 2. Identify missing elements
+  const missingDigest = !metadata.digest || metadata.digest.length < 10 || metadata.digest === 'No summary available';
+  
+  // Find indices of blocks that look like placeholders or need enhancement
+  // For now, we mainly focus on generating descriptions for image placeholders if they don't have captions
+  // In the real HTML import, images are often followed by captions. If not, we can generate one.
+  
+  const systemPrompt = `You are an expert editor. Your task is to enhance an imported article by filling in missing details.
+
+Tasks:
+1. If the article summary (digest) is missing or poor, generate a concise, engaging summary (max 120 chars).
+2. For any image placeholders (detected in content), generate a relevant, descriptive caption based on the surrounding text context.
+3. Return the result in JSON format:
+{
+  "digest": "The generated summary...",
+  "captions": [
+    { "blockIndex": 5, "caption": "Description of what this image likely shows..." }
+  ]
+}`;
+
+  const userPrompt = `Here is the article content structure:
+
+Title: ${metadata.title}
+Current Digest: ${metadata.digest}
+
+Content Blocks:
+${articleText}
+
+Please analyze the content and provide a better digest and captions for images where appropriate.`;
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
+  ];
+
+  let aiResponse: any = {};
+
+  try {
+    let resultText = '';
+    
+    if (provider === AIProvider.DEEPSEEK) {
+      const apiKey = await getApiKeyFromPool(AIProvider.DEEPSEEK);
+      // We don't use the layout tool here, just standard chat
+      const response = await fetch(DEEPSEEK_BASE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: 'deepseek-chat', messages })
+      });
+      const data = await response.json() as any;
+      resultText = data.choices?.[0]?.message?.content || '';
+      releaseApiKey(apiKey, true);
+    } else {
+      const apiKey = await getApiKeyFromPool(AIProvider.QWEN);
+      const response = await fetch(QWEN_BASE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: 'qwen-plus', messages })
+      });
+      const data = await response.json() as any;
+      resultText = data.choices?.[0]?.message?.content || '';
+      releaseApiKey(apiKey, true);
+    }
+
+    aiResponse = parseJsonFromText(resultText);
+    
+  } catch (error) {
+    logger.warn('Smart fill AI request failed', { error });
+    return { blocks, digest: metadata.digest };
+  }
+
+  // 3. Apply changes
+  let finalDigest = metadata.digest;
+  if (missingDigest && aiResponse.digest) {
+    finalDigest = aiResponse.digest;
+  }
+
+  const finalBlocks = [...blocks];
+  if (Array.isArray(aiResponse.captions)) {
+    aiResponse.captions.forEach((cap: any) => {
+      if (typeof cap.blockIndex === 'number' && cap.caption && finalBlocks[cap.blockIndex]) {
+        // Find the block and append caption if it's an image block (PARAGRAPH with image)
+        // Or if it's just a raw HTML block containing an image
+        const block = finalBlocks[cap.blockIndex];
+        if (block.content.includes('<img') || block.content.includes('svg-placeholder')) {
+           // Insert caption after the image
+           // This is a simple heuristic; robust implementation would parse HTML
+           if (!block.content.includes('<figcaption')) {
+             block.content += `<figcaption style="text-align: center; color: #888; font-size: 14px; margin-top: 8px;">${cap.caption}</figcaption>`;
+           }
+        }
+      }
+    });
+  }
+
+  return { blocks: finalBlocks, digest: finalDigest };
 };

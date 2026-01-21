@@ -9,34 +9,34 @@ const GuideModal: React.FC<GuideModalProps> = ({ onClose }) => {
     <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold text-gray-800">New User Guide</h3>
+          <h3 className="text-xl font-bold text-gray-800">新用户指南</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <span className="material-icons">close</span>
           </button>
         </div>
-        
+
         <div className="prose prose-sm prose-green max-w-none">
-          <p>Follow these steps to automate your WeChat Official Account publishing.</p>
-          <h4>1. Get Credentials</h4>
+          <p>按照以下步骤自动发布您的微信公众号内容。</p>
+          <h4>1. 获取凭证</h4>
           <ul>
-            <li>Log in to WeChat Official Account Admin.</li>
-            <li>Go to <strong>Development</strong> {'>'} <strong>Basic Configuration</strong>.</li>
-            <li>Copy your <strong>AppID</strong> and <strong>AppSecret</strong>.</li>
+            <li>登录微信公众号后台管理。</li>
+            <li>进入<strong>开发</strong> {'>'} <strong>基本配置</strong>。</li>
+            <li>复制您的<strong>AppID</strong>和<strong>AppSecret</strong>。</li>
           </ul>
-          <h4>2. Whitelist IP</h4>
+          <h4>2. IP白名单</h4>
           <ul>
-            <li>In Basic Configuration, add your current IP address to the whitelist.</li>
+            <li>在基本配置中，将当前IP地址添加到白名单。</li>
           </ul>
-          <h4>3. Publishing</h4>
+          <h4>3. 发布内容</h4>
           <ul>
-            <li>Generate content with AI (or format existing text).</li>
-            <li>Edit visually in the right panel.</li>
-            <li>Save draft locally if needed.</li>
-            <li>Click "Publish to WeChat" to send to Draft Box.</li>
+            <li>使用AI生成内容（或格式化现有文本）。</li>
+            <li>在右侧面板中进行可视化编辑。</li>
+            <li>如需要，可将草稿本地保存。</li>
+            <li>点击"发布到微信"发送到草稿箱。</li>
           </ul>
         </div>
         <div className="mt-6 flex justify-end">
-          <button onClick={onClose} className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700">Got it</button>
+          <button onClick={onClose} className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700">知道了</button>
         </div>
       </div>
     </div>

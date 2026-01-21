@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { sendSuccess, sendError, createLogger } from '../utils/index.js';
+import { getSystemWatermark } from '../utils/content-transformer.js';
 
 const logger = createLogger('utility');
 
@@ -53,5 +54,18 @@ export const stitchImages = async (req: Request, res: Response) => {
       requestId: req.requestId 
     });
     sendError(res, 500, 'STITCH_ERROR', message);
+  }
+};
+
+/**
+ * Get system watermark
+ * GET /api/v1/utility/watermark
+ */
+export const getWatermark = async (req: Request, res: Response) => {
+  try {
+    const signature = getSystemWatermark();
+    sendSuccess(res, { signature });
+  } catch (error) {
+    sendError(res, 500, 'SYSTEM_ERROR', 'Failed to retrieve watermark');
   }
 };

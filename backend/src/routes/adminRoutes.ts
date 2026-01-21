@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { 
+import {
   getUsers,
   getUser,
   createUser,
@@ -14,6 +14,10 @@ import {
   getUserAnalytics,
   getUserEventHistory,
   getAllEvents,
+  getUserSegmentationData,
+  getTimeAnalyticsData,
+  getUserBehaviorData,
+  getEventTimeDistributionData,
   getKeyPool,
   updateKeyPool,
   reloadKeyPoolConfig,
@@ -127,6 +131,34 @@ router.get('/analytics/users/:userId', getUserAnalytics);
  * @access Admin only
  */
 router.get('/analytics/users/:userId/events', getUserEventHistory);
+
+/**
+ * @route GET /api/v1/admin/analytics/segmentation
+ * @desc Get user segmentation data
+ * @access Admin only
+ */
+router.get('/analytics/segmentation', getUserSegmentationData);
+
+/**
+ * @route GET /api/v1/admin/analytics/time
+ * @desc Get time-based analytics data
+ * @access Admin only
+ */
+router.get('/analytics/time', getTimeAnalyticsData);
+
+/**
+ * @route GET /api/v1/admin/analytics/behavior
+ * @desc Get user behavior patterns
+ * @access Admin only
+ */
+router.get('/analytics/behavior', getUserBehaviorData);
+
+/**
+ * @route GET /api/v1/admin/analytics/timedistribution
+ * @desc Get event time distribution analysis
+ * @access Admin only
+ */
+router.get('/analytics/timedistribution', getEventTimeDistributionData);
 
 /**
  * @route GET /api/v1/admin/keypool

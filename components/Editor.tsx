@@ -8,9 +8,12 @@ import GuideModal from './Editor/modals/GuideModal';
 import TemplateModal from './Editor/modals/TemplateModal';
 import ImportDialog from './Editor/modals/ImportDialog';
 import DisclaimerDialog from './Editor/modals/DisclaimerDialog';
+import RewriteDialog from './Editor/modals/RewriteDialog';
+import UserTemplatePicker from './Editor/modals/UserTemplatePicker';
 import { ArticleBlock, GroundingSource, WeChatCredentials, WeChatAccount, BlockType, AIProvider } from '../types';
 import { allDesignTemplates, getCategories, getTemplatesByCategory, DesignTemplate } from '../services/designTemplates';
 import { getAccessToken, saveDraft, uploadImage, getAccessTokenByAccountId } from '../services/wechatService';
+import { draftApi, templateApi } from '../services/apiClient';
 import { wechatAccountService } from '../services/wechatAccountService';
 import analytics from '../services/analytics';
 
@@ -47,7 +50,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   // Article Content
   const [articleTitle, setArticleTitle] = useState('New Article');
   const [articleDigest, setArticleDigest] = useState('');
-  const [htmlContent, setHtmlContent] = useState<string>('<p style="color:#888; text-align:center;">Generated content will appear here...</p>');
+  const [htmlContent, setHtmlContent] = useState<string>('<p style="color:#888; text-align:center;">生成的内容将显示在这里...</p>');
 
   // --- Custom Hooks ---
   const wechatManager = useWeChatManager(onError);
@@ -85,8 +88,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     setIsPlaying,
     sources,
     featuresAvailable,
-    foundDraft,
-    setFoundDraft,
     showImportDialog,
     setShowImportDialog,
     importUrl,
@@ -103,12 +104,9 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     handleImportArticle,
     acceptDisclaimerAndImport,
     performImport,
-    saveLocalDraft,
-    loadLocalDraft,
     handleInsertHookContent,
     handleInsertCTAContent,
     fetchFeatures,
-    checkForDraft,
   } = articleGenerator;
 
   // HTML Editor Ref (for inserting at cursor)
@@ -118,6 +116,9 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   const [showDesignTemplates, setShowDesignTemplates] = useState(false);
   const [selectedTemplateCategory, setSelectedTemplateCategory] = useState<DesignTemplate['category']>('header');
   const templateCategories = getCategories();
+
+  // User Templates Picker State
+  const [showUserTemplatePicker, setShowUserTemplatePicker] = useState(false);
 
   // Template Preview Modal State
   const [showTemplateModal, setShowTemplateModal] = useState(false);
@@ -131,9 +132,64 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
 
   // Initialize hooks on mount
   useEffect(() => {
-    checkForDraft();
     fetchFeatures();
+    checkServerDrafts();
   }, []);
+
+  // Server Draft Logic
+  const [hasServerDraft, setHasServerDraft] = useState(false);
+  const [latestDraftId, setLatestDraftId] = useState<string | null>(null);
+
+  const checkServerDrafts = async () => {
+    try {
+      const response = await draftApi.list();
+      if (response.success && response.data && response.data.length > 0) {
+        setHasServerDraft(true);
+        setLatestDraftId(response.data[0].id); // Assume sorted by latest
+      }
+    } catch (error) {
+      console.error('Failed to check drafts', error);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    try {
+      const response = await draftApi.save({
+        title: articleTitle,
+        digest: articleDigest,
+        content: htmlContent,
+        topic: articleGenerator.topic,
+        id: latestDraftId || undefined // Update existing if loaded
+      });
+      
+      if (response.success && response.data) {
+        setLatestDraftId(response.data.id);
+        alert('草稿已保存到服务器！');
+      } else {
+        throw new Error(response.error?.message || 'Save failed');
+      }
+    } catch (error: any) {
+      onError('保存草稿失败: ' + error.message);
+    }
+  };
+
+  const handleLoadDraft = async () => {
+    if (!latestDraftId) return;
+    
+    try {
+      const response = await draftApi.get(latestDraftId);
+      if (response.success && response.data) {
+        const draft = response.data;
+        setArticleTitle(draft.title);
+        setArticleDigest(draft.digest);
+        setHtmlContent(draft.content);
+        articleGenerator.setTopic(draft.topic || '');
+        setHasServerDraft(false); // Hide notification
+      }
+    } catch (error: any) {
+      onError('加载草稿失败: ' + error.message);
+    }
+  };
 
   // Publish handler
   const handlePublish = async () => {
@@ -202,10 +258,37 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   };
 
   // Design Template Handler
-  const handleInsertTemplate = (template: DesignTemplate) => {
+  const handleInsertTemplate = async (template: DesignTemplate, smartMode: boolean = true) => {
     // Use ref to insert at cursor position if available
     if (htmlEditorRef.current) {
-      htmlEditorRef.current.insertHtmlAtCursor(template.html);
+      // Check if there is selected content to format AND smart mode is enabled
+      const selectedHtml = htmlEditorRef.current.getSelectionHtml();
+      
+      if (smartMode && selectedHtml && selectedHtml.trim().length > 0) {
+        // Format existing content using backend API
+        try {
+          // Show a temporary loading indicator or toast could be good here
+          // For now just console log
+          console.log('Formatting selection with template...', template.id);
+          
+          const response = await templateApi.apply(selectedHtml, template.id);
+          
+          if (response.success && response.data) {
+            htmlEditorRef.current.insertHtmlAtCursor(response.data.html);
+            analytics.track('template_apply_smart', { templateId: template.id });
+          } else {
+            console.warn('Failed to apply template smart formatting, falling back to insert');
+            htmlEditorRef.current.insertHtmlAtCursor(template.html);
+          }
+        } catch (error) {
+          console.error('Error applying template:', error);
+          // Fallback
+          htmlEditorRef.current.insertHtmlAtCursor(template.html);
+        }
+      } else {
+        // No selection or smart mode disabled, just insert empty template
+        htmlEditorRef.current.insertHtmlAtCursor(template.html);
+      }
     } else {
       // Fallback: append to end
       const separator = htmlContent.trim() ? '\n' : '';
@@ -307,15 +390,15 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
 
 
   return (
-    <div className="flex flex-col lg:flex-row h-full relative">
+    <div className="flex flex-col lg:flex-row h-full relative bg-slate-50 p-4 gap-6 overflow-hidden">
       
       {/* Draft Notification */}
-      {foundDraft && (
+      {hasServerDraft && (
         <div className="absolute top-0 left-0 right-0 z-50 bg-blue-600 text-white px-4 py-2 flex items-center justify-between shadow-md">
-            <span className="text-sm font-medium">Found an unsaved draft from a previous session.</span>
+            <span className="text-sm font-medium">发现服务器端有未完成的草稿。</span>
             <div className="flex gap-3">
-                <button onClick={() => setFoundDraft(false)} className="text-blue-100 hover:text-white text-sm">Discard</button>
-                <button onClick={loadLocalDraft} className="bg-white text-blue-600 px-3 py-1 rounded text-sm font-bold hover:bg-blue-50">Restore Draft</button>
+                <button onClick={() => setHasServerDraft(false)} className="text-blue-100 hover:text-white text-sm">忽略</button>
+                <button onClick={handleLoadDraft} className="bg-white text-blue-600 px-3 py-1 rounded text-sm font-bold hover:bg-blue-50">恢复草稿</button>
             </div>
         </div>
       )}
@@ -329,12 +412,25 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
       {showTemplateModal && (
         <TemplateModal
           onClose={() => setShowTemplateModal(false)}
-          onInsertTemplate={(template) => {
-            handleInsertTemplate(template);
+          onInsertTemplate={(template, smartMode) => {
+            handleInsertTemplate(template, smartMode);
             setShowTemplateModal(false);
           }}
           selectedCategory={selectedTemplateCategory}
           onCategoryChange={setSelectedTemplateCategory}
+        />
+      )}
+
+      {/* User Template Picker Modal */}
+      {showUserTemplatePicker && (
+        <UserTemplatePicker
+          onClose={() => setShowUserTemplatePicker(false)}
+          onSelect={(template) => {
+            articleGenerator.setArticleTemplate(template);
+            articleGenerator.setUseTemplate(true);
+            // Do NOT set template URL here as it might trigger extraction logic or clear the template
+            setShowUserTemplatePicker(false);
+          }}
         />
       )}
 
@@ -345,9 +441,9 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
           onImport={handleImportArticle}
           importUrl={importUrl}
           onImportUrlChange={setImportUrl}
-          isImporting={isImporting || articleGenerator.isAIFilling}
-          skipAIFill={articleGenerator.skipAIFill}
-          onSkipAIFillChange={articleGenerator.setSkipAIFill}
+          isImporting={isImporting}
+          importAsTemplate={articleGenerator.importAsTemplate}
+          onImportAsTemplateChange={articleGenerator.setImportAsTemplate}
         />
       )}
 
@@ -356,6 +452,19 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         <DisclaimerDialog
           onClose={() => setShowDisclaimer(false)}
           onAccept={acceptDisclaimerAndImport}
+        />
+      )}
+
+      {/* Template Rewrite Dialog */}
+      {articleGenerator.showRewriteDialog && (
+        <RewriteDialog
+          isOpen={articleGenerator.showRewriteDialog}
+          onClose={() => articleGenerator.setShowRewriteDialog(false)}
+          onRewrite={articleGenerator.handleRewrite}
+          onSaveTemplate={articleGenerator.handleSaveTemplate}
+          isRewriting={articleGenerator.isRewriting}
+          originalTitle={articleGenerator.originalTitle}
+          originalDigest={articleGenerator.originalDigest}
         />
       )}
 
@@ -401,11 +510,12 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         templateUrl={articleGenerator.templateUrl}
         setTemplateUrl={articleGenerator.setTemplateUrl}
         isExtractingTemplate={articleGenerator.isExtractingTemplate}
+        onOpenUserTemplatePicker={() => setShowUserTemplatePicker(true)}
         wechatAccounts={wechatManager.wechatAccounts}
         openWeChatAccountManager={wechatManager.openWeChatAccountManager}
         setShowAITools={aiTools.setShowAITools}
         sources={sources}
-        saveLocalDraft={saveLocalDraft}
+        saveLocalDraft={handleSaveDraft}
         featuresAvailable={featuresAvailable}
       />
 
@@ -441,10 +551,9 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         loadWeChatAccounts={wechatManager.loadWeChatAccounts}
       />
 
-      {/* Material Library Modal Overlay */}
+      {/* Material Library Modal Overlay (Slide-in Left Drawer, Non-blocking) */}
       {showMaterialLibrary && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed top-0 left-0 bottom-0 z-50 w-full max-w-xl bg-white shadow-2xl animate-slide-in-left flex flex-col border-r border-gray-100">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
               <div className="flex items-center gap-2">
                 <span className="material-icons text-blue-600">folder_special</span>
@@ -452,7 +561,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
               </div>
               <button 
                 onClick={() => setShowMaterialLibrary(false)}
-                className="p-2 hover:bg-gray-200 rounded-full transition"
+                className="p-2 hover:bg-white/50 rounded-full transition"
               >
                 <span className="material-icons text-gray-500">close</span>
               </button>
@@ -467,14 +576,12 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                 onInsertSvg={(svg) => { handleInsertMaterialSvg(svg); setShowMaterialLibrary(false); }}
               />
             </div>
-          </div>
         </div>
       )}
 
-      {/* AI Tools Modal Overlay */}
+      {/* AI Tools Modal Overlay (Slide-in Left Drawer, Non-blocking) */}
       {aiTools.showAITools && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed top-0 left-0 bottom-0 z-50 w-full max-w-xl bg-white shadow-2xl animate-slide-in-left flex flex-col border-r border-gray-100">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
               <div className="flex items-center gap-2">
                 <span className="material-icons text-purple-600">psychology</span>
@@ -483,7 +590,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
               </div>
               <button
                 onClick={() => aiTools.setShowAITools(false)}
-                className="p-2 hover:bg-gray-200 rounded-full transition"
+                className="p-2 hover:bg-white/50 rounded-full transition"
               >
                 <span className="material-icons text-gray-500">close</span>
               </button>
@@ -513,14 +620,12 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                 loading={aiTools.aiToolLoading}
               />
             </div>
-          </div>
         </div>
       )}
 
-      {/* Design Templates Modal Overlay */}
+      {/* Design Templates Modal Overlay (Slide-in Left Drawer, Non-blocking) */}
       {showDesignTemplates && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed top-0 left-0 bottom-0 z-50 w-full max-w-2xl bg-white shadow-2xl animate-slide-in-left flex flex-col border-r border-gray-100">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-pink-50 to-orange-50">
               <div className="flex items-center gap-2">
                 <span className="material-icons text-pink-600">palette</span>
@@ -529,7 +634,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
               </div>
               <button 
                 onClick={() => setShowDesignTemplates(false)}
-                className="p-2 hover:bg-gray-200 rounded-full transition"
+                className="p-2 hover:bg-white/50 rounded-full transition"
               >
                 <span className="material-icons text-gray-500">close</span>
               </button>
@@ -596,7 +701,6 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
                 ))}
               </div>
             </div>
-          </div>
         </div>
       )}
     </div>

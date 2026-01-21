@@ -129,3 +129,31 @@ export interface KeyUsageStats {
   lastUsed?: number; // timestamp
   lastError?: string;
 }
+
+// Content Block for DOM-based article rewriting
+export interface ContentBlock {
+  index: number;        // 原始顺序索引 (用于对齐)
+  type: 'title' | 'subtitle' | 'paragraph' | 'quote' | 'list-item'; // 语义类型
+  originalText: string; // 原文内容 (用于参考字数)
+  charLimit: number;    // 建议字数限制 (原文长度 ±20%)
+}
+
+// AI Rewriting Request/Response schemas
+export const aiRewriteRequestSchema = z.object({
+  topic: z.string().min(1, 'Topic is required').max(200, 'Topic too long'),
+  blocks: z.array(z.object({
+    index: z.number().min(0),
+    type: z.enum(['title', 'subtitle', 'paragraph', 'quote', 'list-item']),
+    originalText: z.string(),
+    charLimit: z.number().min(1).max(10000)
+  })).min(1, 'At least one block required').max(100, 'Too many blocks')
+});
+
+export type AIRewriteRequest = z.infer<typeof aiRewriteRequestSchema>;
+
+export interface AIRewriteResponse {
+  blocks: {
+    index: number;
+    newContent: string;
+  }[];
+}

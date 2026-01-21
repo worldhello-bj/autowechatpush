@@ -10,6 +10,7 @@ export interface PromptConfig {
   systemPrompt: string;
   generationPrompt: string;
   formattingPrompt: string;
+  templateImportPrompt: string; // Template-based content generation
   multiRound: {
     round1: string; // Background
     round2: string; // Main Content
@@ -73,6 +74,17 @@ export const DEFAULT_PROMPTS: PromptConfig = {
 """
 
 使用'layout_article'工具返回格式化结果。`,
+
+  templateImportPrompt: `请根据主题"{{topic}}"生成纯中文文字内容。
+
+**要求**：
+- 只输出纯汉字文字，不要包含任何标点符号、空格、HTML标签或其他特殊字符
+- 内容要与主题相关，符合公众号文章风格
+- 文字长度要与原始内容相当（约{{charCount}}个汉字）
+- 语言要自然流畅，适合公众号阅读
+- 直接输出文字内容，不要有任何解释或格式
+
+新内容：`,
 
   multiRound: {
     round1: `作为专业公众号编辑，为主题"{{topic}}"生成**引言和背景部分**。

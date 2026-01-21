@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, refresh, logout, me } from '../controllers/index.js';
+import { register, login, wechatLogin, refresh, logout, me } from '../controllers/index.js';
 import { validate, authGuard } from '../middleware/index.js';
 import { loginSchema, registerSchema, refreshTokenSchema } from '../types/index.js';
 
@@ -18,6 +18,13 @@ router.post('/register', validate(registerSchema), register);
  * @access Public
  */
 router.post('/token', validate(loginSchema), login);
+
+/**
+ * @route POST /api/v1/auth/wechat
+ * @desc Login/Register with WeChat Code
+ * @access Public
+ */
+router.post('/wechat', wechatLogin);
 
 /**
  * @route POST /api/v1/auth/refresh

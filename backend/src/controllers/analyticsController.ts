@@ -6,6 +6,10 @@ import {
   getUserActivitySummary,
   getUserEvents,
   getEvents,
+  getUserSegmentation,
+  getTimeAnalytics,
+  getUserBehaviorPatterns,
+  getEventTimeDistribution,
 } from '../services/index.js';
 import { EventType } from '../types/index.js';
 
@@ -153,5 +157,88 @@ export const getAllEvents = async (req: Request, res: Response) => {
     const message = error instanceof Error ? error.message : 'Failed to get events';
     logger.error('Failed to get events', { error: message, requestId: req.requestId });
     sendError(res, 500, 'GET_EVENTS_FAILED', message);
+  }
+};
+
+/**
+ * Get user segmentation data (admin only)
+ * GET /api/v1/admin/analytics/segmentation
+ */
+export const getUserSegmentationData = async (req: Request, res: Response) => {
+  try {
+    logger.info('Admin fetching user segmentation', {
+      adminId: req.user?.userId,
+      requestId: req.requestId,
+    });
+
+    const segmentation = getUserSegmentation();
+    sendSuccess(res, segmentation);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to get user segmentation';
+    logger.error('Failed to get user segmentation', { error: message, requestId: req.requestId });
+    sendError(res, 500, 'GET_SEGMENTATION_FAILED', message);
+  }
+};
+
+/**
+ * Get time-based analytics data (admin only)
+ * GET /api/v1/admin/analytics/time
+ */
+export const getTimeAnalyticsData = async (req: Request, res: Response) => {
+  try {
+    const days = Math.min(parseInt(req.query.days as string) || 30, 90);
+
+    logger.info('Admin fetching time analytics', {
+      adminId: req.user?.userId,
+      days,
+      requestId: req.requestId,
+    });
+
+    const timeData = getTimeAnalytics(days);
+    sendSuccess(res, timeData);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to get time analytics';
+    logger.error('Failed to get time analytics', { error: message, requestId: req.requestId });
+    sendError(res, 500, 'GET_TIME_ANALYTICS_FAILED', message);
+  }
+};
+
+/**
+ * Get user behavior patterns (admin only)
+ * GET /api/v1/admin/analytics/behavior
+ */
+export const getUserBehaviorData = async (req: Request, res: Response) => {
+  try {
+    logger.info('Admin fetching user behavior patterns', {
+      adminId: req.user?.userId,
+      requestId: req.requestId,
+    });
+
+    const behaviorData = getUserBehaviorPatterns();
+    sendSuccess(res, behaviorData);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to get user behavior patterns';
+    logger.error('Failed to get user behavior patterns', { error: message, requestId: req.requestId });
+    sendError(res, 500, 'GET_BEHAVIOR_FAILED', message);
+  }
+};
+
+/**
+ * Get event time distribution analysis (admin only)
+ * GET /api/v1/admin/analytics/timedistribution
+ */
+export const getEventTimeDistributionData = async (req: Request, res: Response) => {
+  try {
+    logger.info('Admin fetching event time distribution', {
+      adminId: req.user?.userId,
+      requestId: req.requestId,
+    });
+
+    const timeDistribution = getEventTimeDistribution();
+    sendSuccess(res, timeDistribution);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to get event time distribution';
+    logger.error('Failed to get event time distribution', { error: message, requestId: req.requestId });
+    sendError(res, 500, 'GET_TIME_DISTRIBUTION_FAILED', message);
   }
 };

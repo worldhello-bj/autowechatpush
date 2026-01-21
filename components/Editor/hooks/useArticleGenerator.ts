@@ -1,9 +1,23 @@
 import { useState, useRef } from 'react';
-import { aiApi } from '../../../services/apiClient';
+import { aiApi, templateApi } from '../../../services/apiClient';
 import analytics from '../../../services/analytics';
 import { GenerationResult } from '../../../services/geminiService';
 import { loadMemory, saveMemory, AIMemory } from '../../../services/dualAIService';
 import { ArticleBlock, GroundingSource, AIProvider } from '../../../types';
+import { extractContentBlocksFromHTML, injectRewrittenContent } from '../utils/domRewriter';
+
+// 文字区域接口定义 - 用于模板中的文字替换
+interface TextRegion {
+  id: string;
+  index: number;
+  type: string;
+  originalText: string;        // 完整的原始文本（包含标点等）
+  chineseSequence: string;     // 纯汉字序列
+  htmlContent: string;         // 原始HTML内容
+  level?: number;
+  marker: string;
+  generatedChinese?: string;   // AI生成的纯汉字内容
+}
 
 interface UseArticleGeneratorProps {
   aiProvider: AIProvider;
@@ -60,8 +74,14 @@ export const useArticleGenerator = ({
   const [importUrl, setImportUrl] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
-  const [isAIFilling, setIsAIFilling] = useState(false);
-  const [skipAIFill, setSkipAIFill] = useState(false);
+  const [importAsTemplate, setImportAsTemplate] = useState(false);
+
+  // Template Rewrite State
+  const [showRewriteDialog, setShowRewriteDialog] = useState(false);
+  const [isRewriting, setIsRewriting] = useState(false);
+  const [importedTemplate, setImportedTemplate] = useState<any>(null);
+  const [originalTitle, setOriginalTitle] = useState('');
+  const [originalDigest, setOriginalDigest] = useState('');
 
   // Template Import State (for article generation)
   const [useTemplate, setUseTemplate] = useState(false);
@@ -89,16 +109,24 @@ export const useArticleGenerator = ({
     }
 
     // Extract template if user chose to use template
-    if (useTemplate && templateUrl.trim()) {
-      try {
-        setIsExtractingTemplate(true);
-        const template = await extractArticleTemplate(templateUrl);
-        setArticleTemplate(template);
-      } catch (error) {
-        console.warn('Template extraction failed, proceeding without template:', error);
+    if (useTemplate) {
+      if (articleTemplate) {
+        console.log('Using existing article template');
+      } else if (templateUrl.trim()) {
+        try {
+          setIsExtractingTemplate(true);
+          const template = await extractArticleTemplate(templateUrl);
+          setArticleTemplate(template);
+        } catch (error) {
+          console.warn('Template extraction failed, proceeding without template:', error);
+          setArticleTemplate(null);
+        } finally {
+          setIsExtractingTemplate(false);
+        }
+      } else {
+        // No template selected and no URL provided
+        console.warn('Use template is checked but no template/URL provided');
         setArticleTemplate(null);
-      } finally {
-        setIsExtractingTemplate(false);
       }
     } else {
       setArticleTemplate(null);
@@ -236,31 +264,210 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
         }
 
       } else {
-        // Standard single-pass generation
-        console.log('[useArticleGenerator] Using standard backend API with provider:', aiProvider);
+        // Check if using template - different generation logic
+        if (articleTemplate) {
+          console.log('[useArticleGenerator] Using template-based generation');
 
-        const response = await aiApi.generate({
-          message: topic,
-          provider: aiProvider,
-          useSearch: useSearch,
-          imageContext: imageContext || undefined,
-          isFormattingMode: isFormattingMode,
-          userprompt: userprompt || undefined, // Include custom user prompt if provided
-          template: articleTemplate || undefined, // Include template if available
-        });
+          // Template-based generation: AI only generates text content, we keep the template structure
+          const templateTextRegions = articleTemplate.textRegions;
 
-        if (!response.success || !response.data) {
-          throw new Error(response.error?.message || 'Failed to generate article');
+          // Generate text content for each text region
+          const newTextRegions: TextRegion[] = [];
+
+          console.log(`[useArticleGenerator] Starting template generation for ${templateTextRegions.length} regions (One-shot)`);
+          
+          // Process all regions in one go
+          const batch = templateTextRegions;
+          
+          // Construct prompt with full context
+          const batchPrompts = batch.map((region: TextRegion, idx: number) => {
+            const paragraphType = region.type === 'header' ? '标题' :
+                                 region.type === 'quote' ? '引用段落' :
+                                 '正文段落';
+            return {
+              id: region.id,
+              index: idx + 1,
+              type: paragraphType,
+              originalText: region.originalText, // Include full text for context
+              charLimit: region.chineseSequence.length
+            };
+          });
+
+          const prompt = `请阅读以下文章结构和原始内容，然后为主题"${topic}"创作一篇新文章。
+
+任务要求：
+1. **结构保持**：严格按照提供的段落顺序和类型生成新内容，不要增加或减少段落。
+2. **上下文连贯**：新文章必须逻辑通顺、内容连贯，是一篇完整的文章。
+3. **内容替换**：为每个段落生成新的内容，替换原始内容。
+4. **字数严格控制**：生成的每个段落字数必须与原文长度（charLimit）基本一致（允许±10%波动），切勿过长或过短，以免破坏排版布局。
+5. **格式输出**：请直接返回 JSON 数组（如果可能），或直接按顺序输出新段落内容（用空行分隔）。
+6. **end标记**：如果生成了"end"或类似的结束标记，之后的内容将被忽略。
+
+原始内容结构列表：
+${JSON.stringify(batchPrompts, null, 2)}
+
+请开始创作，并尽量以 JSON 格式返回结果：
+[
+  { "id": "region-id-1", "content": "新段落内容..." },
+  ...
+]
+如果无法返回JSON，请确保按顺序输出段落内容。`;
+
+          try {
+            console.group('[useArticleGenerator] Template Generation Process');
+            console.log(`1. Request Preparation: ${batch.length} regions`);
+            console.log('   Prompt Preview:', prompt.slice(0, 200) + '...');
+            
+            console.log('2. Calling AI API...');
+            const startTime = Date.now();
+            const batchResponse = await aiApi.helper('custom', prompt, aiProvider, {
+              contentType: 'batch_json',
+            });
+            console.log(`   API Latency: ${Date.now() - startTime}ms`);
+
+            if (batchResponse.success && batchResponse.data) {
+              let generatedResults: any[] = [];
+              const rawResult = batchResponse.data.result as string;
+              
+              console.log('3. Response Received');
+              console.log(`   Length: ${rawResult.length} chars`);
+              console.log('   Raw Preview:', rawResult.slice(0, 200) + '...');
+
+              try {
+                // Robust JSON extraction
+                let jsonStr = rawResult;
+                
+                // 1. Remove markdown code blocks
+                jsonStr = jsonStr.replace(/```json\s*|```/g, '');
+                
+                // 2. Find the first '[' and the last ']'
+                const firstBracket = jsonStr.indexOf('[');
+                const lastBracket = jsonStr.lastIndexOf(']');
+                
+                if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+                  jsonStr = jsonStr.substring(firstBracket, lastBracket + 1);
+                  generatedResults = JSON.parse(jsonStr);
+                  console.log('4. JSON Parsing: Success');
+                  console.log(`   Parsed ${generatedResults.length} items`);
+                } else {
+                  throw new Error('No JSON array structure found in response');
+                }
+              } catch (e: any) {
+                console.warn('4. JSON Parsing: Failed', e.message);
+                console.log('   Attempting Paragraph Matching Fallback...');
+                
+                // Fallback: Treat raw response as sequence of paragraphs
+                const paragraphs = rawResult.split(/\n\n+/).map(p => p.trim()).filter(p => p.length > 0);
+                
+                console.log(`   Fallback Analysis: Found ${paragraphs.length} paragraphs for ${batch.length} regions`);
+                
+                if (paragraphs.length !== batch.length) {
+                  console.warn(`   Count Mismatch: Expected ${batch.length}, got ${paragraphs.length}. Alignment might be imperfect.`);
+                }
+
+                // Map paragraphs to regions 1:1
+                generatedResults = paragraphs.map((para, idx) => {
+                  if (idx < batch.length) {
+                    return {
+                      id: batch[idx].id,
+                      content: para
+                    };
+                  }
+                  return null;
+                }).filter(Boolean);
+                
+                console.log(`   Fallback Result: Mapped ${generatedResults.length} regions`);
+              }
+
+              // Map results back to regions
+              batch.forEach((region: TextRegion) => {
+                const result = generatedResults.find((r: any) => r.id === region.id);
+                const generatedText = result ? result.content : region.chineseSequence;
+                
+                if (!result) {
+                  console.warn(`   Missing content for region ${region.id} (index ${region.index}), using original text.`);
+                }
+                
+                newTextRegions.push({
+                  ...region,
+                  generatedChinese: generatedText
+                });
+              });
+            } else {
+              console.error('API Error:', batchResponse.error);
+              console.warn('Request failed, using original text as fallback');
+              batch.forEach((region: TextRegion) => {
+                newTextRegions.push({
+                  ...region,
+                  generatedChinese: region.chineseSequence
+                });
+              });
+            }
+          } catch (error) {
+            console.error('[useArticleGenerator] Critical Processing Error:', error);
+            batch.forEach((region: TextRegion) => {
+              newTextRegions.push({
+                ...region,
+                generatedChinese: region.chineseSequence
+              });
+            });
+          } finally {
+            console.groupEnd();
+          }
+
+          console.log(`[useArticleGenerator] Final Result: ${newTextRegions.length} text regions ready for injection`);
+
+          // Apply template with new text content
+          console.log('[useArticleGenerator] Applying template with new text regions...');
+          console.log('[useArticleGenerator] Original HTML length:', articleTemplate.originalHtml.length);
+
+          const finalHtml = applyTemplateWithTextReplacement(articleTemplate, newTextRegions);
+
+          console.log('[useArticleGenerator] Final HTML length:', finalHtml.length);
+          console.log('[useArticleGenerator] Template application completed');
+
+          result = {
+            title: articleTemplate.title || 'Generated Article',
+            digest: articleTemplate.digest || 'Generated using template',
+            blocks: [], // Not used in template mode
+            sources: [],
+            html: finalHtml, // Use the templated HTML directly
+          };
+
+          console.log('[useArticleGenerator] Template-based generation completed successfully');
+          console.log('[useArticleGenerator] Result summary:', {
+            title: result.title,
+            htmlLength: finalHtml.length,
+            regionsProcessed: newTextRegions.length
+          });
+
+        } else {
+          // Standard single-pass generation (no template)
+          console.log('[useArticleGenerator] Using standard backend API with provider:', aiProvider);
+
+          const response = await aiApi.generate({
+            message: topic,
+            provider: aiProvider,
+            useSearch: useSearch,
+            imageContext: imageContext || undefined,
+            isFormattingMode: isFormattingMode,
+            userprompt: userprompt || undefined, // Include custom user prompt if provided
+            // 注意：这里不再传递template参数，避免JSON序列化问题
+          });
+
+          if (!response.success || !response.data) {
+            throw new Error(response.error?.message || 'Failed to generate article');
+          }
+
+          // Convert API response to GenerationResult type
+          result = {
+            title: response.data.title,
+            digest: response.data.digest,
+            blocks: response.data.blocks as any as ArticleBlock[],
+            sources: response.data.sources,
+          };
+          console.log('[useArticleGenerator] Backend API generated article successfully');
         }
-
-        // Convert API response to GenerationResult type
-        result = {
-          title: response.data.title,
-          digest: response.data.digest,
-          blocks: response.data.blocks as any as ArticleBlock[],
-          sources: response.data.sources,
-        };
-        console.log('[useArticleGenerator] Backend API generated article successfully');
       }
 
       setArticleTitle(result.title);
@@ -427,42 +634,60 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
         throw new Error(response.error?.message || 'Failed to import article');
       }
 
-      let { title, digest, blocks } = response.data;
+      const { title, digest, blocks, cleanedHtml, svgBlocks } = response.data;
 
-      // Check if user wants to skip AI filling
-      if (!skipAIFill) {
-        try {
-          setIsAIFilling(true);
-          // AI fill imported content
-          const filledBlocks = await fillImportedContentWithAI(blocks, title, aiProvider);
-          blocks = filledBlocks;
-        } catch (fillError: any) {
-          console.warn('AI filling failed, using original content:', fillError);
-          // Continue with original content if AI filling fails
-        } finally {
-          setIsAIFilling(false);
-        }
+      if (importAsTemplate) {
+        // Template mode: Generate text regions and store full template data using DOM Tagging
+        const { taggedHtml, textRegions } = processTemplateHtml(cleanedHtml);
+        
+        setImportedTemplate({
+          title,
+          digest,
+          blocks,
+          cleanedHtml: taggedHtml, // Use tagged HTML which corresponds to originalHtml
+          svgBlocks,
+          textRegions,
+          url: urlToImport,
+          statistics: {
+            totalBlocks: blocks.length,
+            textRegions: textRegions.length,
+            imageBlocks: blocks.filter((b: any) => b.type === 'image').length,
+            codeBlocks: blocks.filter((b: any) => b.type === 'code').length
+          }
+        });
+        setOriginalTitle(title);
+        setOriginalDigest(digest);
+
+        // For template mode, use the tagged HTML for high-fidelity preview
+        setHtmlContent(taggedHtml);
+        setArticleTitle(title);
+        setArticleDigest(digest);
+
+        // Close import dialog and show rewrite dialog
+        setShowImportDialog(false);
+        setShowRewriteDialog(true);
+      } else {
+        // Normal import mode
+        setArticleTitle(title);
+        setArticleDigest(digest);
+
+        // Convert blocks to HTML
+        const html = convertBlocksToHtml(blocks);
+        setHtmlContent(html);
+
+        // Close import dialog
+        setShowImportDialog(false);
       }
 
-      // Update article state - these setters need to be passed from parent
-      setArticleTitle(title);
-      setArticleDigest(digest);
-
-      // Convert blocks to HTML
-      const html = convertBlocksToHtml(blocks);
-      setHtmlContent(html);
-
-      // Close import dialog
-      setShowImportDialog(false);
       setImportUrl('');
-      setSkipAIFill(false); // Reset for next import
+      setImportAsTemplate(false); // Reset for next import
 
       // Track import event (don't let analytics errors affect the import)
       try {
         analytics.track('article_import', {
           url: urlToImport,
           blocksCount: blocks.length,
-          aiFilled: !skipAIFill,
+          asTemplate: importAsTemplate,
         });
       } catch (err) {
         console.error('Analytics tracking failed:', err);
@@ -539,162 +764,13 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     }
   };
 
-  // AI Fill Imported Content
-  const fillImportedContentWithAI = async (
-    blocks: any[],
-    articleTitle: string,
-    aiProvider: AIProvider
-  ): Promise<any[]> => {
-    console.log('[fillImportedContentWithAI] Starting AI fill for imported content');
 
-    // Identify blocks that need filling
-    const blocksToFill = identifyFillableBlocks(blocks);
-    if (blocksToFill.length === 0) {
-      console.log('[fillImportedContentWithAI] No blocks need filling');
-      return blocks;
-    }
 
-    console.log(`[fillImportedContentWithAI] Found ${blocksToFill.length} blocks to fill`);
 
-    // Fill blocks in batches to avoid overwhelming the API
-    const batchSize = 3;
-    const filledBlocks = [...blocks];
 
-    for (let i = 0; i < blocksToFill.length; i += batchSize) {
-      const batch = blocksToFill.slice(i, i + batchSize);
-      const batchPromises = batch.map(async ({ index, block, fillType, plainText, originalHtml }) => {
-        try {
-          const filledContent = await generateContentForBlock(block, fillType, plainText, originalHtml, articleTitle, aiProvider);
-          return { index, content: filledContent };
-        } catch (error) {
-          console.error(`[fillImportedContentWithAI] Failed to fill block ${index}:`, error);
-          return { index, content: originalHtml }; // Keep original HTML on failure
-        }
-      });
-
-      const batchResults = await Promise.all(batchPromises);
-      batchResults.forEach(({ index, content }) => {
-        filledBlocks[index] = { ...filledBlocks[index], content };
-      });
-    }
-
-    console.log('[fillImportedContentWithAI] AI fill completed');
-    return filledBlocks;
-  };
-
-  // Identify blocks that need AI filling (recognize real WeChat article content)
-  const identifyFillableBlocks = (blocks: any[]): Array<{ index: number; block: any; fillType: string; plainText: string; originalHtml: string }> => {
-    const fillableBlocks: Array<{ index: number; block: any; fillType: string; plainText: string; originalHtml: string }> = [];
-
-    blocks.forEach((block, index) => {
-      const content = block.content || '';
-
-      // Extract plain text from HTML content
-      const plainText = extractPlainText(content);
-
-      // Identify all blocks with substantial text content (headers, paragraphs, quotes, cards, callouts)
-      if (['header', 'paragraph', 'quote', 'card', 'callout'].includes(block.type) &&
-          plainText.trim() &&
-          plainText.length > 5) {  // Has substantial content
-
-        const fillType = block.type === 'header' ? 'title' : 'content';
-        fillableBlocks.push({
-          index,
-          block,
-          fillType,
-          plainText,
-          originalHtml: content
-        });
-      }
-    });
-
-    return fillableBlocks;
-  };
-
-  // Extract plain text from HTML content (handles WeChat article rich text)
-  const extractPlainText = (html: string): string => {
-    if (!html) return '';
-
-    try {
-      // Create a temporary DOM element to extract text content
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = html;
-      return tempDiv.textContent || tempDiv.innerText || '';
-    } catch (error) {
-      console.warn('[extractPlainText] Failed to parse HTML:', error);
-      return html; // Fallback to original content
-    }
-  };
-
-  // Generate content for a specific block (handles WeChat rich text HTML)
-  const generateContentForBlock = async (
-    block: any,
-    fillType: string,
-    plainText: string,
-    originalHtml: string,
-    articleTitle: string,
-    aiProvider: AIProvider
-  ): Promise<string> => {
-    let prompt = '';
-
-    switch (fillType) {
-      case 'title':
-        prompt = `基于文章标题"${articleTitle}"，为这个段落生成一个吸引人的小标题。要求：简洁、有创意、相关性强，不超过20个字。当前内容是："${plainText}"，请根据这个内容生成一个更好的标题。`;
-        break;
-      case 'content':
-        prompt = `基于文章标题"${articleTitle}"，为这个段落生成相关的内容。要求：信息丰富、有逻辑、适合微信公众号阅读，保持与原文相似的长度和风格。当前内容是："${plainText.slice(0, 200)}${plainText.length > 200 ? '...' : ''}"，请根据这个内容生成一个更好的版本。`;
-        break;
-      default:
-        return originalHtml;
-    }
-
-    try {
-      const response = await aiApi.generate({
-        message: prompt,
-        provider: aiProvider,
-        useSearch: false,
-        isFormattingMode: false,
-      });
-
-      if (response.success && response.data?.blocks?.[0]?.content) {
-        const newPlainText = response.data.blocks[0].content;
-        // Replace the plain text content while preserving HTML structure and styles
-        return replacePlainTextInHtml(originalHtml, plainText, newPlainText);
-      }
-
-      // Fallback: return original HTML
-      return originalHtml;
-    } catch (error) {
-      console.error(`[generateContentForBlock] Failed to generate content for ${fillType}:`, error);
-      return originalHtml;
-    }
-  };
-
-  // Replace plain text content in HTML while preserving structure and styles
-  const replacePlainTextInHtml = (originalHtml: string, oldPlainText: string, newPlainText: string): string => {
-    if (!originalHtml || !oldPlainText || !newPlainText) return originalHtml;
-
-    try {
-      // For WeChat articles, we need a more sophisticated replacement
-      // For now, use a simple approach: split the text and replace
-      const trimmedOld = oldPlainText.trim();
-      const trimmedNew = newPlainText.trim();
-
-      if (trimmedOld === trimmedNew) return originalHtml;
-
-      // Simple text replacement - this may not work perfectly for complex HTML
-      // but should work for most WeChat article structures
-      return originalHtml.replace(trimmedOld, trimmedNew);
-
-    } catch (error) {
-      console.warn('[replacePlainTextInHtml] Failed to replace text, returning original:', error);
-      return originalHtml;
-    }
-  };
-
-  // Extract article template from URL
+  // Extract article template from URL - Improved DOM Tagging Strategy
   const extractArticleTemplate = async (url: string): Promise<any> => {
-    console.log('[extractArticleTemplate] Extracting template from URL:', url);
+    console.log('[extractArticleTemplate] Starting template extraction from URL:', url);
 
     const response = await aiApi.importUrl(url);
 
@@ -702,41 +778,259 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
       throw new Error(response.error?.message || 'Failed to extract template');
     }
 
-    const { title, digest, blocks } = response.data;
+    const { title, digest, blocks, cleanedHtml, svgBlocks } = response.data;
+    
+    // Process HTML to tag text regions with unique IDs
+    const { taggedHtml, textRegions } = processTemplateHtml(cleanedHtml);
+    
+    console.log('[extractArticleTemplate] Tagging complete. Created', textRegions.length, 'regions');
 
-    // Return complete template with original blocks and content info
-    const template = {
+    // Return template with tagged HTML
+    return {
       title,
       digest,
-      originalBlocks: blocks,
-      contentBlocks: blocks.filter((block: any) =>
-        ['header', 'paragraph', 'quote', 'card', 'callout'].includes(block.type) &&
-        block.content && block.content.trim()
-      ).map((block: any, index: number) => ({
-        index: blocks.indexOf(block), // Original position in blocks array
-        type: block.type,
-        originalContent: block.content,
-        level: block.level || 1,
-        style: block.style,
-        title: block.title,
-        icon: block.icon,
-        language: block.language,
-        alignment: block.alignment,
-        fontSize: block.fontSize,
-        fontWeight: block.fontWeight,
-        fontStyle: block.fontStyle,
-      })),
+      originalHtml: taggedHtml, // Now contains data-ai-id attributes
+      svgBlocks,
+      textRegions,
       statistics: {
         totalBlocks: blocks.length,
-        contentBlocks: blocks.filter((b: any) =>
-          ['header', 'paragraph', 'quote', 'card', 'callout'].includes(b.type) &&
-          b.content && b.content.trim()
-        ).length,
+        textRegions: textRegions.length,
+        imageBlocks: blocks.filter((b: any) => b.type === 'image').length,
+        codeBlocks: blocks.filter((b: any) => b.type === 'code').length
+      }
+    };
+  };
+
+  /**
+   * Process HTML to find and tag text regions with IDs
+   * Uses DOM parser to robustly identify leaf text nodes
+   */
+  const processTemplateHtml = (html: string): { taggedHtml: string; textRegions: TextRegion[] } => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const regions: TextRegion[] = [];
+    let regionIndex = 0;
+
+    // Helper to check if an element is a leaf block (contains text but no block children)
+    const isLeafBlock = (el: Element): boolean => {
+      const blockTags = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote'];
+      const tagName = el.tagName.toLowerCase();
+      
+      // Explicitly exclude non-content tags
+      if (['style', 'script', 'noscript', 'iframe', 'svg', 'path'].includes(tagName)) return false;
+
+      // Explicit block tags are candidates
+      if (blockTags.includes(tagName)) return true;
+      
+      // Divs/Sections are candidates only if they don't have block children
+      if (tagName === 'div' || tagName === 'section') {
+        const hasBlockChildren = Array.from(el.children).some(child => 
+          blockTags.includes(child.tagName.toLowerCase()) || 
+          child.tagName.toLowerCase() === 'div' || 
+          child.tagName.toLowerCase() === 'section'
+        );
+        return !hasBlockChildren && (el.textContent?.trim().length || 0) > 0;
+      }
+      
+      return false;
+    };
+
+    // Recursive traversal
+    const traverse = (node: Node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as HTMLElement;
+        
+        // Skip hidden elements (simple check)
+        if (el.style.display === 'none' || el.style.visibility === 'hidden') return;
+        
+        // Skip non-content tags
+        if (['style', 'script', 'noscript', 'iframe', 'svg'].includes(el.tagName.toLowerCase())) return;
+
+        // If it's a leaf block with Chinese content
+        if (isLeafBlock(el)) {
+          // Use innerText to get visible text only, avoiding CSS/Scripts if they somehow got here
+          const text = el.innerText || el.textContent || '';
+          const hasChinese = /[\u4e00-\u9fff]/.test(text);
+          
+          // Only tag if it has Chinese and sufficient length
+          if (hasChinese && text.trim().length >= 5) {
+            const id = `ai-region-${Date.now()}-${regionIndex++}`;
+            el.setAttribute('data-ai-id', id);
+            el.setAttribute('title', '点击查看原始内容'); // Tooltip hint
+            el.classList.add('ai-template-region'); // Add class for styling/identification
+            
+            regions.push({
+              id,
+              index: regionIndex,
+              type: el.tagName.toLowerCase(),
+              originalText: text,
+              chineseSequence: text.replace(/[^\u4e00-\u9fff]/g, ''),
+              htmlContent: el.outerHTML, // This will capture the element BEFORE placeholder replacement? No, reference.
+              // Wait, el.outerHTML is dynamic. I need to capture it NOW or ensure I replace AFTER.
+              level: 1,
+              marker: id
+            });
+
+            // Generate placeholder text: "可填写区域" repeating
+            const placeholderBase = "可填写区域";
+            const repeatCount = Math.ceil(text.length / placeholderBase.length);
+            const placeholder = placeholderBase.repeat(repeatCount).slice(0, text.length);
+            
+            // Replace content in DOM for visualization
+            el.textContent = placeholder;
+
+            return; // Don't traverse deeper into a tagged block
+          }
+        }
+        // Continue traversing children
+        Array.from(el.children).forEach(traverse);
       }
     };
 
-    console.log('[extractArticleTemplate] Template extracted with', template.contentBlocks.length, 'content blocks');
-    return template;
+    traverse(doc.body);
+
+    return {
+      taggedHtml: doc.body.innerHTML,
+      textRegions: regions
+    };
+  };
+
+  /**
+   * Apply template by finding tagged elements and replacing text
+   * Uses DOM ID lookup for 100% accuracy
+   */
+  const applyTemplateWithTextReplacement = (template: any, newTextRegions: TextRegion[]): string => {
+    console.log('[applyTemplateWithTextReplacement] Starting DOM-based replacement');
+    
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(template.originalHtml, 'text/html');
+    let replacedCount = 0;
+
+    // Restore SVG placeholders first (if any)
+    if (template.svgBlocks) {
+      // This part still uses string replacement on the result, or we can do it in DOM if we can find them
+      // For now, let's keep SVGs as is, assuming they are preserved in doc.body.innerHTML
+    }
+
+    newTextRegions.forEach(region => {
+      if (!region.generatedChinese) return;
+
+      // Find element by data-ai-id
+      const el = doc.querySelector(`[data-ai-id="${region.id}"]`);
+      if (el) {
+        // Direct text replacement
+        el.textContent = region.generatedChinese;
+        
+        // Clean up template markers
+        el.removeAttribute('data-ai-id');
+        el.removeAttribute('title');
+        el.classList.remove('ai-template-region');
+        
+        replacedCount++;
+      } else {
+        console.warn(`[applyTemplateWithTextReplacement] Could not find element with id ${region.id}`);
+      }
+
+    });
+
+    console.log(`[applyTemplateWithTextReplacement] Replaced ${replacedCount} regions`);
+    
+    let resultHtml = doc.body.innerHTML;
+
+    // Restore SVGs using string replacement on the final HTML
+    // (Because DOMParser might have messed up SVGs or we need to put real content back into placeholders)
+    if (template.svgBlocks && template.svgBlocks.length > 0) {
+      const svgMap = new Map<string, string>(template.svgBlocks.map((svg: any) => [svg.id, svg.content]));
+      resultHtml = resultHtml.replace(/<div data-svg-block-id="([^"]+)" class="svg-placeholder"><\/div>/g, (match: string, svgId: string) => {
+        const svgContent = svgMap.get(svgId);
+        return typeof svgContent === 'string' ? svgContent : match;
+      });
+    }
+
+    return resultHtml;
+  };
+
+  // 正则转义辅助函数
+  const escapeRegExp = (string: string): string => {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  };
+
+  // Handle template rewrite
+  const handleRewrite = async (newTopic: string) => {
+    if (!importedTemplate || !newTopic.trim()) {
+      onError('模板数据或主题不能为空');
+      return;
+    }
+
+    setIsRewriting(true);
+    try {
+      // 1. 解析原始HTML内容块
+      const contentBlocks = extractContentBlocksFromHTML(importedTemplate.cleanedHtml);
+
+      if (contentBlocks.length === 0) {
+        onError("无法解析模板内容，请检查HTML格式");
+        return;
+      }
+
+      // 2. 准备发送给AI的数据（去除DOM引用）
+      const blocksForAI = contentBlocks.map(({ domRef, ...block }) => block);
+
+      // 3. 调用AI重写API
+      const response = await aiApi.rewrite({
+        topic: newTopic,
+        blocks: blocksForAI
+      });
+
+      if (response.success && response.data) {
+        // 4. 将AI结果回填到原始DOM中
+        const newHtml = injectRewrittenContent(contentBlocks, response.data);
+        setHtmlContent(newHtml);
+
+        // 更新标题和摘要（可选）
+        setArticleTitle(`AI重写：${newTopic}`);
+        setArticleDigest(`基于"${originalTitle}"模板重写的新内容`);
+
+        // 关闭重写对话框
+        setShowRewriteDialog(false);
+
+        // 清理状态
+        setImportedTemplate(null);
+        setOriginalTitle('');
+        setOriginalDigest('');
+      } else {
+        throw new Error(response.error?.message || '重写失败');
+      }
+    } catch (e: any) {
+      onError(e.message || "文章重写失败");
+    } finally {
+      setIsRewriting(false);
+    }
+  };
+
+  // Save template to backend
+  const handleSaveTemplate = async (name: string): Promise<void> => {
+    if (!importedTemplate) throw new Error("No template data to save");
+    
+    const templateData = {
+      name,
+      originalHtml: importedTemplate.cleanedHtml,
+      textRegions: importedTemplate.textRegions,
+      svgBlocks: importedTemplate.svgBlocks,
+      preview: importedTemplate.digest || "Imported from WeChat article",
+      sourceUrl: importedTemplate.url,
+      statistics: importedTemplate.statistics
+    };
+    
+    const response = await templateApi.create(templateData);
+    
+    if (!response.success) {
+      throw new Error(response.error?.message || "Failed to save template");
+    }
+    
+    analytics.track('template_save', {
+      nameLength: name.length,
+      regionsCount: importedTemplate.textRegions.length
+    });
   };
 
   // Check for existing draft on mount
@@ -784,9 +1078,16 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     isImporting,
     showDisclaimer,
     setShowDisclaimer,
-    isAIFilling,
-    skipAIFill,
-    setSkipAIFill,
+    importAsTemplate,
+    setImportAsTemplate,
+
+    // Template Rewrite states
+    showRewriteDialog,
+    setShowRewriteDialog,
+    isRewriting,
+    importedTemplate,
+    originalTitle,
+    originalDigest,
 
     // Template states (for article generation)
     useTemplate,
@@ -795,6 +1096,7 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     setTemplateUrl: updateTemplateUrl, // Use wrapper function that clears old template
     isExtractingTemplate,
     articleTemplate,
+    setArticleTemplate,
 
     // Stitch states
     stitchFileInputRef,
@@ -808,6 +1110,8 @@ ${JSON.stringify(contentSummary.blocks, null, 2)}
     handleImportArticle,
     acceptDisclaimerAndImport,
     performImport,
+    handleRewrite,
+    handleSaveTemplate,
     saveLocalDraft,
     loadLocalDraft,
     handleInsertHookContent,

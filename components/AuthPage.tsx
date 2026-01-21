@@ -1,9 +1,195 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 
 interface AuthPageProps {
   onSuccess?: () => void;
 }
+
+// 浮动粒子组件
+const FloatingParticles: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationId: number;
+
+    const setCanvasSize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+
+    setCanvasSize();
+    window.addEventListener('resize', setCanvasSize);
+
+    class Particle {
+      x: number;
+      y: number;
+      size: number;
+      speedX: number;
+      speedY: number;
+      opacity: number;
+
+      constructor() {
+        this.x = Math.random() * (canvas?.width || window.innerWidth);
+        this.y = Math.random() * (canvas?.height || window.innerHeight);
+        this.size = Math.random() * 2 + 1;
+        this.speedX = (Math.random() - 0.5) * 0.5;
+        this.speedY = (Math.random() - 0.5) * 0.5;
+        this.opacity = Math.random() * 0.3;
+      }
+
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+
+        const canvasWidth = canvas?.width || window.innerWidth;
+        const canvasHeight = canvas?.height || window.innerHeight;
+
+        if (this.x > canvasWidth) this.x = 0;
+        if (this.x < 0) this.x = canvasWidth;
+        if (this.y > canvasHeight) this.y = 0;
+        if (this.y < 0) this.y = canvasHeight;
+      }
+
+      draw() {
+        if (!ctx) return;
+        ctx.fillStyle = `rgba(34, 197, 94, ${this.opacity})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    const particles: Particle[] = [];
+    const particleCount = 30;
+
+    for (let i = 0; i < particleCount; i++) {
+      particles.push(new Particle());
+    }
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      particles.forEach(particle => {
+        particle.update();
+        particle.draw();
+      });
+
+      requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    return () => {
+      window.removeEventListener('resize', setCanvasSize);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 pointer-events-none"
+      style={{ zIndex: 1 }}
+    />
+  );
+};
+
+// 动画表单字段组件
+interface AnimatedFormFieldProps {
+  type: string;
+  placeholder: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  icon: string;
+  showToggle?: boolean;
+  onToggle?: () => void;
+  showPassword?: boolean;
+  disabled?: boolean;
+}
+
+const AnimatedFormField: React.FC<AnimatedFormFieldProps> = ({
+  type,
+  placeholder,
+  value,
+  onChange,
+  icon,
+  showToggle,
+  onToggle,
+  showPassword,
+  disabled
+}) => {
+  const [isFocused, setIsFocused] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isHovering, setIsHovering] = useState(false);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMousePosition({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+  };
+
+  return (
+    <div className="relative group mb-6">
+      <div
+        className="relative overflow-hidden rounded-xl border border-white/20 bg-white/10 backdrop-blur-sm transition-all duration-300 ease-in-out hover:border-white/30"
+        onMouseMove={handleMouseMove}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+      >
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/60 transition-colors duration-200 group-focus-within:text-white">
+          <span className="material-icons text-lg">{icon}</span>
+        </div>
+
+        <input
+          type={type}
+          value={value}
+          onChange={onChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          disabled={disabled}
+          className="w-full bg-transparent pl-12 pr-12 py-4 text-white placeholder:text-white/40 focus:outline-none text-base disabled:opacity-50"
+          placeholder=""
+        />
+
+        <label className={`absolute left-12 transition-all duration-300 ease-in-out pointer-events-none ${
+          isFocused || value
+            ? 'top-2 text-xs text-green-300 font-medium'
+            : 'top-1/2 -translate-y-1/2 text-sm text-white/60'
+        }`}>
+          {placeholder}
+        </label>
+
+        {showToggle && (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors"
+          >
+            <span className="material-icons text-lg">
+              {showPassword ? 'visibility_off' : 'visibility'}
+            </span>
+          </button>
+        )}
+
+        {isHovering && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: `radial-gradient(200px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(34, 197, 94, 0.1) 0%, transparent 70%)`
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
 
 const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -16,7 +202,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
+  const [showDisclaimer, setShowDisclaimer] = useState(true);
+  const [rememberMe, setRememberMe] = useState(false);
+
   const { login, register } = useAuth();
 
   const validateEmail = (email: string) => {
@@ -83,125 +271,128 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4 sm:p-6">
-      <div className="w-full max-w-md animate-fade-in">
-        {/* Logo */}
-        <div className="text-center mb-6 sm:mb-8 animate-scale-in">
-          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg mb-3 sm:mb-4 transform transition-transform hover:scale-110">
-            <span className="material-icons text-white text-2xl sm:text-3xl">article</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
+      <FloatingParticles />
+
+      {/* Disclaimer Dialog for Login Page */}
+      {showDisclaimer && (
+        <>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 animate-fade-in" />
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4 animate-scale-in">
+            <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl max-w-lg w-full p-8 sm:p-10 border border-white/20">
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <span className="material-icons text-white text-4xl">info</span>
+                </div>
+                <h3 className="text-3xl font-bold text-white mb-3">重要使用声明</h3>
+                <p className="text-xl text-white/80 font-medium">本网站仅供个人使用</p>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-white/20">
+                <h4 className="font-bold text-white mb-4 text-xl">使用条款</h4>
+                <ul className="text-white/90 space-y-4">
+                  <li className="flex items-start gap-3">
+                    <span className="material-icons text-green-400 mt-0.5 text-xl flex-shrink-0">check_circle</span>
+                    <span className="text-lg">本平台仅供个人学习和使用</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="material-icons text-red-400 mt-0.5 text-xl flex-shrink-0">warning</span>
+                    <span className="font-semibold text-red-300 text-lg">本平台不开放给他人使用</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="material-icons text-green-400 mt-0.5 text-xl flex-shrink-0">check_circle</span>
+                    <span className="text-lg">严禁用于商业用途或非法活动</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="material-icons text-green-400 mt-0.5 text-xl flex-shrink-0">check_circle</span>
+                    <span className="text-lg">请遵守相关法律法规和平台规则</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="material-icons text-green-400 mt-0.5 text-xl flex-shrink-0">check_circle</span>
+                    <span className="text-lg">使用过程中产生的任何责任由使用者自行承担</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 mb-8 text-center border border-white/10">
+                <p className="text-xl font-semibold text-white mb-2">备案号：京ICP备2026002161号</p>
+                <p className="text-white/70">WeChat AI Publisher v1.3.0</p>
+              </div>
+
+              <button
+                onClick={() => setShowDisclaimer(false)}
+                className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 px-6 rounded-2xl font-bold hover:from-green-400 hover:to-green-500 transition-all duration-300 shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/50 text-xl transform hover:scale-105"
+              >
+                我已阅读并同意
+              </button>
+            </div>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
-            WeChat <span className="text-green-600">AI Publisher</span>
+        </>
+      )}
+
+      <div className="relative z-10 w-full max-w-md">
+        {/* Logo Section */}
+        <div className="text-center mb-8 animate-fade-in">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-3xl shadow-2xl mb-6 transform transition-all duration-300 hover:scale-110 hover:rotate-3">
+            <span className="material-icons text-white text-4xl">article</span>
+          </div>
+          <h1 className="text-4xl font-bold text-white mb-2 tracking-wide">
+            WeChat <span className="text-green-400">AI Publisher</span>
           </h1>
-            <p className="text-sm sm:text-base text-gray-500 mt-2">
-              登录您的账户
-            </p>
+          <p className="text-xl text-white/70">
+            登录您的账户
+          </p>
         </div>
 
         {/* Auth Form */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 sm:p-8 animate-slide-in-up">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Name field (register only) - 暂时隐藏 */}
-            {showRegister && mode === 'register' && (
-              <div className="animate-fade-in">
-                <label htmlFor="register-name" className="block text-sm font-medium text-gray-700 mb-1">
-                  用户名
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-gray-400 text-lg sm:text-xl">
-                    person
-                  </span>
-                  <input
-                    id="register-name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base"
-                    placeholder="输入您的用户名"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-            )}
+        <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8 animate-slide-in-up">
+          <form onSubmit={handleSubmit} className="space-y-2">
+            {/* Email/Username Field */}
+            <AnimatedFormField
+              type="text"
+              placeholder="用户名或邮箱"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              icon="person"
+              disabled={isLoading}
+            />
 
-            {/* Email/Username */}
-            <div>
-              <label htmlFor="auth-email" className="block text-sm font-medium text-gray-700 mb-1">
-                用户名或邮箱
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-gray-400 text-lg sm:text-xl">
-                  person
-                </span>
+            {/* Password Field */}
+            <AnimatedFormField
+              type={showPassword ? 'text' : 'password'}
+              placeholder="密码"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              icon="lock"
+              showToggle
+              onToggle={() => setShowPassword(!showPassword)}
+              showPassword={showPassword}
+              disabled={isLoading}
+            />
+
+            {/* Remember Me & Forgot Password */}
+            <div className="flex items-center justify-between mb-6">
+              <label className="flex items-center space-x-3 cursor-pointer group">
                 <input
-                  id="auth-email"
-                  type="text"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base"
-                  placeholder="用户名或邮箱"
-                  disabled={isLoading}
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-5 h-5 text-green-400 bg-white/10 border-white/30 rounded focus:ring-green-400 focus:ring-2 transition-all"
                 />
-              </div>
-            </div>
-
-            {/* Password */}
-            <div>
-              <label htmlFor="auth-password" className="block text-sm font-medium text-gray-700 mb-1">
-                密码
+                <span className="text-white/80 group-hover:text-white transition-colors text-sm">记住我</span>
               </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-gray-400 text-lg sm:text-xl">
-                  lock
-                </span>
-                <input
-                  id="auth-password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-12 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base"
-                  placeholder="至少6个字符"
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  aria-label={showPassword ? '隐藏密码' : '显示密码'}
-                >
-                  <span className="material-icons text-lg sm:text-xl">
-                    {showPassword ? 'visibility_off' : 'visibility'}
-                  </span>
-                </button>
-              </div>
-            </div>
 
-            {/* Confirm Password (register only) - 暂时隐藏 */}
-            {showRegister && mode === 'register' && (
-              <div className="animate-fade-in">
-                <label htmlFor="register-confirm-password" className="block text-sm font-medium text-gray-700 mb-1">
-                  确认密码
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-gray-400 text-lg sm:text-xl">
-                    lock_outline
-                  </span>
-                  <input
-                    id="register-confirm-password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base"
-                    placeholder="再次输入密码"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-            )}
+              <button
+                type="button"
+                className="text-sm text-green-400 hover:text-green-300 hover:underline transition-colors"
+              >
+                忘记密码？
+              </button>
+            </div>
 
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm flex items-center gap-2 animate-slide-in-up">
+              <div className="bg-red-500/20 backdrop-blur-sm border border-red-400/30 text-red-300 px-6 py-4 rounded-xl text-sm flex items-center gap-3 animate-slide-in-up mb-6">
                 <span className="material-icons text-lg">error_outline</span>
                 <span className="flex-1">{error}</span>
               </div>
@@ -211,49 +402,54 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-2.5 sm:py-3 px-4 rounded-lg font-medium hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transform hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full relative group bg-gradient-to-r from-green-500 to-green-600 text-white py-4 px-6 rounded-2xl font-bold transition-all duration-300 hover:from-green-400 hover:to-green-500 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden transform hover:scale-105 active:scale-95 shadow-xl shadow-green-500/30"
             >
-              {isLoading ? (
-                <>
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  处理中...
-                </>
-              ) : (
-                <>
-                  <span className="material-icons text-lg">
-                    login
-                  </span>
-                  登录
-                </>
+              <span className={`transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}>
+                <span className="flex items-center justify-center gap-3">
+                  <span className="material-icons text-xl">login</span>
+                  <span className="text-lg">登录</span>
+                </span>
+              </span>
+
+              {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                </div>
               )}
+
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
             </button>
           </form>
 
-          {/* Switch Mode - 暂时隐藏 */}
-          {showRegister && (
-            <div className="text-center">
-              <p className="text-gray-600">
-                {mode === 'login' ? '还没有账户？' : '已有账户？'}
-                <button
-                  type="button"
-                  onClick={switchMode}
-                  className="ml-1 text-green-600 font-medium hover:text-green-700 hover:underline"
-                >
-                  {mode === 'login' ? '立即注册' : '立即登录'}
-                </button>
-              </p>
+          {/* Social Login Options */}
+          <div className="mt-8">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/20" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-slate-900/50 text-white/60 backdrop-blur-sm rounded-full">或使用以下方式</span>
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Footer */}
-        <div className="text-center mt-6 text-sm text-gray-400 space-y-1">
-          <p>WeChat AI Publisher v1.3.0</p>
-          <p className="text-xs text-gray-400">本网站仅供个人使用</p>
-          <p className="text-xs text-gray-400">备案号：京ICP备2026002161号</p>
+            <div className="mt-6 grid grid-cols-3 gap-4">
+              <button className="flex items-center justify-center p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105 group">
+                <span className="material-icons text-white/80 group-hover:text-white text-2xl">login</span>
+              </button>
+              <button className="flex items-center justify-center p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105 group">
+                <span className="material-icons text-white/80 group-hover:text-white text-2xl">phone</span>
+              </button>
+              <button className="flex items-center justify-center p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105 group">
+                <span className="material-icons text-white/80 group-hover:text-white text-2xl">email</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="text-center mt-8 text-white/50 space-y-2">
+            <p className="text-sm">WeChat AI Publisher v1.3.0</p>
+            <p className="text-xs">本网站仅供个人使用 • 备案号：京ICP备2026002161号</p>
+          </div>
         </div>
       </div>
     </div>

@@ -102,3 +102,25 @@ export enum AIProvider {
   DEEPSEEK = 'deepseek',
   QWEN = 'qwen'
 }
+
+// Content Block for DOM-based article rewriting
+export interface ContentBlock {
+  index: number;        // 原始顺序索引 (用于对齐)
+  type: 'title' | 'subtitle' | 'paragraph' | 'quote' | 'list-item'; // 语义类型
+  originalText: string; // 原文内容 (用于参考字数)
+  charLimit: number;    // 建议字数限制 (原文长度 ±20%)
+  domRef?: Element;     // DOM节点引用 (仅在内存中保留，不发给AI)
+}
+
+// AI Rewriting Request/Response types
+export interface AIRewriteRequest {
+  topic: string;        // 新主题
+  blocks: Omit<ContentBlock, 'domRef'>[]; // 不包含DOM引用的内容块
+}
+
+export interface AIRewriteResponse {
+  blocks: {
+    index: number;
+    newContent: string;
+  }[];
+}

@@ -6,8 +6,8 @@ interface ImportDialogProps {
   importUrl: string;
   onImportUrlChange: (url: string) => void;
   isImporting: boolean;
-  skipAIFill?: boolean;
-  onSkipAIFillChange?: (skip: boolean) => void;
+  importAsTemplate?: boolean;
+  onImportAsTemplateChange?: (importAsTemplate: boolean) => void;
 }
 
 const ImportDialog: React.FC<ImportDialogProps> = ({
@@ -16,8 +16,8 @@ const ImportDialog: React.FC<ImportDialogProps> = ({
   importUrl,
   onImportUrlChange,
   isImporting,
-  skipAIFill = false,
-  onSkipAIFillChange
+  importAsTemplate = false,
+  onImportAsTemplateChange
 }) => {
   return (
     <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -59,22 +59,22 @@ const ImportDialog: React.FC<ImportDialogProps> = ({
           </div>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-4">
           <div className="flex items-center gap-2">
-            <span className="material-icons text-blue-600 text-sm">smart_toy</span>
+            <span className="material-icons text-purple-600 text-sm">copy_all</span>
             <div className="flex-1">
-              <p className="text-xs font-medium text-blue-800 mb-1">AI智能填充</p>
-              <p className="text-xs text-blue-700">自动识别并填充文章中的空白区域</p>
+              <p className="text-xs font-medium text-purple-800 mb-1">作为模板导入</p>
+              <p className="text-xs text-purple-700">导入后可输入新主题，AI将基于模板样式重写内容</p>
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={!skipAIFill}
-                onChange={(e) => onSkipAIFillChange?.(!e.target.checked)}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                checked={importAsTemplate}
+                onChange={(e) => onImportAsTemplateChange?.(e.target.checked)}
+                className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"
                 disabled={isImporting}
               />
-              <span className="text-xs text-blue-800">启用</span>
+              <span className="text-xs text-purple-800">启用</span>
             </label>
           </div>
         </div>

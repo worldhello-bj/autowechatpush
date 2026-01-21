@@ -19,7 +19,9 @@ export type EventType =
   | 'page_view'
   | 'settings_update'
   | 'prompt_update'
-  | 'ai_query';
+  | 'ai_query'
+  | 'template_save'
+  | 'template_apply_smart';
 
 interface TrackEventOptions {
   eventType: EventType;

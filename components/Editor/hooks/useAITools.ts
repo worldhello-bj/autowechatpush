@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { aiApi } from '../../../services/apiClient';
 import { StyleSuggestion } from '../../../services/deepSeekService';
 import { AIProvider } from '../../../types';
+import { extractContentBlocksFromHTML, injectRewrittenContent } from '../utils/domRewriter';
 
 // StyleSuggestion type still needed for component state
 export interface AIToolsState {
@@ -12,6 +13,9 @@ export interface AIToolsState {
   styleSuggestions: StyleSuggestion[];
   generatedHook: string;
   generatedCTA: string;
+  showRewriteModal: boolean;
+  rewriteTopic: string;
+  isRewriting: boolean;
 }
 
 export interface AIToolsActions {
@@ -26,6 +30,9 @@ export interface AIToolsActions {
   handleRewriteContent: (style: 'humorous' | 'serious' | 'inspirational' | 'educational' | 'conversational') => Promise<void>;
   handleTranslate: (targetLang: 'zh' | 'en') => Promise<void>;
   handleExpandContent: (style: 'detailed' | 'examples' | 'storytelling') => Promise<void>;
+  handleDOMRewrite: () => Promise<void>;
+  setShowRewriteModal: (show: boolean) => void;
+  setRewriteTopic: (topic: string) => void;
 }
 
 export interface UseAIToolsProps {
@@ -54,6 +61,9 @@ export const useAITools = ({
   const [styleSuggestions, setStyleSuggestions] = useState<StyleSuggestion[]>([]);
   const [generatedHook, setGeneratedHook] = useState('');
   const [generatedCTA, setGeneratedCTA] = useState('');
+  const [showRewriteModal, setShowRewriteModal] = useState(false);
+  const [rewriteTopic, setRewriteTopic] = useState('');
+  const [isRewriting, setIsRewriting] = useState(false);
 
   const getPlainTextContent = (): string => {
     const tempDiv = document.createElement("div");
@@ -210,91 +220,142 @@ export const useAITools = ({
     }
   };
 
-  const handlePolishContent = async (tone: 'professional' | 'casual' | 'formal' | 'creative'): Promise<void> => {
-    const content = getPlainTextContent();
-    if (content.length < 50) {
-      onError("Please generate some article content first.");
+  // Helper to handle structure-aware content processing
+  const processStructuredContent = async (
+    action: string, 
+    options: any = {}
+  ): Promise<void> => {
+    if (!htmlContent.trim()) {
+      onError("请先创建一些文章内容");
       return;
     }
+
     setAiToolLoading(true);
     try {
-      const response = await aiApi.helper('polishContent', content, aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek', { tone });
+      // 1. Extract content blocks
+      const contentBlocks = extractContentBlocksFromHTML(htmlContent);
+      
+      if (contentBlocks.length === 0) {
+        onError("无法解析文章内容，请检查HTML格式");
+        return;
+      }
+
+      // 2. Prepare JSON payload (array of strings)
+      const textArray = contentBlocks.map(b => b.originalText);
+      const jsonContent = JSON.stringify(textArray);
+
+      // 3. Call AI Helper
+      const providerName = aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek';
+      const response = await aiApi.helper(action as any, jsonContent, providerName, options);
+
       if (response.success && response.data) {
-        const polished = typeof response.data.result === 'string' ? response.data.result : '';
-        setHtmlContent(textToSafeHtml(polished));
+        let resultData = response.data.result;
+        
+        // 4. Parse response
+        let resultArray: string[] = [];
+        if (Array.isArray(resultData)) {
+          resultArray = resultData as string[];
+        } else if (typeof resultData === 'string') {
+          // Try parsing if string
+          try {
+            resultArray = JSON.parse(resultData);
+          } catch {
+            // Fallback: if not JSON, treat as single block? No, this will likely fail mapping.
+            // Split by newlines as last resort fallback
+            resultArray = resultData.split('\n').filter(s => s.trim());
+          }
+        }
+
+        if (!Array.isArray(resultArray) || resultArray.length === 0) {
+           throw new Error("AI response format error");
+        }
+
+        // 5. Map back to blocks
+        // Note: AI might return different number of blocks if it merged/split.
+        // But our prompt asks for strict alignment.
+        // We map simply by index.
+        const rewriteResponse = {
+          blocks: contentBlocks.map((block, idx) => ({
+            index: block.index,
+            newContent: resultArray[idx] || block.originalText // Fallback to original if missing
+          }))
+        };
+
+        // 6. Inject back
+        const newHtml = injectRewrittenContent(contentBlocks, rewriteResponse);
+        setHtmlContent(newHtml);
       } else {
-        throw new Error(response.error?.message || 'Failed to polish content');
+        throw new Error(response.error?.message || 'AI processing failed');
       }
     } catch (e: any) {
-      onError(e.message || "Failed to polish content");
+      console.error(e);
+      onError(e.message || "处理失败，请重试");
     } finally {
       setAiToolLoading(false);
     }
+  };
+
+  const handlePolishContent = async (tone: 'professional' | 'casual' | 'formal' | 'creative'): Promise<void> => {
+    await processStructuredContent('polishContent', { tone });
   };
 
   const handleRewriteContent = async (style: 'humorous' | 'serious' | 'inspirational' | 'educational' | 'conversational'): Promise<void> => {
-    const content = getPlainTextContent();
-    if (content.length < 50) {
-      onError("Please generate some article content first.");
-      return;
-    }
-    setAiToolLoading(true);
-    try {
-      const response = await aiApi.helper('rewriteContent', content, aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek', { style });
-      if (response.success && response.data) {
-        const rewritten = typeof response.data.result === 'string' ? response.data.result : '';
-        setHtmlContent(textToSafeHtml(rewritten));
-      } else {
-        throw new Error(response.error?.message || 'Failed to rewrite content');
-      }
-    } catch (e: any) {
-      onError(e.message || "Failed to rewrite content");
-    } finally {
-      setAiToolLoading(false);
-    }
+    await processStructuredContent('rewriteContent', { style });
   };
 
   const handleTranslate = async (targetLang: 'zh' | 'en'): Promise<void> => {
-    const content = getPlainTextContent();
-    if (content.length < 10) {
-      onError("Please generate some article content first.");
-      return;
-    }
-    setAiToolLoading(true);
-    try {
-      const response = await aiApi.helper('translateContent', content, aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek', { targetLanguage: targetLang });
-      if (response.success && response.data) {
-        const translated = typeof response.data.result === 'string' ? response.data.result : '';
-        setHtmlContent(textToSafeHtml(translated));
-      } else {
-        throw new Error(response.error?.message || 'Failed to translate content');
-      }
-    } catch (e: any) {
-      onError(e.message || "Failed to translate content");
-    } finally {
-      setAiToolLoading(false);
-    }
+    await processStructuredContent('translateContent', { targetLanguage: targetLang });
   };
 
   const handleExpandContent = async (style: 'detailed' | 'examples' | 'storytelling'): Promise<void> => {
-    const content = getPlainTextContent();
-    if (content.length < 30) {
-      onError("Please generate some article content first.");
+    await processStructuredContent('expandContent', { style });
+  };
+
+  const handleDOMRewrite = async (): Promise<void> => {
+    if (!rewriteTopic.trim()) {
+      onError("请输入新的主题");
       return;
     }
-    setAiToolLoading(true);
+
+    if (!htmlContent.trim()) {
+      onError("请先创建一些文章内容");
+      return;
+    }
+
+    setIsRewriting(true);
     try {
-      const response = await aiApi.helper('expandContent', content, aiProvider === AIProvider.QWEN ? 'qwen' : 'deepseek', { style });
+      // 1. 解析HTML内容块
+      const contentBlocks = extractContentBlocksFromHTML(htmlContent);
+
+      if (contentBlocks.length === 0) {
+        onError("无法解析文章内容，请检查HTML格式");
+        return;
+      }
+
+      // 2. 准备发送给AI的数据（去除DOM引用）
+      const blocksForAI = contentBlocks.map(({ domRef, ...block }) => block);
+
+      // 3. 调用AI重写API
+      const response = await aiApi.rewrite({
+        topic: rewriteTopic,
+        blocks: blocksForAI
+      });
+
       if (response.success && response.data) {
-        const expanded = typeof response.data.result === 'string' ? response.data.result : '';
-        setHtmlContent(textToSafeHtml(expanded));
+        // 4. 将AI结果回填到原始DOM中
+        const newHtml = injectRewrittenContent(contentBlocks, response.data);
+        setHtmlContent(newHtml);
+
+        // 关闭模态框
+        setShowRewriteModal(false);
+        setRewriteTopic('');
       } else {
-        throw new Error(response.error?.message || 'Failed to expand content');
+        throw new Error(response.error?.message || '重写失败');
       }
     } catch (e: any) {
-      onError(e.message || "Failed to expand content");
+      onError(e.message || "文章重写失败");
     } finally {
-      setAiToolLoading(false);
+      setIsRewriting(false);
     }
   };
 
@@ -307,6 +368,9 @@ export const useAITools = ({
     styleSuggestions,
     generatedHook,
     generatedCTA,
+    showRewriteModal,
+    rewriteTopic,
+    isRewriting,
 
     // Actions
     setShowAITools,
@@ -320,5 +384,8 @@ export const useAITools = ({
     handleRewriteContent,
     handleTranslate,
     handleExpandContent,
+    handleDOMRewrite,
+    setShowRewriteModal,
+    setRewriteTopic,
   };
 };

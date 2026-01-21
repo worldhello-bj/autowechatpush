@@ -207,11 +207,11 @@ export interface GenerationRequest {
   template?: any; // Article template structure for generation guidance
 }
 
-// Import ArticleBlock from types.ts to maintain consistency
-import type { ArticleBlock } from '../types';
+// Import ArticleBlock and rewrite types from types.ts to maintain consistency
+import type { ArticleBlock, AIRewriteRequest, AIRewriteResponse } from '../types';
 
 // Re-export for convenience
-export type { ArticleBlock };
+export type { ArticleBlock, AIRewriteRequest, AIRewriteResponse };
 
 export interface GenerationResult {
   title: string;
@@ -242,15 +242,17 @@ export const aiApi = {
     });
   },
   
-  importUrl: async (url: string, mode: string = 'structure_only'): Promise<ApiResponse<{
+  importUrl: async (url: string, skipAIFill: boolean = false, mode: string = 'structure_only'): Promise<ApiResponse<{
     title: string;
     author: string;
     digest: string;
     blocks: ArticleBlock[];
+    cleanedHtml: string;
+    svgBlocks: Array<{ id: string; content: string }>;
   }>> => {
     return request('/ai/import-url', {
       method: 'POST',
-      body: JSON.stringify({ url, mode }),
+      body: JSON.stringify({ url, skipAIFill, mode }),
     });
   },
   
@@ -268,11 +270,19 @@ export const aiApi = {
     return request('/ai/quota');
   },
   
+  rewrite: async (rewriteRequest: AIRewriteRequest): Promise<ApiResponse<AIRewriteResponse>> => {
+    return request<AIRewriteResponse>('/ai/rewrite', {
+      method: 'POST',
+      body: JSON.stringify(rewriteRequest),
+    });
+  },
+
   getFeatures: async (): Promise<ApiResponse<{
     features: {
       articleGeneration: boolean;
       imageAnalysis: boolean;
       textToSpeech: boolean;
+      articleRewrite: boolean;
     };
     providers: {
       deepseek: boolean;
@@ -503,8 +513,114 @@ export const quotaApi = {
   },
 };
 
+// Template API
+export interface TextRegion {
+  id: string;
+  index: number;
+  type: string;
+  originalText: string;
+  chineseSequence: string;
+  htmlContent: string;
+  level?: number;
+  marker: string;
+  generatedChinese?: string;
+}
+
+export interface UserTemplate {
+  id: string;
+  userId: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  preview?: string;
+  sourceUrl?: string;
+  originalHtml: string; 
+  textRegions: TextRegion[]; 
+  svgBlocks?: Array<{id: string, content: string}>;
+  statistics?: {
+    totalBlocks: number;
+    textRegions: number;
+    imageBlocks: number;
+    codeBlocks: number;
+  };
+}
+
+export const templateApi = {
+  create: async (data: Omit<UserTemplate, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<UserTemplate>> => {
+    return request<UserTemplate>('/templates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  list: async (): Promise<ApiResponse<UserTemplate[]>> => {
+    return request<UserTemplate[]>('/templates');
+  },
+
+  get: async (id: string): Promise<ApiResponse<UserTemplate>> => {
+    return request<UserTemplate>(`/templates/${id}`);
+  },
+
+  update: async (id: string, updates: Partial<Pick<UserTemplate, 'name' | 'preview'>>): Promise<ApiResponse<UserTemplate>> => {
+    return request<UserTemplate>(`/templates/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  },
+
+  delete: async (id: string): Promise<ApiResponse<{ message: string }>> => {
+    return request<{ message: string }>(`/templates/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  apply: async (contentHtml: string, templateId: string): Promise<ApiResponse<{ html: string }>> => {
+    return request<{ html: string }>('/templates/apply', {
+      method: 'POST',
+      body: JSON.stringify({ contentHtml, templateId }),
+    });
+  },
+};
+
+// Draft API
+export interface ArticleDraft {
+  id: string;
+  userId: string;
+  title: string;
+  digest: string;
+  content: string;
+  topic?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export const draftApi = {
+  save: async (data: Omit<ArticleDraft, 'id' | 'userId' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<ApiResponse<ArticleDraft>> => {
+    return request<ArticleDraft>('/drafts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  list: async (): Promise<ApiResponse<ArticleDraft[]>> => {
+    return request<ArticleDraft[]>('/drafts');
+  },
+
+  get: async (id: string): Promise<ApiResponse<ArticleDraft>> => {
+    return request<ArticleDraft>(`/drafts/${id}`);
+  },
+
+  delete: async (id: string): Promise<ApiResponse<{ message: string }>> => {
+    return request<{ message: string }>(`/drafts/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
 export default {
   auth: authApi,
+  template: templateApi,
+  draft: draftApi,
   ai: aiApi,
   health: healthApi,
   material: materialApi,

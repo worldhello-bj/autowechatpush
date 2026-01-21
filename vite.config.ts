@@ -10,6 +10,9 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    watch: {
+      ignored: ['**/backend/data/**']
+    },
     proxy: {
       '/api/wechat': {
         target: 'https://api.weixin.qq.com',

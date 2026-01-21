@@ -7,3 +7,5 @@ export * from './analyticsService.js';
 export * from './aiKeyPoolService.js';
 export * from './feedbackService.js';
 export * from './scraperService.js';
+export * from './templateService.js';
+export * from './draftService.js';

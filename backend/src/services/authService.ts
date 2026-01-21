@@ -43,6 +43,9 @@ const emailIndex: Map<string, string> = new Map(); // email -> userId
 // Index for username (name) lookup
 const nameIndex: Map<string, string> = new Map(); // name (lowercase) -> userId
 
+// Index for WeChat OpenID lookup
+const openIdIndex: Map<string, string> = new Map(); // openId -> userId
+
 // Constants
 const ADMIN_UNLIMITED_QUOTA = 999999;
 
@@ -182,6 +185,9 @@ const loadData = async () => {
       users.set(user.id, user);
       emailIndex.set(user.email.toLowerCase(), user.id);
       nameIndex.set(user.name.toLowerCase(), user.id);
+      if (user.openId) {
+        openIdIndex.set(user.openId, user.id);
+      }
       loadedCount++;
     });
 
@@ -196,6 +202,102 @@ const loadData = async () => {
  */
 export const initUserStore = async (): Promise<void> => {
   await loadData();
+};
+
+/**
+ * Login or Register with WeChat Code
+ */
+export const loginWithWeChat = async (code: string): Promise<AuthResponse> => {
+  // Exchange code for openid (MOCKED for now if env vars missing, or try real call)
+  const appId = process.env.WECHAT_MINI_APP_ID;
+  const secret = process.env.WECHAT_MINI_APP_SECRET;
+
+  let openId = '';
+
+  if (!appId || !secret) {
+       // Fallback for development without credentials
+       logger.warn('WeChat AppID/Secret not configured, using mock OpenID based on code');
+       openId = `mock_openid_${code}`;
+  } else {
+       const url = `https://api.weixin.qq.com/sns/jscode2session?appid=${appId}&secret=${secret}&js_code=${code}&grant_type=authorization_code`;
+       const res = await fetch(url);
+       const data = await res.json() as any;
+       if (data.errcode) {
+           throw new Error(`WeChat Auth Error: ${data.errmsg}`);
+       }
+       openId = data.openid;
+  }
+
+  let userId = openIdIndex.get(openId);
+  
+  if (userId) {
+       // User exists, login
+       const user = users.get(userId)!;
+       
+       // Generate tokens
+       const tokenPayload = { userId, email: user.email, role: user.role };
+       const accessToken = generateAccessToken(tokenPayload);
+       const refreshToken = generateRefreshToken(tokenPayload);
+       
+       // Create session
+       const session: UserSession = {
+          userId,
+          refreshToken,
+          expiresAt: new Date(Date.now() + parseExpiry(config.JWT_REFRESH_EXPIRY)),
+          createdAt: new Date(),
+       };
+       sessions.set(refreshToken, session);
+       
+       logger.info('User logged in via WeChat', { userId });
+
+       return { accessToken, refreshToken, user: { id: userId, email: user.email, name: user.name, quota: user.quota, role: user.role } };
+  } else {
+       // Register new user
+       const newUserId = uuidv4();
+       const now = new Date();
+       const randomSuffix = randomUUID().slice(0, 8);
+       // Use a fake email that won't collide
+       const email = `${openId}@wechat.local`.toLowerCase();
+       const name = `WeChatUser_${randomSuffix}`;
+       // Random password (user won't use it)
+       const passwordHash = await hashPassword(randomUUID());
+       
+       const newUser: User = {
+           id: newUserId,
+           email,
+           name,
+           passwordHash,
+           createdAt: now,
+           updatedAt: now,
+           quota: 50, // Starter quota for WeChat users
+           role: 'user',
+           openId: openId
+       };
+       
+       users.set(newUserId, newUser);
+       emailIndex.set(email, newUserId);
+       nameIndex.set(name.toLowerCase(), newUserId);
+       openIdIndex.set(openId, newUserId);
+       
+       persistData();
+       initializeUserQuota(newUserId, QuotaPlan.FREE);
+       
+       const tokenPayload = { userId: newUserId, email: newUser.email, role: newUser.role };
+       const accessToken = generateAccessToken(tokenPayload);
+       const refreshToken = generateRefreshToken(tokenPayload);
+       
+       const session: UserSession = {
+          userId: newUserId,
+          refreshToken,
+          expiresAt: new Date(Date.now() + parseExpiry(config.JWT_REFRESH_EXPIRY)),
+          createdAt: now,
+       };
+       sessions.set(refreshToken, session);
+       
+       logger.info('User registered via WeChat', { userId: newUserId });
+
+       return { accessToken, refreshToken, user: { id: newUserId, email: newUser.email, name: newUser.name, quota: newUser.quota, role: newUser.role } };
+  }
 };
 
 /**
