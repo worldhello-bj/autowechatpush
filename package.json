@@ -15,6 +15,7 @@
     "dev:admin": "vite --config vite.admin.config.ts",
     "build": "tsc && vite build",
     "build:admin": "vite build --config vite.admin.config.ts",
+    "deploy:web": "npm run build && xcopy dist backend\\web /E /I /Y",
     "preview": "vite preview",
     "start": "node server.cjs",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",

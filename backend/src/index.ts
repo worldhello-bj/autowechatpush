@@ -82,10 +82,10 @@ app.use((req, res, next) => {
 });
 
 // API routes
-app.use('/api', routes);
+app.use('/api/v1', routes);
 
-// API 404 handler - for unmatched /api/* routes
-app.use('/api', notFoundHandler);
+// API 404 handler - for unmatched /api/v1/* routes
+app.use('/api/v1', notFoundHandler);
 
 // Static file serving for frontend (web folder)
 // The web folder contains the built frontend files.
@@ -135,8 +135,8 @@ if (hasFrontend) {
     res.json({
       message: 'WeChat AI Publisher API',
       version: '1.0.0',
-      api: '/api',
-      health: '/api/health',
+      api: '/api/v1',
+      health: '/api/v1/health',
       docs: 'See README.md for API documentation',
       frontend: 'Place built frontend files in the web/ folder to enable web access',
     });
@@ -179,33 +179,33 @@ const startServer = async () => {
     logger.info(`🚀 Server running on http://localhost:${PORT}`);
     logger.info(`🔒 Security: Bound to ${HOST} (not accessible from public internet)`);
     logger.info(`📊 Environment: ${config.NODE_ENV}`);
-    logger.info(`🔗 API Base: http://localhost:${PORT}/api`);
+    logger.info(`🔗 API Base: http://localhost:${PORT}/api/v1`);
     logger.info(`👤 Admin: ${config.ADMIN_EMAIL}`);
     if (config.NODE_ENV !== 'production') {
       logger.info(`🧪 Test Account: test / 123456`);
     }
     logger.info('');
     logger.info('Available endpoints:');
-    logger.info('  GET  /api/health        - Health check');
-    logger.info('  POST /api/auth/register - Register user');
-    logger.info('  POST /api/auth/token    - Login');
-    logger.info('  POST /api/auth/refresh  - Refresh token');
-    logger.info('  GET  /api/auth/me       - Current user');
-    logger.info('  POST /api/ai/generate   - Generate article');
-    logger.info('  POST /api/ai/chat/stream - SSE streaming');
-    logger.info('  GET  /api/ai/quota      - Get quota');
-    logger.info('  POST /api/materials     - Upload material');
-    logger.info('  GET  /api/materials     - List materials');
-    logger.info('  GET  /api/user/quota    - Get user quota status');
-    logger.info('  GET  /api/user/quota/history - Usage history');
+    logger.info('  GET  /api/v1/health        - Health check');
+    logger.info('  POST /api/v1/auth/register - Register user');
+    logger.info('  POST /api/v1/auth/token    - Login');
+    logger.info('  POST /api/v1/auth/refresh  - Refresh token');
+    logger.info('  GET  /api/v1/auth/me       - Current user');
+    logger.info('  POST /api/v1/ai/generate   - Generate article');
+    logger.info('  POST /api/v1/ai/chat/stream - SSE streaming');
+    logger.info('  GET  /api/v1/ai/quota      - Get quota');
+    logger.info('  POST /api/v1/materials     - Upload material');
+    logger.info('  GET  /api/v1/materials     - List materials');
+    logger.info('  GET  /api/v1/user/quota    - Get user quota status');
+    logger.info('  GET  /api/v1/user/quota/history - Usage history');
     logger.info('');
     logger.info('Admin endpoints (require admin role):');
-    logger.info('  GET  /api/admin/stats   - Dashboard stats');
-    logger.info('  GET  /api/admin/users   - List users');
-    logger.info('  POST /api/admin/users   - Create user');
-    logger.info('  PATCH /api/admin/users/:id/role - Change role');
-    logger.info('  PATCH /api/admin/users/:id/quota - Update quota');
-    logger.info('  DELETE /api/admin/users/:id - Delete user');
+    logger.info('  GET  /api/v1/admin/stats   - Dashboard stats');
+    logger.info('  GET  /api/v1/admin/users   - List users');
+    logger.info('  POST /api/v1/admin/users   - Create user');
+    logger.info('  PATCH /api/v1/admin/users/:id/role - Change role');
+    logger.info('  PATCH /api/v1/admin/users/:id/quota - Update quota');
+    logger.info('  DELETE /api/v1/admin/users/:id - Delete user');
   });
 };
 

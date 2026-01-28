@@ -149,13 +149,13 @@ const FeatureCard: React.FC<{
 
   return (
     <div
-      className={`transform transition-all duration-700 ease-out ${
+      className={`transform transition-all duration-700 ease-out h-full ${
         isVisible
           ? 'translate-y-0 opacity-100 scale-100'
           : 'translate-y-8 opacity-0 scale-95'
       }`}
     >
-      <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 hover:border-white/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-green-500/20">
+      <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 hover:border-white/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-green-500/20 h-full flex flex-col">
         <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
           <span className="material-icons text-white text-2xl">{icon}</span>
         </div>

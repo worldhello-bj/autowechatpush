@@ -10,6 +10,7 @@ import analyticsRoutes from './analyticsRoutes.js';
 import feedbackRoutes from './feedbackRoutes.js';
 import templateRoutes from './templateRoutes.js';
 import draftRoutes from './draftRoutes.js';
+import wechatRoutes from './wechatRoutes.js';
 
 const router = Router();
 
@@ -25,5 +26,6 @@ router.use('/analytics', analyticsRoutes);
 router.use('/feedback', feedbackRoutes);
 router.use('/templates', templateRoutes);
 router.use('/drafts', draftRoutes);
+router.use('/wechat', wechatRoutes);
 
 export default router;

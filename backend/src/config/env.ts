@@ -12,7 +12,7 @@ const envSchema = z.object({
   JWT_REFRESH_EXPIRY: z.string().default('7d'),
   
   // CORS configuration
-  CORS_ORIGINS: z.string().default('http://localhost:5173,http://localhost:3000'),
+  CORS_ORIGINS: z.string().default('http://localhost:5173,http://localhost:3000,https://servicewechat.com'),
   
   // Rate limiting
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000), // 1 minute

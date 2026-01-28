@@ -193,8 +193,6 @@ const AnimatedFormField: React.FC<AnimatedFormFieldProps> = ({
 
 const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  // 暂时隐藏注册功能
-  const showRegister = false;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -340,17 +338,29 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
             WeChat <span className="text-green-400">AI Publisher</span>
           </h1>
           <p className="text-xl text-white/70">
-            登录您的账户
+            {mode === 'login' ? '登录您的账户' : '创建新账户'}
           </p>
         </div>
 
         {/* Auth Form */}
         <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8 animate-slide-in-up">
           <form onSubmit={handleSubmit} className="space-y-2">
+            {/* Name Field - Register Only */}
+            {mode === 'register' && (
+              <AnimatedFormField
+                type="text"
+                placeholder="用户名"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                icon="badge"
+                disabled={isLoading}
+              />
+            )}
+
             {/* Email/Username Field */}
             <AnimatedFormField
               type="text"
-              placeholder="用户名或邮箱"
+              placeholder={mode === 'login' ? "用户名或邮箱" : "邮箱地址"}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               icon="person"
@@ -369,6 +379,19 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
               showPassword={showPassword}
               disabled={isLoading}
             />
+
+            {/* Confirm Password - Register Only */}
+            {mode === 'register' && (
+              <AnimatedFormField
+                type={showPassword ? 'text' : 'password'}
+                placeholder="确认密码"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                icon="lock_reset"
+                showPassword={showPassword}
+                disabled={isLoading}
+              />
+            )}
 
             {/* Remember Me & Forgot Password */}
             <div className="flex items-center justify-between mb-6">
@@ -407,7 +430,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
               <span className={`transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}>
                 <span className="flex items-center justify-center gap-3">
                   <span className="material-icons text-xl">login</span>
-                  <span className="text-lg">登录</span>
+                  <span className="text-lg">{mode === 'login' ? '登录' : '注册'}</span>
                 </span>
               </span>
 
@@ -420,6 +443,20 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
             </button>
           </form>
+
+          {/* Switch Mode Button */}
+          <div className="mt-6 text-center animate-fade-in">
+            <p className="text-white/60">
+              {mode === 'login' ? '还没有账号？' : '已有账号？'}
+              <button
+                type="button"
+                onClick={switchMode}
+                className="ml-2 text-green-400 hover:text-green-300 font-medium hover:underline transition-colors"
+              >
+                {mode === 'login' ? '立即注册' : '立即登录'}
+              </button>
+            </p>
+          </div>
 
           {/* Social Login Options */}
           <div className="mt-8">

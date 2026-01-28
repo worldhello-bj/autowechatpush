@@ -23,7 +23,7 @@ export default defineConfig({
     },
     proxy: {
       '/api/v1': {
-        target: 'http://localhost:3001',
+        target: 'https://www.aiwxcreator.cloud/',
         changeOrigin: true
       }
     }

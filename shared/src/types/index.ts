@@ -75,14 +75,25 @@ export interface WeChatCredentials {
   appSecret: string;
 }
 
+export interface WeChatAuthorization {
+  appId: string; // The AppID of the authorized official account
+  authAppId: string; // The AppID of the third-party platform
+  authorizationCode: string; // The authorization code received from callback
+  expiresIn: number;
+  refreshToken: string; // Refresh token for the authorizer access token
+  funcInfo: number[]; // List of authorized permission set IDs
+}
+
 export interface WeChatAccount {
   id: string;
   name: string;
   appId: string;
-  appSecret: string;
+  appSecret?: string; // Optional if using authorization mode
   isDefault: boolean;
   createdAt: string;
   lastUsed?: string;
+  authorization?: WeChatAuthorization; // For Scheme B
+  authType: 'credentials' | 'authorization'; // To distinguish between Scheme A and B
 }
 
 export interface WechatPayload {
@@ -109,7 +120,7 @@ export interface ContentBlock {
   type: 'title' | 'subtitle' | 'paragraph' | 'quote' | 'list-item'; // 语义类型
   originalText: string; // 原文内容 (用于参考字数)
   charLimit: number;    // 建议字数限制 (原文长度 ±20%)
-  domRef?: Element;     // DOM节点引用 (仅在内存中保留，不发给AI)
+  domRef?: any;         // DOM节点引用 (仅在内存中保留，不发给AI)
 }
 
 // AI Rewriting Request/Response types
@@ -123,170 +134,4 @@ export interface AIRewriteResponse {
     index: number;
     newContent: string;
   }[];
-}
-
-// API Response Types
-export interface ApiResponse<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?: {
-    code: string;
-    message: string;
-    details?: unknown;
-  };
-  meta?: {
-    requestId: string;
-    timestamp: string;
-  };
-}
-
-export interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    quota: number;
-    role: 'user' | 'admin';
-  };
-}
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  quota: number;
-  role: 'user' | 'admin';
-}
-
-export interface GenerationRequest {
-  message: string;
-  provider?: 'google' | 'deepseek' | 'qwen';
-  useSearch?: boolean;
-  imageContext?: string;
-  isFormattingMode?: boolean;
-  thinkingMode?: boolean;
-  multiRoundMode?: boolean;
-  userprompt?: string;
-  template?: any;
-}
-
-export interface GenerationResult {
-  title: string;
-  digest: string;
-  blocks: ArticleBlock[];
-  sources: Array<{ title: string; uri: string }>;
-}
-
-export interface AIHelperResponse {
-  action: string;
-  result: string | string[] | Array<{style: string; preview: string}>;
-  provider: string;
-}
-
-export interface SSECallbacks {
-  onThinking?: (data: { message: string }) => void;
-  onBlock?: (block: ArticleBlock) => void;
-  onComplete?: (data: { title: string; digest: string; totalBlocks: number; sources: Array<{ title: string; uri: string }> }) => void;
-  onError?: (error: { code: string; message: string }) => void;
-}
-
-export interface MaterialMetadata {
-  id: string;
-  type: 'image' | 'video' | 'gif' | 'svg';
-  filename: string;
-  originalName: string;
-  mimeType: string;
-  size: number;
-  url: string;
-  createdAt: string;
-}
-
-export interface UploadResponse {
-  id: string;
-  url: string;
-  type: 'image' | 'video' | 'gif' | 'svg';
-  filename: string;
-  size: number;
-}
-
-export interface ListMaterialsResponse {
-  materials: MaterialMetadata[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-}
-
-export type MaterialTypeValue = 'image' | 'video' | 'gif' | 'svg';
-
-export interface QuotaStatus {
-  userId: string;
-  plan: 'free' | 'basic' | 'pro' | 'enterprise';
-  totalQuota: number;
-  usedQuota: number;
-  remainingQuota: number;
-  dailyUsed: number;
-  dailyLimit: number;
-  monthlyUsed: number;
-  monthlyLimit: number;
-  resetDate: string;
-  expiryDate?: string;
-}
-
-export interface UsageRecord {
-  id: string;
-  type: 'ai_generation' | 'material_upload' | 'ai_stream';
-  cost: number;
-  timestamp: string;
-  details?: Record<string, unknown>;
-}
-
-export interface UsageStats {
-  period: 'day' | 'week' | 'month';
-  total: number;
-  byType: Record<string, number>;
-}
-
-export interface TextRegion {
-  id: string;
-  index: number;
-  type: string;
-  originalText: string;
-  chineseSequence: string;
-  htmlContent: string;
-  level?: number;
-  marker: string;
-  generatedChinese?: string;
-}
-
-export interface UserTemplate {
-  id: string;
-  userId: string;
-  name: string;
-  createdAt: number;
-  updatedAt: number;
-  preview?: string;
-  sourceUrl?: string;
-  originalHtml: string; 
-  textRegions: TextRegion[]; 
-  svgBlocks?: Array<{id: string, content: string}>;
-  statistics?: {
-    totalBlocks: number;
-    textRegions: number;
-    imageBlocks: number;
-    codeBlocks: number;
-  };
-}
-
-export interface ArticleDraft {
-  id: string;
-  userId: string;
-  title: string;
-  digest: string;
-  content: string;
-  topic?: string;
-  createdAt: number;
-  updatedAt: number;
 }
