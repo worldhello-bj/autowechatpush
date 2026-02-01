@@ -49,3 +49,9 @@ backend/node_modules
 backend/data
 backend/src/config/aikeys.json
 backend/test-keypool.js
+
+# Shared build artifacts
+shared/src/**/*.js
+shared/src/**/*.d.ts
+shared/src/**/*.js.map
+shared/src/**/*.d.ts.map

@@ -9,6 +9,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { createLogger } from '../utils/index.js';
 import { DEFAULT_PROMPTS, PromptConfig, interpolatePrompt } from '../config/promptConfig.js';
+import { TemplateBlockAnnotation } from '../types/template.js';
 
 const logger = createLogger('prompt-service');
 
@@ -330,13 +331,27 @@ export const buildCompletePrompt = async (
   // Add template guidance if provided
   if (request.template) {
     const template = request.template;
+    
+    // Check if we have structure annotations
+    const hasAnnotations = template.structureAnnotations && 
+                          template.structureAnnotations.length > 0 &&
+                          template.annotationStatus === 'completed';
+    
     userPrompt += `\n\n请为以下文章模板中的每个文字内容块生成新内容，保持原有样式和结构不变：
 
 文章标题：${template.title || '未指定'}
+主题：${request.message}
+`;
 
-需要生成新内容的文字块：
+    // If we have AI-generated structure annotations, include them
+    if (hasAnnotations) {
+      userPrompt += `\n模板结构分析（AI生成的语义标注）：
+这个模板经过AI分析，每个内容块的语义角色和内容指导如下，请严格遵循这些指导生成内容。
+`;
+    }
+
+    userPrompt += `\n需要生成新内容的文字块：
 ${template.contentBlocks?.map((block: any, index: number) => {
-  const blockIndex = block.index + 1; // 1-based position
   const originalContent = block.originalContent?.slice(0, 50) + (block.originalContent?.length > 50 ? '...' : '');
 
   let typeDesc = '';
@@ -349,7 +364,20 @@ ${template.contentBlocks?.map((block: any, index: number) => {
     default: typeDesc = block.type;
   }
 
-  return `文字块 ${index + 1} (位置 ${blockIndex}): ${typeDesc}
+  // Find corresponding annotation if available
+  let annotationInfo = '';
+  if (hasAnnotations && template.structureAnnotations) {
+    const annotation = template.structureAnnotations.find((a: TemplateBlockAnnotation) => a.blockIndex === index);
+    if (annotation) {
+      annotationInfo = `
+  【AI语义标注】
+  - 语义角色: ${annotation.semanticRole}
+  - 内容指导: ${annotation.contentGuidance}
+  - 结构上下文: ${annotation.structuralContext}`;
+    }
+  }
+
+  return `Block ${index}: ${typeDesc}
   原始内容预览: "${originalContent}"
   样式信息: ${JSON.stringify({
     style: block.style,
@@ -361,25 +389,32 @@ ${template.contentBlocks?.map((block: any, index: number) => {
     title: block.title,
     icon: block.icon,
     language: block.language
-  })}`;
+  })}${annotationInfo}`;
 }).join('\n\n') || '无需要生成内容的文字块'}
 
 重要要求：
 1. 为每个文字块生成全新的内容，完全替换原始内容
 2. 保持每个块的类型和所有样式属性完全不变
 3. 生成的内容要与用户指定的主题"${request.message}"完全相关
-4. 内容的长度和复杂度应该与原始内容相当
+4. ${hasAnnotations ? '严格按照每个块的【AI语义标注】中的"内容指导"和"结构上下文"来生成内容' : '内容的长度和复杂度应该与原始内容相当'}
 5. 对于标题块，生成简洁有力的标题
 6. 对于段落块，生成信息丰富的内容
 7. 对于引用块，生成富有哲理或强调性的话语
 8. 对于卡片和提示框，生成相应的说明性内容
 
-请返回一个JSON数组，包含每个文字块的新内容，按原始顺序排列。格式：
-[{"index": 0, "newContent": "新生成的内容"}, {"index": 1, "newContent": "新生成的内容"}, ...]`;
+关键：你必须返回一个纯JSON数组，不要包含任何markdown代码块标记（如\`\`\`json或\`\`\`）。
+数组中每个对象包含两个字段：
+- "index": 数字，从0开始的索引（Block 0对应index:0，Block 1对应index:1，以此类推）
+- "newContent": 字符串，该块的新内容
+
+输出格式示例：
+[{"index": 0, "newContent": "第一个块的新内容"}, {"index": 1, "newContent": "第二个块的新内容"}, {"index": 2, "newContent": "第三个块的新内容"}]`;
 
     logger.info('Added template content fill guidance to prompt', {
       templateTitle: template.title,
-      contentBlocks: template.contentBlocks?.length || 0
+      contentBlocks: template.contentBlocks?.length || 0,
+      hasAnnotations,
+      annotationStatus: template.annotationStatus
     });
   }
 

@@ -14,22 +14,35 @@ const parseJsonFromText = (text: string): any => {
     // First try direct parsing
     return JSON.parse(text);
   } catch {
-    // If direct parsing fails, try to extract JSON from text
-    // Look for JSON array or object patterns
-    const jsonPatterns = [
-      // Match JSON arrays: [{"key": "value"}, ...]
-      /\[[\s\S]*?\]/g,
-      // Match JSON objects: {"key": "value", ...}
-      /\{[\s\S]*?\}/g
-    ];
+    // Remove markdown code blocks if present (```json ... ``` or ``` ... ```)
+    // Match complete code blocks and extract the content
+    let cleanedText = text;
+    const codeBlockPattern = /```(?:json)?\s*\n?([\s\S]*?)\n?```/gi;
+    const codeBlockMatch = text.match(codeBlockPattern);
+    if (codeBlockMatch) {
+      // Extract content from code block
+      cleanedText = text.replace(codeBlockPattern, '$1').trim();
+    }
+    
+    try {
+      // Try parsing the cleaned text
+      return JSON.parse(cleanedText);
+    } catch {
+      // If still fails, try to extract JSON from text
+      // Look for JSON array or object patterns
+      const jsonPatterns = [
+        // Match JSON arrays with proper nesting: [{"key": "value"}, ...]
+        // Use greedy quantifier to capture full array with multiple objects
+        /\[\s*\{[\s\S]*\}\s*\]/,
+        // Match single JSON objects: {"key": "value", ...}
+        /\{[\s\S]*?\}/
+      ];
 
-    for (const pattern of jsonPatterns) {
-      const matches = text.match(pattern);
-      if (matches) {
-        // Try each match until we find valid JSON
-        for (const match of matches) {
+      for (const pattern of jsonPatterns) {
+        const match = cleanedText.match(pattern);
+        if (match) {
           try {
-            const parsed = JSON.parse(match);
+            const parsed = JSON.parse(match[0]);
             // Additional validation for template fill format
             if (Array.isArray(parsed) && parsed.length > 0) {
               // Check if array contains objects with index and newContent
@@ -40,22 +53,29 @@ const parseJsonFromText = (text: string): any => {
                 typeof item.newContent === 'string'
               );
               if (hasValidStructure) {
+                logger.info('Successfully parsed template fill JSON', { 
+                  itemCount: parsed.length 
+                });
                 return parsed;
               }
             }
             // Return any valid JSON as fallback
             return parsed;
-          } catch {
-            // Continue to next match
+          } catch (e) {
+            // Continue to next pattern
+            logger.debug('Failed to parse with pattern', { pattern: pattern.toString() });
             continue;
           }
         }
       }
-    }
 
-    // If no valid JSON found, log and return empty array
-    logger.warn('Could not extract valid JSON from AI response', { text: text.substring(0, 200) });
-    return [];
+      // If no valid JSON found, log and return empty array
+      logger.warn('Could not extract valid JSON from AI response', { 
+        textPreview: text.substring(0, 200),
+        cleanedPreview: cleanedText.substring(0, 200)
+      });
+      return [];
+    }
   }
 };
 
@@ -372,7 +392,10 @@ const callDeepSeekForTemplateFill = async (
   messages: Array<{ role: string; content: string }>,
   thinkingMode: boolean = false
 ): Promise<Array<{ index: number; newContent: string }>> => {
-  logger.info('Calling DeepSeek API for template fill');
+  logger.info('Calling DeepSeek API for template fill', { 
+    thinkingMode,
+    messagesCount: messages.length
+  });
 
   const requestBody: Record<string, unknown> = {
     model: 'deepseek-chat',
@@ -410,10 +433,28 @@ const callDeepSeekForTemplateFill = async (
       throw new Error(errorMessage);
     }
 
+    logger.info('DeepSeek response received', { 
+      contentLength: content.length,
+      contentPreview: content.substring(0, 100)
+    });
+
     // Enhanced JSON parsing - extract JSON from AI response text
     const parsed = parseJsonFromText(content);
+    
+    if (!Array.isArray(parsed)) {
+      logger.error('Parsed result is not an array', { 
+        parsedType: typeof parsed,
+        parsed
+      });
+      throw new Error('AI response is not a valid array');
+    }
+    
+    logger.info('Template fill parsing successful', { 
+      itemsCount: parsed.length
+    });
+    
     success = true;
-    return Array.isArray(parsed) ? parsed : [];
+    return parsed;
 
   } finally {
     // Release the API key back to the pool
@@ -428,7 +469,9 @@ const callQwenForTemplateFill = async (
   apiKey: string,
   messages: Array<{ role: string; content: string }>
 ): Promise<Array<{ index: number; newContent: string }>> => {
-  logger.info('Calling Qwen API for template fill');
+  logger.info('Calling Qwen API for template fill', { 
+    messagesCount: messages.length
+  });
 
   let success = false;
   let errorMessage: string | undefined;
@@ -460,10 +503,28 @@ const callQwenForTemplateFill = async (
       throw new Error(errorMessage);
     }
 
+    logger.info('Qwen response received', { 
+      contentLength: content.length,
+      contentPreview: content.substring(0, 100)
+    });
+
     // Enhanced JSON parsing - extract JSON from AI response text
     const parsed = parseJsonFromText(content);
+    
+    if (!Array.isArray(parsed)) {
+      logger.error('Parsed result is not an array', { 
+        parsedType: typeof parsed,
+        parsed
+      });
+      throw new Error('AI response is not a valid array');
+    }
+    
+    logger.info('Template fill parsing successful', { 
+      itemsCount: parsed.length
+    });
+    
     success = true;
-    return Array.isArray(parsed) ? parsed : [];
+    return parsed;
 
   } finally {
     // Release the API key back to the pool
