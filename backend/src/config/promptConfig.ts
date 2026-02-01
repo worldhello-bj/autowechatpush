@@ -17,6 +17,10 @@ export interface PromptConfig {
     round3: string; // Images & Widgets
     round4: string; // Summary
   };
+  dualAI: {
+    contentPrompt: string; // Dual AI Pass 1: Content generation
+    designPrompt: string;  // Dual AI Pass 2: Design beautification
+  };
 }
 
 // Default prompts based on common WeChat publishing guidelines
@@ -132,6 +136,71 @@ export const DEFAULT_PROMPTS: PromptConfig = {
 - 使用card、highlight、callout、quote块
 
 同时提供最终标题和摘要（适合公众号预览）。`
+  },
+  
+  dualAI: {
+    contentPrompt: `作为微信公众号的专业内容创作者，请为以下主题创作一篇高质量文章：
+
+主题：{{topic}}
+{{imageContext}}
+
+你的专长是创作引人入胜的故事，使用多样化的写作风格和丰富的语言表达。
+
+请专注于：
+- **清晰、引人注目的写作**：使用多样化的句式结构
+- **故事叙述技巧**：包含引子、冲突、解决方案、情感线索
+- **丰富的语言**：比喻、类比、修辞性问题、生动的描述
+- **节奏和韵律**：混合使用简短有力的句子和流畅的长句
+- **引人入胜的开头**：每个章节以吸引注意力的开场白开始
+- **易于理解的例子**：使用读者能够产生共鸣的场景
+- **准确的信息**：以娱乐的方式呈现
+- **文化相关性**：适合中文受众，使用恰当的成语和典故
+
+要求：
+- 创建3-5个结构良好的章节，标题要有创意、吸引眼球
+- 使用多样化的写作技巧：讲故事、比喻、修辞性问题
+- 变化句式结构以增加阅读节奏感
+- 为每个章节提炼关键要点，使用易记的措辞
+- 添加情感触动点和可共鸣的场景
+- 提取相关关键词用于SEO`,
+
+    designPrompt: `作为微信公众号的专业视觉设计师和创意作者，请将以下文章内容转化为精美的"秀米风格"排版布局。
+
+文章标题：{{title}}
+文章摘要：{{digest}}
+
+原始内容概览（共{{blockCount}}个内容块）：
+{{blocks}}
+
+你的专长是创建美观、引人入胜的文章布局，使用丰富多样的内容呈现方式和排版设计。
+
+请专注于：
+- **视觉多样性**：使用不同的区块类型（卡片、提示框、引用、高亮、表格）
+- **丰富的色彩设计**：应用鲜艳的颜色（red, blue, purple, orange, gold, green, pink, cyan, gradient）
+- **卓越的排版**：使用不同的字体大小和粗细建立视觉层次：
+  - fontSize: 'xlarge' 用于醒目的标题和关键统计数据
+  - fontSize: 'large' 用于重要观点和令人难忘的引用
+  - fontSize: 'small' 用于脚注和次要信息
+  - fontWeight: 'bold' 用于关键短语和强调
+  - fontStyle: 'italic' 用于引用和特殊术语
+- **语言多样性**：使用多样化的句式结构和引人入胜的措辞增强内容
+- **适当的视觉层次**：有效使用标题、副标题和强调区块
+- **引人入胜的格式**：添加表情图标、创意标题和吸引注意力的元素
+- **移动端友好的布局**：确保在移动设备上的可读性
+
+要求：
+- 使用至少4-5种不同的颜色以实现视觉多样性
+- 应用排版变化（如上所述）
+- 为关键点使用卡片，配以创意、吸引人的标题
+- 使用适当级别的标题（1、2、3）和引人入胜的语言
+- 在章节之间添加不同样式的分隔线
+- 为重要提示使用提示框，配以相关的表情图标
+- 为令人难忘的陈述或励志句子添加引用区块
+- 为令人惊讶的事实或关键短语使用高亮区块
+- 使每个章节在视觉上具有独特性，拥有自己的颜色主题和排版
+- 变化内容呈现方式：混合简短有力的陈述和详细的解释
+
+请返回优化后的完整文章结构。`
   }
 };
 
@@ -152,12 +221,16 @@ export const interpolatePrompt = (template: string, variables: Record<string, st
  * Get prompt template by type
  */
 export const getPromptTemplate = (
-  type: keyof PromptConfig | 'multiRound.round1' | 'multiRound.round2' | 'multiRound.round3' | 'multiRound.round4',
+  type: keyof PromptConfig | 'multiRound.round1' | 'multiRound.round2' | 'multiRound.round3' | 'multiRound.round4' | 'dualAI.contentPrompt' | 'dualAI.designPrompt',
   config: PromptConfig = DEFAULT_PROMPTS
 ): string => {
   if (type.startsWith('multiRound.')) {
     const round = type.split('.')[1] as keyof typeof config.multiRound;
     return config.multiRound[round];
+  }
+  if (type.startsWith('dualAI.')) {
+    const dualAIType = type.split('.')[1] as keyof typeof config.dualAI;
+    return config.dualAI[dualAIType];
   }
   return config[type as keyof PromptConfig] as string;
 };

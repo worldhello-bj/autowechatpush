@@ -273,6 +273,14 @@ export const buildCompletePrompt = async (
     useMultiRound?: boolean;
     round?: number;
     template?: any;
+    useDualAI?: boolean;
+    dualAIPass?: 'content' | 'design';
+    contentSummary?: {
+      title: string;
+      digest: string;
+      blockCount: number;
+      blocks: any[];
+    };
   },
   promptConfig: PromptConfig
 ): Promise<{
@@ -280,7 +288,7 @@ export const buildCompletePrompt = async (
   userPrompt: string;
   validationResult?: PromptValidationResult;
 }> => {
-  const { message, isFormattingMode, userprompt, imageContext, useMultiRound, round } = request;
+  const { message, isFormattingMode, userprompt, imageContext, useMultiRound, round, useDualAI, dualAIPass, contentSummary } = request;
   
   let systemPrompt = promptConfig.systemPrompt;
   let userPrompt = '';
@@ -309,7 +317,24 @@ export const buildCompletePrompt = async (
   
   // If no valid user prompt, use default template
   if (!userPrompt) {
-    if (useMultiRound && round) {
+    if (useDualAI && dualAIPass) {
+      // Dual AI mode - use specific prompts for content or design pass
+      if (dualAIPass === 'content') {
+        const template = promptConfig.dualAI.contentPrompt;
+        userPrompt = interpolatePrompt(template, { 
+          topic: message,
+          imageContext: imageContext ? `\n图片上下文：${imageContext}\n` : ''
+        });
+      } else if (dualAIPass === 'design' && contentSummary) {
+        const template = promptConfig.dualAI.designPrompt;
+        userPrompt = interpolatePrompt(template, {
+          title: contentSummary.title,
+          digest: contentSummary.digest,
+          blockCount: String(contentSummary.blockCount),
+          blocks: JSON.stringify(contentSummary.blocks, null, 2)
+        });
+      }
+    } else if (useMultiRound && round) {
       // Multi-round mode
       const roundKey = `round${round}` as keyof typeof promptConfig.multiRound;
       const template = promptConfig.multiRound[roundKey];
@@ -323,8 +348,8 @@ export const buildCompletePrompt = async (
     }
   }
   
-  // Add image context if provided
-  if (imageContext) {
+  // Add image context if provided and not already added in dual AI mode
+  if (imageContext && !useDualAI) {
     userPrompt += `\n\nImage context: ${imageContext}`;
   }
 

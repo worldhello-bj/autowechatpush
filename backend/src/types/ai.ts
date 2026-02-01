@@ -69,6 +69,14 @@ export const aiChatRequestSchema = z.object({
   multiRoundMode: z.boolean().default(false),
   userprompt: z.string().max(5000, 'User prompt too long (max 5000 characters)').optional(),
   template: z.any().optional(), // Article template structure for generation guidance
+  useDualAI: z.boolean().default(false).optional(),
+  dualAIPass: z.enum(['content', 'design']).optional(),
+  contentSummary: z.object({
+    title: z.string(),
+    digest: z.string(),
+    blockCount: z.number(),
+    blocks: z.array(z.any())
+  }).optional(),
 });
 
 export type AIChatRequest = z.infer<typeof aiChatRequestSchema>;
