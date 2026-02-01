@@ -4,9 +4,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 import * as cheerio from 'cheerio';
-import { UserTemplate } from '../types/template.js';
+import { UserTemplate, TemplateBlockAnnotation } from '../types/template.js';
 import { createLogger } from '../utils/index.js';
 import { getTemplateById as getSystemTemplateById } from '../config/designTemplates.js';
+import { generateArticle } from './aiService.js';
+import { AIProvider } from '../types/ai.js';
 
 const logger = createLogger('template-service');
 
@@ -147,6 +149,170 @@ export const initTemplateStore = async (): Promise<void> => {
 };
 
 /**
+ * Generate AI-powered structure annotations for a template
+ * This helps the AI understand the template structure better when filling it
+ */
+export const annotateTemplateStructure = async (
+  template: UserTemplate
+): Promise<TemplateBlockAnnotation[]> => {
+  try {
+    logger.info('Generating structure annotations for template', { 
+      templateId: template.id,
+      textRegionsCount: template.textRegions.length 
+    });
+
+    // Build a description of the template structure for AI analysis
+    const structureDescription = template.textRegions.map((region, index) => {
+      return `Block ${index}:
+  Type: ${region.type}
+  Level: ${region.level || 'N/A'}
+  Original Text: ${region.originalText.substring(0, 100)}${region.originalText.length > 100 ? '...' : ''}
+  HTML Marker: ${region.marker}`;
+    }).join('\n\n');
+
+    const prompt = `分析以下文章模板的结构，为每个文字块生成语义标注，帮助AI理解模板结构。
+
+模板名称：${template.name}
+文字块总数：${template.textRegions.length}
+
+文字块详情：
+${structureDescription}
+
+请为每个文字块生成标注，包括：
+1. semanticRole: 语义角色（如 "main_title", "subtitle", "introduction", "body_paragraph", "conclusion", "call_to_action" 等）
+2. contentGuidance: 内容指导（简短说明这个位置应该放什么类型的内容）
+3. structuralContext: 结构上下文（说明这个块在整体文章中的位置和作用）
+
+返回JSON数组格式，每个对象包含：blockIndex, blockType, semanticRole, contentGuidance, structuralContext
+
+示例：
+[
+  {
+    "blockIndex": 0,
+    "blockType": "header",
+    "semanticRole": "main_title",
+    "contentGuidance": "文章的主标题，应该简洁有力，概括文章主题",
+    "structuralContext": "文章开头，第一个元素，是读者看到的第一印象"
+  }
+]`;
+
+    // Call AI to generate annotations
+    const result = await generateArticle({
+      message: prompt,
+      provider: AIProvider.DEEPSEEK,
+      useSearch: false,
+      isFormattingMode: false,
+      thinkingMode: false,
+      multiRoundMode: false,
+    });
+
+    // Extract JSON from AI response
+    const responseText = result.blocks.map(b => b.content).join('\n');
+    
+    // Try to parse JSON
+    let annotations: TemplateBlockAnnotation[] = [];
+    
+    // Remove markdown code blocks if present
+    let cleanedText = responseText;
+    const codeBlockPattern = /```(?:json)?\s*\n?([\s\S]*?)\n?```/gi;
+    const codeBlockMatch = responseText.match(codeBlockPattern);
+    if (codeBlockMatch) {
+      cleanedText = responseText.replace(codeBlockPattern, '$1').trim();
+    }
+    
+    try {
+      // Try to find JSON array in the response
+      const jsonMatch = cleanedText.match(/\[\s*\{[\s\S]*\}\s*\]/);
+      if (jsonMatch) {
+        annotations = JSON.parse(jsonMatch[0]);
+      } else {
+        // Try parsing the whole cleaned text
+        annotations = JSON.parse(cleanedText);
+      }
+    } catch (parseError) {
+      logger.warn('Failed to parse AI annotation response, using fallback annotations', { 
+        error: parseError,
+        responsePreview: responseText.substring(0, 200)
+      });
+      
+      // Fallback: create basic annotations based on template structure
+      annotations = template.textRegions.map((region, index) => ({
+        blockIndex: index,
+        blockType: region.type,
+        semanticRole: region.type === 'header' ? `header_level_${region.level || 1}` : region.type,
+        contentGuidance: `这是一个${region.type}类型的内容块`,
+        structuralContext: `文章中的第${index + 1}个内容块`
+      }));
+    }
+
+    // Validate annotations
+    if (!Array.isArray(annotations)) {
+      throw new Error('Annotations is not an array');
+    }
+
+    logger.info('Structure annotations generated successfully', { 
+      templateId: template.id,
+      annotationsCount: annotations.length 
+    });
+
+    return annotations;
+  } catch (error) {
+    logger.error('Failed to generate structure annotations', { 
+      templateId: template.id,
+      error 
+    });
+    
+    // Return fallback annotations
+    return template.textRegions.map((region, index) => ({
+      blockIndex: index,
+      blockType: region.type,
+      semanticRole: region.type,
+      contentGuidance: `Content block of type ${region.type}`,
+      structuralContext: `Block ${index + 1} in the template`
+    }));
+  }
+};
+
+/**
+ * Update template with structure annotations (async background task)
+ */
+const updateTemplateAnnotationsAsync = async (templateId: string): Promise<void> => {
+  try {
+    const template = templates.get(templateId);
+    if (!template) {
+      logger.warn('Template not found for annotation', { templateId });
+      return;
+    }
+
+    // Mark as processing
+    template.annotationStatus = 'processing';
+    templates.set(templateId, template);
+
+    // Generate annotations
+    const annotations = await annotateTemplateStructure(template);
+
+    // Update template with annotations
+    template.structureAnnotations = annotations;
+    template.annotationStatus = 'completed';
+    templates.set(templateId, template);
+    
+    persistData();
+    
+    logger.info('Template annotations updated', { templateId, annotationsCount: annotations.length });
+  } catch (error) {
+    logger.error('Failed to update template annotations', { templateId, error });
+    
+    // Mark as failed
+    const template = templates.get(templateId);
+    if (template) {
+      template.annotationStatus = 'failed';
+      templates.set(templateId, template);
+      persistData();
+    }
+  }
+};
+
+/**
  * Create a new user template
  */
 export const createTemplate = async (
@@ -162,6 +328,7 @@ export const createTemplate = async (
     userId,
     createdAt: now,
     updatedAt: now,
+    annotationStatus: 'pending', // Mark as pending annotation
   };
   
   templates.set(templateId, template);
@@ -173,6 +340,11 @@ export const createTemplate = async (
   
   persistData();
   logger.info('Template created', { templateId, userId });
+  
+  // Trigger background annotation (don't await - runs async)
+  void updateTemplateAnnotationsAsync(templateId).catch(error => {
+    logger.error('Background annotation failed', { templateId, error });
+  });
   
   return template;
 };
