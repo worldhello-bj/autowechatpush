@@ -199,7 +199,7 @@ ${structureDescription}
     // Call AI to generate annotations
     const result = await generateArticle({
       message: prompt,
-      provider: AIProvider.DEEPSEEK,
+      provider: AIProvider.DEEPSEEK, // Using DeepSeek for consistent annotation quality
       useSearch: false,
       isFormattingMode: false,
       thinkingMode: false,
@@ -217,7 +217,7 @@ ${structureDescription}
     const codeBlockPattern = /```(?:json)?\s*\n?([\s\S]*?)\n?```/gi;
     const codeBlockMatch = responseText.match(codeBlockPattern);
     if (codeBlockMatch) {
-      cleanedText = responseText.replace(codeBlockPattern, '$1').trim();
+      cleanedText = responseText.replace(codeBlockPattern, (_, group1) => group1).trim();
     }
     
     try {

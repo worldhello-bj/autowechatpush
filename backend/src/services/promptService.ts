@@ -9,6 +9,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { createLogger } from '../utils/index.js';
 import { DEFAULT_PROMPTS, PromptConfig, interpolatePrompt } from '../config/promptConfig.js';
+import { TemplateBlockAnnotation } from '../types/template.js';
 
 const logger = createLogger('prompt-service');
 
@@ -366,7 +367,7 @@ ${template.contentBlocks?.map((block: any, index: number) => {
   // Find corresponding annotation if available
   let annotationInfo = '';
   if (hasAnnotations && template.structureAnnotations) {
-    const annotation = template.structureAnnotations.find((a: any) => a.blockIndex === index);
+    const annotation = template.structureAnnotations.find((a: TemplateBlockAnnotation) => a.blockIndex === index);
     if (annotation) {
       annotationInfo = `
   【AI语义标注】
