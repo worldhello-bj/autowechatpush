@@ -333,10 +333,10 @@ export const buildCompletePrompt = async (
     userPrompt += `\n\n请为以下文章模板中的每个文字内容块生成新内容，保持原有样式和结构不变：
 
 文章标题：${template.title || '未指定'}
+主题：${request.message}
 
 需要生成新内容的文字块：
 ${template.contentBlocks?.map((block: any, index: number) => {
-  const blockIndex = block.index + 1; // 1-based position
   const originalContent = block.originalContent?.slice(0, 50) + (block.originalContent?.length > 50 ? '...' : '');
 
   let typeDesc = '';
@@ -349,7 +349,7 @@ ${template.contentBlocks?.map((block: any, index: number) => {
     default: typeDesc = block.type;
   }
 
-  return `文字块 ${index + 1} (位置 ${blockIndex}): ${typeDesc}
+  return `Block ${index}: ${typeDesc}
   原始内容预览: "${originalContent}"
   样式信息: ${JSON.stringify({
     style: block.style,
@@ -374,8 +374,13 @@ ${template.contentBlocks?.map((block: any, index: number) => {
 7. 对于引用块，生成富有哲理或强调性的话语
 8. 对于卡片和提示框，生成相应的说明性内容
 
-请返回一个JSON数组，包含每个文字块的新内容，按原始顺序排列。格式：
-[{"index": 0, "newContent": "新生成的内容"}, {"index": 1, "newContent": "新生成的内容"}, ...]`;
+关键：你必须返回一个纯JSON数组，不要包含任何markdown代码块标记（如\`\`\`json或\`\`\`）。
+数组中每个对象包含两个字段：
+- "index": 数字，从0开始的索引（Block 0对应index:0，Block 1对应index:1，以此类推）
+- "newContent": 字符串，该块的新内容
+
+输出格式示例：
+[{"index": 0, "newContent": "第一个块的新内容"}, {"index": 1, "newContent": "第二个块的新内容"}, {"index": 2, "newContent": "第三个块的新内容"}]`;
 
     logger.info('Added template content fill guidance to prompt', {
       templateTitle: template.title,
