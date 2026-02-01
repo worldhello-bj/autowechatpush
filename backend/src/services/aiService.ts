@@ -15,7 +15,14 @@ const parseJsonFromText = (text: string): any => {
     return JSON.parse(text);
   } catch {
     // Remove markdown code blocks if present (```json ... ``` or ``` ... ```)
-    let cleanedText = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    // Match complete code blocks and extract the content
+    let cleanedText = text;
+    const codeBlockPattern = /```(?:json)?\s*\n?([\s\S]*?)\n?```/gi;
+    const codeBlockMatch = text.match(codeBlockPattern);
+    if (codeBlockMatch) {
+      // Extract content from code block
+      cleanedText = text.replace(codeBlockPattern, '$1').trim();
+    }
     
     try {
       // Try parsing the cleaned text
@@ -25,7 +32,8 @@ const parseJsonFromText = (text: string): any => {
       // Look for JSON array or object patterns
       const jsonPatterns = [
         // Match JSON arrays with proper nesting: [{"key": "value"}, ...]
-        /\[\s*\{[\s\S]*?\}\s*\]/,
+        // Use greedy quantifier to capture full array with multiple objects
+        /\[\s*\{[\s\S]*\}\s*\]/,
         // Match single JSON objects: {"key": "value", ...}
         /\{[\s\S]*?\}/
       ];
