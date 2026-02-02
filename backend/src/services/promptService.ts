@@ -52,14 +52,25 @@ export const loadPromptConfig = async (): Promise<PromptConfig> => {
     const content = await fs.readFile(PROMPT_CONFIG_PATH, 'utf-8');
     const config = JSON.parse(content) as PromptConfig;
     
-    // Validate structure
+    // Validate structure - now includes dualAI validation
     if (!config.systemPrompt || !config.generationPrompt || !config.formattingPrompt || !config.multiRound) {
       logger.warn('Prompt config file has invalid structure, using defaults');
       return DEFAULT_PROMPTS;
     }
     
+    // Merge with defaults to ensure dualAI exists (for backward compatibility with old config files)
+    const mergedConfig: PromptConfig = {
+      ...DEFAULT_PROMPTS,
+      ...config,
+      multiRound: {
+        ...DEFAULT_PROMPTS.multiRound,
+        ...config.multiRound
+      },
+      dualAI: config.dualAI || DEFAULT_PROMPTS.dualAI
+    };
+    
     logger.info('Loaded prompt configuration from file');
-    return config;
+    return mergedConfig;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       logger.info('No prompt config file found, using defaults');
@@ -273,6 +284,14 @@ export const buildCompletePrompt = async (
     useMultiRound?: boolean;
     round?: number;
     template?: any;
+    useDualAI?: boolean;
+    dualAIPass?: 'content' | 'design';
+    contentSummary?: {
+      title: string;
+      digest: string;
+      blockCount: number;
+      blocks: any[];
+    };
   },
   promptConfig: PromptConfig
 ): Promise<{
@@ -280,7 +299,7 @@ export const buildCompletePrompt = async (
   userPrompt: string;
   validationResult?: PromptValidationResult;
 }> => {
-  const { message, isFormattingMode, userprompt, imageContext, useMultiRound, round } = request;
+  const { message, isFormattingMode, userprompt, imageContext, useMultiRound, round, useDualAI, dualAIPass, contentSummary } = request;
   
   let systemPrompt = promptConfig.systemPrompt;
   let userPrompt = '';
@@ -309,7 +328,41 @@ export const buildCompletePrompt = async (
   
   // If no valid user prompt, use default template
   if (!userPrompt) {
-    if (useMultiRound && round) {
+    if (useDualAI && dualAIPass) {
+      // Dual AI mode - use specific prompts for content or design pass
+      // Use fallback to defaults if dualAI config is missing
+      const dualAIConfig = promptConfig.dualAI || DEFAULT_PROMPTS.dualAI;
+      
+      if (dualAIPass === 'content') {
+        const template = dualAIConfig.contentPrompt;
+        userPrompt = interpolatePrompt(template, { 
+          topic: message,
+          imageContext: imageContext ? `\n图片上下文：${imageContext}\n` : ''
+        });
+      } else if (dualAIPass === 'design') {
+        if (contentSummary) {
+          const template = dualAIConfig.designPrompt;
+          userPrompt = interpolatePrompt(template, {
+            title: contentSummary.title,
+            digest: contentSummary.digest,
+            blockCount: String(contentSummary.blockCount),
+            blocks: JSON.stringify(contentSummary.blocks, null, 2)
+          });
+        } else {
+          // Fallback for missing contentSummary - should not be reachable due to validation in aiChatRequestSchema
+          // but kept as defensive programming in case validation is bypassed or disabled in testing
+          logger.warn('Dual AI design pass requested without contentSummary; falling back to default prompt', {
+            useDualAI,
+            dualAIPass
+          });
+          if (isFormattingMode) {
+            userPrompt = interpolatePrompt(promptConfig.formattingPrompt, { input: message });
+          } else {
+            userPrompt = interpolatePrompt(promptConfig.generationPrompt, { topic: message });
+          }
+        }
+      }
+    } else if (useMultiRound && round) {
       // Multi-round mode
       const roundKey = `round${round}` as keyof typeof promptConfig.multiRound;
       const template = promptConfig.multiRound[roundKey];
@@ -323,8 +376,8 @@ export const buildCompletePrompt = async (
     }
   }
   
-  // Add image context if provided
-  if (imageContext) {
+  // Add image context if provided and not already added in dual AI mode
+  if (imageContext && !useDualAI) {
     userPrompt += `\n\nImage context: ${imageContext}`;
   }
 

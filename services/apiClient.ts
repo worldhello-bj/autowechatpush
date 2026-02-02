@@ -195,6 +195,19 @@ export const authApi = {
 };
 
 // AI API
+export interface ContentSummaryBlock {
+  type: string;
+  contentPreview: string;
+  title?: string;
+}
+
+export interface ContentSummary {
+  title: string;
+  digest: string;
+  blockCount: number;
+  blocks: ContentSummaryBlock[];
+}
+
 export interface GenerationRequest {
   message: string;
   provider?: 'google' | 'deepseek' | 'qwen';
@@ -205,6 +218,9 @@ export interface GenerationRequest {
   multiRoundMode?: boolean;
   userprompt?: string; // Custom user prompt for personalized generation
   template?: any; // Article template structure for generation guidance
+  useDualAI?: boolean; // Enable dual AI mode (two-pass approach)
+  dualAIPass?: 'content' | 'design'; // Which pass in dual AI mode
+  contentSummary?: ContentSummary; // Summary from content pass for design pass
 }
 
 // Import ArticleBlock and rewrite types from types.ts to maintain consistency

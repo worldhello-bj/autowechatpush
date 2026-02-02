@@ -267,7 +267,10 @@ const buildPrompt = async (request: AIChatRequest): Promise<{
       imageContext: request.imageContext,
       useMultiRound: request.multiRoundMode,
       round: request.multiRoundMode ? 1 : undefined,
-      template: request.template
+      template: request.template,
+      useDualAI: request.useDualAI,
+      dualAIPass: request.dualAIPass,
+      contentSummary: request.contentSummary
     },
     promptConfig
   );

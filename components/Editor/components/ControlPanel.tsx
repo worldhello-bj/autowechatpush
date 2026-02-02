@@ -289,20 +289,26 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             </span>
           </label>
 
-          {/* Dual AI Mode Toggle */}
+          {/* Dual AI Mode Toggle - Only available for new article generation from topic */}
           <label className={`flex items-center gap-2 px-3 py-2 rounded-md border transition ${
-            isFormattingMode
+            (isFormattingMode || useTemplate)
               ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200'
               : useDualAI
                 ? 'cursor-pointer bg-gradient-to-r from-purple-50 to-blue-50 border-purple-300'
                 : 'cursor-pointer hover:bg-purple-50 border-gray-200'
           }`}
-            title={isFormattingMode ? "双AI模式在格式化模式下不可用" : "双AI模式：分两次调用，先生成内容后美化设计"}>
+            title={
+              isFormattingMode 
+                ? "双AI模式在格式化模式下不可用" 
+                : useTemplate
+                  ? "双AI模式在使用模板时不可用，仅用于主题生成新文章"
+                  : "双AI模式：分两次调用，先生成内容后美化设计"
+            }>
             <input
               type="checkbox"
               checked={useDualAI}
               onChange={(e) => setUseDualAI(e.target.checked)}
-              disabled={isFormattingMode}
+              disabled={isFormattingMode || useTemplate}
               className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4"
             />
             <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
