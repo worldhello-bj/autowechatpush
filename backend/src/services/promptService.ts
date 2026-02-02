@@ -349,7 +349,8 @@ export const buildCompletePrompt = async (
             blocks: JSON.stringify(contentSummary.blocks, null, 2)
           });
         } else {
-          // Missing contentSummary for design pass - log and fall back to standard prompts
+          // Fallback for missing contentSummary - should not be reachable due to validation in aiChatRequestSchema
+          // but kept as defensive programming in case validation is bypassed or disabled in testing
           logger.warn('Dual AI design pass requested without contentSummary; falling back to default prompt', {
             useDualAI,
             dualAIPass

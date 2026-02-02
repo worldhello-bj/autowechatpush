@@ -220,11 +220,26 @@ export const interpolatePrompt = (template: string, variables: Record<string, st
 };
 
 /**
+ * Valid prompt template type keys (excludes object-valued keys to prevent runtime bugs)
+ */
+type PromptTemplateType = 
+  | 'systemPrompt' 
+  | 'generationPrompt' 
+  | 'formattingPrompt' 
+  | 'templateImportPrompt' 
+  | 'multiRound.round1' 
+  | 'multiRound.round2' 
+  | 'multiRound.round3' 
+  | 'multiRound.round4' 
+  | 'dualAI.contentPrompt' 
+  | 'dualAI.designPrompt';
+
+/**
  * Get prompt template by type
  * Excludes object-valued keys to prevent runtime bugs
  */
 export const getPromptTemplate = (
-  type: 'systemPrompt' | 'generationPrompt' | 'formattingPrompt' | 'templateImportPrompt' | 'multiRound.round1' | 'multiRound.round2' | 'multiRound.round3' | 'multiRound.round4' | 'dualAI.contentPrompt' | 'dualAI.designPrompt',
+  type: PromptTemplateType,
   config: PromptConfig = DEFAULT_PROMPTS
 ): string => {
   if (type.startsWith('multiRound.')) {
