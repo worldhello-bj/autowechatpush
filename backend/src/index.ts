@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -17,6 +18,25 @@ const app = express();
 
 // Trust proxy for rate limiting behind reverse proxy
 app.set('trust proxy', 1);
+
+// Response compression (gzip/brotli)
+// Add compression before other middleware to compress all responses
+app.use(compression({
+  filter: (req, res) => {
+    // Don't compress if client doesn't support it
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    // Don't compress SSE streams
+    if (res.getHeader('Content-Type')?.toString().includes('text/event-stream')) {
+      return false;
+    }
+    // Use compression filter to check if response should be compressed
+    return compression.filter(req, res);
+  },
+  level: 6, // Balance between compression ratio and CPU usage (1-9, 6 is good balance)
+  threshold: 1024, // Only compress responses larger than 1KB
+}));
 
 // Security middleware with CSP configuration for frontend
 // Note: 'unsafe-inline' and 'unsafe-eval' are required for Tailwind CDN runtime.
@@ -62,10 +82,27 @@ app.use(limiter);
 // Request ID middleware (for tracing)
 app.use(requestIdMiddleware);
 
-// Body parsing
-// Limit set to 70mb to accommodate base64-encoded files (video max is 50MB, base64 adds ~33% overhead)
-app.use(express.json({ limit: '70mb' }));
-app.use(express.urlencoded({ extended: true, limit: '70mb' }));
+// Body parsing with size limits
+// Different endpoints have different size requirements
+// Materials endpoint needs large limit for video uploads (base64 encoded)
+// AI endpoints need moderate limit for content
+// Auth endpoints need small limit for credentials
+// Default limit for all other endpoints
+
+// Create body parsers with different size limits
+const largeBodyParser = express.json({ limit: '70mb' }); // For material uploads
+const mediumBodyParser = express.json({ limit: '10mb' }); // For AI content
+const smallBodyParser = express.json({ limit: '1mb' }); // For auth/admin
+const defaultBodyParser = express.json({ limit: '5mb' }); // Default
+
+// Apply size limits based on route
+app.use('/api/v1/materials', largeBodyParser); // Material uploads need 70MB
+app.use('/api/v1/ai', mediumBodyParser); // AI generation content
+app.use('/api/v1/auth', smallBodyParser); // Auth endpoints
+app.use('/api/v1/admin', smallBodyParser); // Admin endpoints
+app.use(defaultBodyParser); // Default for other routes
+
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging
 app.use((req, res, next) => {
@@ -116,11 +153,21 @@ try {
 }
 
 if (hasFrontend) {
-  // Serve static files from web folder
-  app.use(express.static(webPath));
+  // Serve static files from web folder with caching
+  app.use(express.static(webPath, {
+    maxAge: config.NODE_ENV === 'production' ? '1y' : '0', // Cache static assets for 1 year in production
+    etag: true,
+    lastModified: true,
+    immutable: config.NODE_ENV === 'production', // Assets are immutable in production
+  }));
   
   // SPA fallback - serve index.html for any non-API GET requests
   app.get(/^(?!\/api\/).*$/, (req, res, next) => {
+    // Don't cache the index.html itself (SPA entry point should always be fresh)
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
     res.sendFile(indexPath, (err) => {
       if (err) {
         next(err);

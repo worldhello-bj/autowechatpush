@@ -12,6 +12,49 @@ interface RateLimitEntry {
 const userRateLimits: Map<string, RateLimitEntry> = new Map();
 const ipRateLimits: Map<string, RateLimitEntry> = new Map();
 
+// Periodic cleanup of expired rate limit entries to prevent memory leaks
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+const cleanupExpiredEntries = () => {
+  const now = Date.now();
+  let cleanedCount = 0;
+  
+  // Clean user rate limits
+  for (const [key, entry] of userRateLimits.entries()) {
+    if (now > entry.resetTime) {
+      userRateLimits.delete(key);
+      cleanedCount++;
+    }
+  }
+  
+  // Clean IP rate limits
+  for (const [key, entry] of ipRateLimits.entries()) {
+    if (now > entry.resetTime) {
+      ipRateLimits.delete(key);
+      cleanedCount++;
+    }
+  }
+  
+  if (cleanedCount > 0) {
+    logger.debug('Cleaned up expired rate limit entries', { 
+      cleanedCount,
+      remainingEntries: userRateLimits.size + ipRateLimits.size
+    });
+  }
+};
+
+// Start periodic cleanup
+const cleanupTimer = setInterval(cleanupExpiredEntries, CLEANUP_INTERVAL_MS);
+
+// Cleanup on process exit
+process.on('SIGTERM', () => {
+  clearInterval(cleanupTimer);
+});
+
+process.on('SIGINT', () => {
+  clearInterval(cleanupTimer);
+});
+
 // Default rate limit configuration
 interface RateLimitConfig {
   windowMs: number;      // Time window in milliseconds

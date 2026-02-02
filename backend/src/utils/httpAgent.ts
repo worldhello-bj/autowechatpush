@@ -1,0 +1,58 @@
+import http from 'http';
+import https from 'https';
+
+/**
+ * HTTP/HTTPS agents with connection pooling for better performance
+ * 
+ * Benefits:
+ * - Reuses TCP connections (keepAlive)
+ * - Reduces connection establishment overhead
+ * - Improves performance for repeated API calls
+ * - Limits concurrent connections to prevent overwhelming external services
+ */
+
+export const httpAgent = new http.Agent({
+  keepAlive: true,           // Reuse connections
+  maxSockets: 50,            // Max concurrent connections per host
+  maxFreeSockets: 10,        // Max idle connections to keep
+  timeout: 60000,            // Connection timeout (60 seconds)
+  keepAliveMsecs: 1000,      // Keep alive probe interval
+});
+
+export const httpsAgent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 50,
+  maxFreeSockets: 10,
+  timeout: 60000,
+  keepAliveMsecs: 1000,
+});
+
+/**
+ * Enhanced fetch with timeout and agent support
+ * 
+ * @param url - URL to fetch
+ * @param options - Fetch options
+ * @param timeoutMs - Timeout in milliseconds (default: 30000)
+ * @returns Response
+ */
+export const fetchWithTimeout = async (
+  url: string,
+  options: RequestInit = {},
+  timeoutMs: number = 30000
+): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      // @ts-ignore - Node.js fetch supports agent option
+      agent: url.startsWith('https:') ? httpsAgent : httpAgent,
+    });
+    
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
