@@ -28,12 +28,23 @@ export const httpsAgent = new https.Agent({
 });
 
 /**
+ * Custom timeout error class
+ */
+class TimeoutError extends Error {
+  constructor(url: string, timeoutMs: number) {
+    super(`Request to ${url} timed out after ${timeoutMs}ms`);
+    this.name = 'TimeoutError';
+  }
+}
+
+/**
  * Enhanced fetch with timeout and agent support
  * 
  * @param url - URL to fetch
  * @param options - Fetch options
  * @param timeoutMs - Timeout in milliseconds (default: 30000)
  * @returns Response
+ * @throws TimeoutError if request times out
  */
 export const fetchWithTimeout = async (
   url: string,
@@ -47,12 +58,22 @@ export const fetchWithTimeout = async (
     const response = await fetch(url, {
       ...options,
       signal: controller.signal,
-      // @ts-ignore - Node.js fetch supports agent option
+      // Note: Node.js fetch implementation supports agent option for connection pooling
+      // but it's not in the standard RequestInit type definition
+      // @ts-expect-error - agent option is supported by Node.js fetch but not in types
       agent: url.startsWith('https:') ? httpsAgent : httpAgent,
     });
     
-    return response;
-  } finally {
     clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    
+    // Convert AbortError to TimeoutError for better context
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new TimeoutError(url, timeoutMs);
+    }
+    
+    throw error;
   }
 };

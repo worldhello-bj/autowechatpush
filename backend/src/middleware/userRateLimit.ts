@@ -43,17 +43,40 @@ const cleanupExpiredEntries = () => {
   }
 };
 
-// Start periodic cleanup
-const cleanupTimer = setInterval(cleanupExpiredEntries, CLEANUP_INTERVAL_MS);
+// Start periodic cleanup only in non-test environments to avoid interference with tests
+let cleanupTimer: NodeJS.Timeout | null = null;
 
-// Cleanup on process exit
-process.on('SIGTERM', () => {
-  clearInterval(cleanupTimer);
-});
+if (process.env.NODE_ENV !== 'test') {
+  cleanupTimer = setInterval(cleanupExpiredEntries, CLEANUP_INTERVAL_MS);
+  
+  // Cleanup on process exit
+  process.on('SIGTERM', () => {
+    if (cleanupTimer) clearInterval(cleanupTimer);
+  });
 
-process.on('SIGINT', () => {
-  clearInterval(cleanupTimer);
-});
+  process.on('SIGINT', () => {
+    if (cleanupTimer) clearInterval(cleanupTimer);
+  });
+}
+
+/**
+ * Start cleanup timer (for test environments or manual control)
+ */
+export const startCleanup = (): void => {
+  if (!cleanupTimer) {
+    cleanupTimer = setInterval(cleanupExpiredEntries, CLEANUP_INTERVAL_MS);
+  }
+};
+
+/**
+ * Stop cleanup timer (for test environments or manual control)
+ */
+export const stopCleanup = (): void => {
+  if (cleanupTimer) {
+    clearInterval(cleanupTimer);
+    cleanupTimer = null;
+  }
+};
 
 // Default rate limit configuration
 interface RateLimitConfig {

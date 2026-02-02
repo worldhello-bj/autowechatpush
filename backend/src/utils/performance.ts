@@ -1,4 +1,5 @@
 import { createLogger } from './logger.js';
+import { Request, Response, NextFunction } from 'express';
 
 const logger = createLogger('performance');
 
@@ -171,7 +172,7 @@ export function clearMetrics(): void {
  * Performance monitoring middleware for Express
  */
 export function performanceMiddleware() {
-  return (req: any, res: any, next: any) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     const startTime = process.hrtime.bigint();
     
     res.on('finish', () => {

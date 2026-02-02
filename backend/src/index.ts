@@ -89,11 +89,19 @@ app.use(requestIdMiddleware);
 // Auth endpoints need small limit for credentials
 // Default limit for all other endpoints
 
+// Body parser size limits (configurable)
+const BODY_LIMITS = {
+  LARGE: '70mb',   // Material uploads (base64 video ~50MB + 33% overhead)
+  MEDIUM: '10mb',  // AI content generation
+  SMALL: '1mb',    // Auth and admin endpoints
+  DEFAULT: '5mb',  // Default for other routes
+} as const;
+
 // Create body parsers with different size limits
-const largeBodyParser = express.json({ limit: '70mb' }); // For material uploads
-const mediumBodyParser = express.json({ limit: '10mb' }); // For AI content
-const smallBodyParser = express.json({ limit: '1mb' }); // For auth/admin
-const defaultBodyParser = express.json({ limit: '5mb' }); // Default
+const largeBodyParser = express.json({ limit: BODY_LIMITS.LARGE });
+const mediumBodyParser = express.json({ limit: BODY_LIMITS.MEDIUM });
+const smallBodyParser = express.json({ limit: BODY_LIMITS.SMALL });
+const defaultBodyParser = express.json({ limit: BODY_LIMITS.DEFAULT });
 
 // Apply size limits based on route
 app.use('/api/v1/materials', largeBodyParser); // Material uploads need 70MB
@@ -102,7 +110,8 @@ app.use('/api/v1/auth', smallBodyParser); // Auth endpoints
 app.use('/api/v1/admin', smallBodyParser); // Admin endpoints
 app.use(defaultBodyParser); // Default for other routes
 
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// URL-encoded parser with default limit to match JSON parser
+app.use(express.urlencoded({ extended: true, limit: BODY_LIMITS.DEFAULT }));
 
 // Request logging
 app.use((req, res, next) => {
