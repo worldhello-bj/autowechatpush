@@ -1,8 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { randomUUID } from 'crypto';
 import { 
   QuotaPlan,
   PLAN_LIMITS,
@@ -10,7 +8,7 @@ import {
   UsageRecord,
   QuotaCheckResult,
 } from '../types/index.js';
-import { createLogger } from '../utils/index.js';
+import { createLogger, createJsonStorage } from '../utils/index.js';
 
 const logger = createLogger('quota-service');
 
@@ -30,8 +28,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, '..', '..', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'quota.json');
-let persistTimer: NodeJS.Timeout | null = null;
-let persistInFlight: Promise<void> | null = null;
 const USAGE_TYPES: UsageRecord['type'][] = ['ai_generation', 'material_upload', 'ai_stream', 'ai_rewrite'];
 // Maximum usage records to keep in memory
 const MAX_USAGE_RECORDS = 10000;
@@ -52,18 +48,13 @@ interface PersistedData {
   usageRecords: UsageRecordSerialized[];
 }
 
-const flushPersist = async () => {
-  if (persistInFlight) {
-    // Try again shortly after current flush completes
-    if (!persistTimer) {
-      persistTimer = setTimeout(() => {
-        persistTimer = null;
-        void flushPersist();
-      }, 50);
-    }
-    return;
-  }
+// Create optimized JSON storage instance (compact mode for efficiency)
+const storage = createJsonStorage<PersistedData>(DATA_FILE, {
+  prettyPrint: false, // Use compact JSON to save space and CPU
+  debounceMs: 100,
+});
 
+const persistData = () => {
   const payload: PersistedData = {
     userQuotas: Array.from(userQuotas.values()).map(q => ({
       ...q,
@@ -77,34 +68,7 @@ const flushPersist = async () => {
     })),
   };
 
-  const tempFile = `${DATA_FILE}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;
-
-  const currentPersist = (async () => {
-    try {
-      await fs.promises.mkdir(DATA_DIR, { recursive: true });
-      await fs.promises.writeFile(tempFile, JSON.stringify(payload, null, 2), 'utf-8');
-      await fs.promises.rename(tempFile, DATA_FILE);
-    } catch (error) {
-      logger.error('Failed to persist quota data to disk', { error });
-    }
-  })();
-
-  persistInFlight = currentPersist.finally(() => {
-    if (persistInFlight === currentPersist) {
-      persistInFlight = null;
-    }
-  });
-
-  await persistInFlight;
-};
-
-const persistData = () => {
-  if (persistTimer) return;
-
-  persistTimer = setTimeout(() => {
-    persistTimer = null;
-    void flushPersist();
-  }, 100);
+  storage.save(payload);
 };
 
 const isValidDateString = (value: unknown): value is string => {
@@ -115,18 +79,12 @@ const isValidDateString = (value: unknown): value is string => {
 
 const loadData = async () => {
   try {
-    try {
-      await fs.promises.access(DATA_FILE, fs.constants.F_OK);
-    } catch {
+    const parsed = await storage.load();
+    
+    if (!parsed) {
       return;
     }
 
-    const raw = await fs.promises.readFile(DATA_FILE, 'utf-8');
-    const parsed = JSON.parse(raw) as Partial<PersistedData>;
-    if (typeof parsed !== 'object' || parsed === null) {
-      logger.warn('Quota data file malformed (non-object), skipping load');
-      return;
-    }
     if (!Array.isArray(parsed.userQuotas) || !Array.isArray(parsed.usageRecords)) {
       logger.warn('Quota data file malformed, skipping load');
       return;
