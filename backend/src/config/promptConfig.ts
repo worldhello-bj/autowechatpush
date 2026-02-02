@@ -221,9 +221,10 @@ export const interpolatePrompt = (template: string, variables: Record<string, st
 
 /**
  * Get prompt template by type
+ * Excludes object-valued keys to prevent runtime bugs
  */
 export const getPromptTemplate = (
-  type: keyof PromptConfig | 'multiRound.round1' | 'multiRound.round2' | 'multiRound.round3' | 'multiRound.round4' | 'dualAI.contentPrompt' | 'dualAI.designPrompt',
+  type: 'systemPrompt' | 'generationPrompt' | 'formattingPrompt' | 'templateImportPrompt' | 'multiRound.round1' | 'multiRound.round2' | 'multiRound.round3' | 'multiRound.round4' | 'dualAI.contentPrompt' | 'dualAI.designPrompt',
   config: PromptConfig = DEFAULT_PROMPTS
 ): string => {
   if (type.startsWith('multiRound.')) {
@@ -234,5 +235,5 @@ export const getPromptTemplate = (
     const dualAIType = type.split('.')[1] as keyof typeof config.dualAI;
     return config.dualAI[dualAIType];
   }
-  return config[type as keyof PromptConfig] as string;
+  return config[type as 'systemPrompt' | 'generationPrompt' | 'formattingPrompt' | 'templateImportPrompt'];
 };

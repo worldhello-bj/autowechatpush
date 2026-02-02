@@ -52,14 +52,25 @@ export const loadPromptConfig = async (): Promise<PromptConfig> => {
     const content = await fs.readFile(PROMPT_CONFIG_PATH, 'utf-8');
     const config = JSON.parse(content) as PromptConfig;
     
-    // Validate structure
+    // Validate structure - now includes dualAI validation
     if (!config.systemPrompt || !config.generationPrompt || !config.formattingPrompt || !config.multiRound) {
       logger.warn('Prompt config file has invalid structure, using defaults');
       return DEFAULT_PROMPTS;
     }
     
+    // Merge with defaults to ensure dualAI exists (for backward compatibility with old config files)
+    const mergedConfig: PromptConfig = {
+      ...DEFAULT_PROMPTS,
+      ...config,
+      multiRound: {
+        ...DEFAULT_PROMPTS.multiRound,
+        ...config.multiRound
+      },
+      dualAI: config.dualAI || DEFAULT_PROMPTS.dualAI
+    };
+    
     logger.info('Loaded prompt configuration from file');
-    return config;
+    return mergedConfig;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       logger.info('No prompt config file found, using defaults');
@@ -319,20 +330,36 @@ export const buildCompletePrompt = async (
   if (!userPrompt) {
     if (useDualAI && dualAIPass) {
       // Dual AI mode - use specific prompts for content or design pass
+      // Use fallback to defaults if dualAI config is missing
+      const dualAIConfig = promptConfig.dualAI || DEFAULT_PROMPTS.dualAI;
+      
       if (dualAIPass === 'content') {
-        const template = promptConfig.dualAI.contentPrompt;
+        const template = dualAIConfig.contentPrompt;
         userPrompt = interpolatePrompt(template, { 
           topic: message,
           imageContext: imageContext ? `\n图片上下文：${imageContext}\n` : ''
         });
-      } else if (dualAIPass === 'design' && contentSummary) {
-        const template = promptConfig.dualAI.designPrompt;
-        userPrompt = interpolatePrompt(template, {
-          title: contentSummary.title,
-          digest: contentSummary.digest,
-          blockCount: String(contentSummary.blockCount),
-          blocks: JSON.stringify(contentSummary.blocks, null, 2)
-        });
+      } else if (dualAIPass === 'design') {
+        if (contentSummary) {
+          const template = dualAIConfig.designPrompt;
+          userPrompt = interpolatePrompt(template, {
+            title: contentSummary.title,
+            digest: contentSummary.digest,
+            blockCount: String(contentSummary.blockCount),
+            blocks: JSON.stringify(contentSummary.blocks, null, 2)
+          });
+        } else {
+          // Missing contentSummary for design pass - log and fall back to standard prompts
+          logger.warn('Dual AI design pass requested without contentSummary; falling back to default prompt', {
+            useDualAI,
+            dualAIPass
+          });
+          if (isFormattingMode) {
+            userPrompt = interpolatePrompt(promptConfig.formattingPrompt, { input: message });
+          } else {
+            userPrompt = interpolatePrompt(promptConfig.generationPrompt, { topic: message });
+          }
+        }
       }
     } else if (useMultiRound && round) {
       // Multi-round mode

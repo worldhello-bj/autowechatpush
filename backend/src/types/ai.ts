@@ -72,11 +72,41 @@ export const aiChatRequestSchema = z.object({
   useDualAI: z.boolean().default(false).optional(),
   dualAIPass: z.enum(['content', 'design']).optional(),
   contentSummary: z.object({
-    title: z.string(),
-    digest: z.string(),
-    blockCount: z.number(),
-    blocks: z.array(z.any())
+    title: z.string().max(200, 'Title too long'),
+    digest: z.string().max(500, 'Digest too long'),
+    blockCount: z.number().min(0).max(100),
+    blocks: z.array(z.object({
+      type: z.string(),
+      contentPreview: z.string().max(200),
+      title: z.string().optional()
+    })).max(100, 'Too many blocks in content summary')
   }).optional(),
+}).superRefine((data, ctx) => {
+  // Validate dual AI mode requirements
+  if (data.useDualAI && !data.dualAIPass) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'dualAIPass is required when useDualAI is true',
+      path: ['dualAIPass']
+    });
+  }
+  
+  if (data.dualAIPass === 'design' && !data.contentSummary) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'contentSummary is required when dualAIPass is "design"',
+      path: ['contentSummary']
+    });
+  }
+  
+  // Dual AI mode is only for new article generation, not template-based or formatting
+  if (data.useDualAI && (data.template || data.isFormattingMode)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Dual AI mode is only available for new article generation from topic, not for template-based generation or formatting',
+      path: ['useDualAI']
+    });
+  }
 });
 
 export type AIChatRequest = z.infer<typeof aiChatRequestSchema>;
