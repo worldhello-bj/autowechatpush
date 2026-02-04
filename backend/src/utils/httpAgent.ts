@@ -30,7 +30,7 @@ export const httpsAgent = new https.Agent({
 /**
  * Custom timeout error class
  */
-class TimeoutError extends Error {
+export class TimeoutError extends Error {
   constructor(url: string, timeoutMs: number) {
     super(`Request to ${url} timed out after ${timeoutMs}ms`);
     this.name = 'TimeoutError';

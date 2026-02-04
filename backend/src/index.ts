@@ -23,12 +23,18 @@ app.set('trust proxy', 1);
 // Add compression before other middleware to compress all responses
 app.use(compression({
   filter: (req, res) => {
-    // Don't compress if client doesn't support it
+    // Don't compress if client asks to disable it
     if (req.headers['x-no-compression']) {
       return false;
     }
-    // Don't compress SSE streams
-    if (res.getHeader('Content-Type')?.toString().includes('text/event-stream')) {
+    // Don't compress SSE streams: check route path instead of relying on Content-Type header,
+    // which may not be set yet when the compression filter runs.
+    if (req.path && req.path.includes('/chat/stream')) {
+      return false;
+    }
+    // Extra safety: also avoid compression if Content-Type is already known as SSE
+    const contentType = res.getHeader('Content-Type');
+    if (typeof contentType === 'string' && contentType.includes('text/event-stream')) {
       return false;
     }
     // Use compression filter to check if response should be compressed
@@ -103,14 +109,30 @@ const mediumBodyParser = express.json({ limit: BODY_LIMITS.MEDIUM });
 const smallBodyParser = express.json({ limit: BODY_LIMITS.SMALL });
 const defaultBodyParser = express.json({ limit: BODY_LIMITS.DEFAULT });
 
-// Apply size limits based on route
-app.use('/api/v1/materials', largeBodyParser); // Material uploads need 70MB
-app.use('/api/v1/ai', mediumBodyParser); // AI generation content
-app.use('/api/v1/auth', smallBodyParser); // Auth endpoints
-app.use('/api/v1/admin', smallBodyParser); // Admin endpoints
-app.use(defaultBodyParser); // Default for other routes
+// Apply size limits based on route using a single dispatching middleware
+app.use((req, res, next) => {
+  let parser;
+
+  if (req.path.startsWith('/api/v1/materials')) {
+    // Material uploads need 70MB
+    parser = largeBodyParser;
+  } else if (req.path.startsWith('/api/v1/ai')) {
+    // AI generation content
+    parser = mediumBodyParser;
+  } else if (req.path.startsWith('/api/v1/auth') || req.path.startsWith('/api/v1/admin')) {
+    // Auth and admin endpoints
+    parser = smallBodyParser;
+  } else {
+    // Default for other routes
+    parser = defaultBodyParser;
+  }
+
+  return parser(req, res, next);
+});
 
 // URL-encoded parser with default limit to match JSON parser
+// Note: Material uploads use base64-encoded JSON, not URL-encoded forms,
+// so URL-encoded requests are limited to 5MB regardless of route
 app.use(express.urlencoded({ extended: true, limit: BODY_LIMITS.DEFAULT }));
 
 // Request logging

@@ -54,6 +54,23 @@ const storage = createJsonStorage<PersistedData>(DATA_FILE, {
   debounceMs: 100,
 });
 
+// Ensure pending debounced writes are flushed on graceful shutdown
+process.on('SIGTERM', async () => {
+  try {
+    await storage.flush();
+  } finally {
+    process.exit(0);
+  }
+});
+
+process.on('SIGINT', async () => {
+  try {
+    await storage.flush();
+  } finally {
+    process.exit(0);
+  }
+});
+
 const persistData = () => {
   const payload: PersistedData = {
     userQuotas: Array.from(userQuotas.values()).map(q => ({

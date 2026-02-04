@@ -63,6 +63,23 @@ const storage = createJsonStorage<PersistedUserData>(USERS_FILE, {
   debounceMs: 2000,
 });
 
+// Ensure pending debounced data is flushed on graceful shutdown
+process.on('SIGTERM', async () => {
+  try {
+    await storage.flush();
+  } finally {
+    process.exit(0);
+  }
+});
+
+process.on('SIGINT', async () => {
+  try {
+    await storage.flush();
+  } finally {
+    process.exit(0);
+  }
+});
+
 /**
  * Persist user data to disk using optimized JSON storage
  */

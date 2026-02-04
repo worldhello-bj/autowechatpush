@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import { randomUUID } from 'crypto';
 import { createLogger } from './logger.js';
 
@@ -131,8 +132,8 @@ export class JsonStorage<T> {
 
     const currentPersist = (async () => {
       try {
-        // Ensure directory exists
-        const dir = this.filePath.substring(0, this.filePath.lastIndexOf('/'));
+        // Ensure directory exists (cross-platform compatible)
+        const dir = path.dirname(this.filePath);
         await fs.promises.mkdir(dir, { recursive: true });
 
         // Serialize data (compact by default)

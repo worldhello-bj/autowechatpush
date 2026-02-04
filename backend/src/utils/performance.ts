@@ -13,7 +13,7 @@ interface PerformanceMetric {
   name: string;
   duration: number;
   timestamp: Date;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Store recent metrics in memory (last 1000 entries)
@@ -31,7 +31,7 @@ const MAX_METRICS = 1000;
 export async function measurePerformance<T>(
   name: string,
   fn: () => Promise<T>,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): Promise<T> {
   const startTime = process.hrtime.bigint();
   
@@ -108,14 +108,20 @@ export function getOperationStats(operationName: string): {
   const count = durations.length;
   const sum = durations.reduce((a, b) => a + b, 0);
   
+  // Helper function for accurate percentile calculation
+  const getPercentile = (sorted: number[], p: number): number => {
+    const index = Math.ceil(sorted.length * p) - 1;
+    return sorted[Math.max(0, index)];
+  };
+  
   return {
     count,
     avgDuration: sum / count,
     minDuration: durations[0],
     maxDuration: durations[count - 1],
-    p50: durations[Math.floor(count * 0.5)],
-    p95: durations[Math.floor(count * 0.95)],
-    p99: durations[Math.floor(count * 0.99)],
+    p50: getPercentile(durations, 0.5),
+    p95: getPercentile(durations, 0.95),
+    p99: getPercentile(durations, 0.99),
   };
 }
 
