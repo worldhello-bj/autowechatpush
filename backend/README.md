@@ -1,6 +1,6 @@
 # WeChat AI Publisher - Backend API
 
-This is the backend API service for the WeChat AI Publisher application. It follows the SaaS architecture transformation plan outlined in `TRANSFORMATION_PLAN.md`.
+This is the backend API service for the WeChat AI Publisher application, built with TypeScript, Express, and modern Node.js best practices.
 
 ## Features
 
@@ -217,9 +217,9 @@ Now accessing `http://your-domain` will serve the frontend application, while `/
 - **Input Validation** - Zod schema validation
 - **Request ID** - Traceability
 
-## Roadmap
+## Implementation Status
 
-See `TRANSFORMATION_PLAN.md` for the full transformation roadmap. Current implementation covers:
+Current implementation includes:
 
 - [x] Phase 1: Base Restructuring
   - [x] TypeScript + Express setup
