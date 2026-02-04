@@ -1,5 +1,5 @@
 import { config } from '../config/index.js';
-import { createLogger } from '../utils/index.js';
+import { createLogger, fetchWithTimeout } from '../utils/index.js';
 import { AIProvider, AIChatRequest, GenerationResult, BlockType, ArticleBlock } from '../types/index.js';
 import { getApiKeyFromPool, releaseApiKey } from './aiKeyPoolService.js';
 import { loadPromptConfig, buildCompletePrompt } from './promptService.js';
@@ -129,14 +129,14 @@ const callDeepSeekAPI = async (
   let errorMessage: string | undefined;
 
   try {
-    const response = await fetch(DEEPSEEK_BASE_URL, {
+    const response = await fetchWithTimeout(DEEPSEEK_BASE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(requestBody),
-    });
+    }, 60000); // 60 second timeout for AI generation
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } };
@@ -190,7 +190,7 @@ const callQwenAPI = async (
   let errorMessage: string | undefined;
 
   try {
-    const response = await fetch(QWEN_BASE_URL, {
+    const response = await fetchWithTimeout(QWEN_BASE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -202,7 +202,7 @@ const callQwenAPI = async (
         tools: [layoutArticleFunction],
         tool_choice: 'auto',
       }),
-    });
+    }, 60000); // 60 second timeout for AI generation
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } };
@@ -413,14 +413,14 @@ const callDeepSeekForTemplateFill = async (
   let errorMessage: string | undefined;
 
   try {
-    const response = await fetch(`https://api.deepseek.com/chat/completions`, {
+    const response = await fetchWithTimeout(`https://api.deepseek.com/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(requestBody),
-    });
+    }, 60000); // 60 second timeout for template fill
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } };
@@ -480,7 +480,7 @@ const callQwenForTemplateFill = async (
   let errorMessage: string | undefined;
 
   try {
-    const response = await fetch(`https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`, {
+    const response = await fetchWithTimeout(`https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -490,7 +490,7 @@ const callQwenForTemplateFill = async (
         model: 'qwen-plus',
         messages,
       }),
-    });
+    }, 60000); // 60 second timeout for template fill
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } };
@@ -702,21 +702,21 @@ Please analyze the content and provide a better digest and captions for images w
     if (provider === AIProvider.DEEPSEEK) {
       const apiKey = await getApiKeyFromPool(AIProvider.DEEPSEEK);
       // We don't use the layout tool here, just standard chat
-      const response = await fetch(DEEPSEEK_BASE_URL, {
+      const response = await fetchWithTimeout(DEEPSEEK_BASE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({ model: 'deepseek-chat', messages })
-      });
+      }, 60000); // 60 second timeout
       const data = await response.json() as any;
       resultText = data.choices?.[0]?.message?.content || '';
       releaseApiKey(apiKey, true);
     } else {
       const apiKey = await getApiKeyFromPool(AIProvider.QWEN);
-      const response = await fetch(QWEN_BASE_URL, {
+      const response = await fetchWithTimeout(QWEN_BASE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({ model: 'qwen-plus', messages })
-      });
+      }, 60000); // 60 second timeout
       const data = await response.json() as any;
       resultText = data.choices?.[0]?.message?.content || '';
       releaseApiKey(apiKey, true);

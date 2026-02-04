@@ -1,8 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { randomUUID } from 'crypto';
 import { 
   User, 
   UserSession, 
@@ -18,7 +16,8 @@ import {
   generateRefreshToken,
   verifyToken,
   parseExpiry,
-  createLogger 
+  createLogger,
+  createJsonStorage,
 } from '../utils/index.js';
 import { config } from '../config/index.js';
 import { initializeUserQuota, setUserTotalQuota } from './quotaService.js';
@@ -30,8 +29,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, '..', '..', 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
-let persistTimer: NodeJS.Timeout | null = null;
-let persistInFlight: Promise<void> | null = null;
 
 // In-memory storage with disk persistence
 const users: Map<string, User> = new Map();
@@ -60,21 +57,33 @@ interface PersistedUserData {
   version: string;
 }
 
-/**
- * Flush user data to disk
- */
-const flushPersist = async () => {
-  if (persistInFlight) {
-    // Retry after current flush completes
-    if (!persistTimer) {
-      persistTimer = setTimeout(() => {
-        persistTimer = null;
-        void flushPersist();
-      }, 50);
-    }
-    return;
-  }
+// Create optimized JSON storage instance (compact mode for efficiency)
+const storage = createJsonStorage<PersistedUserData>(USERS_FILE, {
+  prettyPrint: false, // Use compact JSON to save space and CPU
+  debounceMs: 2000,
+});
 
+// Ensure pending debounced data is flushed on graceful shutdown
+process.on('SIGTERM', async () => {
+  try {
+    await storage.flush();
+  } finally {
+    process.exit(0);
+  }
+});
+
+process.on('SIGINT', async () => {
+  try {
+    await storage.flush();
+  } finally {
+    process.exit(0);
+  }
+});
+
+/**
+ * Persist user data to disk using optimized JSON storage
+ */
+const persistData = () => {
   const payload: PersistedUserData = {
     version: '1.0',
     users: Array.from(users.values()).map(u => ({
@@ -83,45 +92,8 @@ const flushPersist = async () => {
       updatedAt: u.updatedAt.toISOString(),
     })),
   };
-
-  const tempFile = `${USERS_FILE}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;
-
-  const currentPersist = (async () => {
-    try {
-      await fs.promises.mkdir(DATA_DIR, { recursive: true });
-      await fs.promises.writeFile(tempFile, JSON.stringify(payload, null, 2), 'utf-8');
-      await fs.promises.rename(tempFile, USERS_FILE);
-      logger.debug('User data persisted to disk', { userCount: users.size });
-    } catch (error) {
-      logger.error('Failed to persist user data to disk', { error });
-      // Clean up temp file if it exists
-      try {
-        if (fs.existsSync(tempFile)) {
-          await fs.promises.unlink(tempFile);
-        }
-      } catch { /* ignore */ }
-    }
-  })();
-
-  persistInFlight = currentPersist.finally(() => {
-    if (persistInFlight === currentPersist) {
-      persistInFlight = null;
-    }
-  });
-
-  await persistInFlight;
-};
-
-/**
- * Schedule user data persistence (debounced)
- */
-const persistData = () => {
-  if (persistTimer) return;
-
-  persistTimer = setTimeout(() => {
-    persistTimer = null;
-    void flushPersist();
-  }, 2000); // 2 second debounce
+  
+  storage.save(payload);
 };
 
 /**
@@ -134,22 +106,14 @@ const isValidDateString = (value: unknown): value is string => {
 };
 
 /**
- * Load user data from disk
+ * Load user data from disk using optimized JSON storage
  */
 const loadData = async () => {
   try {
-    try {
-      await fs.promises.access(USERS_FILE, fs.constants.F_OK);
-    } catch {
-      logger.info('No existing user data file found, starting fresh');
-      return;
-    }
-
-    const raw = await fs.promises.readFile(USERS_FILE, 'utf-8');
-    const parsed = JSON.parse(raw) as Partial<PersistedUserData>;
+    const parsed = await storage.load();
     
-    if (typeof parsed !== 'object' || parsed === null) {
-      logger.warn('User data file malformed (non-object), skipping load');
+    if (!parsed) {
+      logger.info('No existing user data file found, starting fresh');
       return;
     }
     

@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -17,6 +18,31 @@ const app = express();
 
 // Trust proxy for rate limiting behind reverse proxy
 app.set('trust proxy', 1);
+
+// Response compression (gzip/brotli)
+// Add compression before other middleware to compress all responses
+app.use(compression({
+  filter: (req, res) => {
+    // Don't compress if client asks to disable it
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    // Don't compress SSE streams: check route path instead of relying on Content-Type header,
+    // which may not be set yet when the compression filter runs.
+    if (req.path && req.path.includes('/chat/stream')) {
+      return false;
+    }
+    // Extra safety: also avoid compression if Content-Type is already known as SSE
+    const contentType = res.getHeader('Content-Type');
+    if (typeof contentType === 'string' && contentType.includes('text/event-stream')) {
+      return false;
+    }
+    // Use compression filter to check if response should be compressed
+    return compression.filter(req, res);
+  },
+  level: 6, // Balance between compression ratio and CPU usage (1-9, 6 is good balance)
+  threshold: 1024, // Only compress responses larger than 1KB
+}));
 
 // Security middleware with CSP configuration for frontend
 // Note: 'unsafe-inline' and 'unsafe-eval' are required for Tailwind CDN runtime.
@@ -62,10 +88,52 @@ app.use(limiter);
 // Request ID middleware (for tracing)
 app.use(requestIdMiddleware);
 
-// Body parsing
-// Limit set to 70mb to accommodate base64-encoded files (video max is 50MB, base64 adds ~33% overhead)
-app.use(express.json({ limit: '70mb' }));
-app.use(express.urlencoded({ extended: true, limit: '70mb' }));
+// Body parsing with size limits
+// Different endpoints have different size requirements
+// Materials endpoint needs large limit for video uploads (base64 encoded)
+// AI endpoints need moderate limit for content
+// Auth endpoints need small limit for credentials
+// Default limit for all other endpoints
+
+// Body parser size limits (configurable)
+const BODY_LIMITS = {
+  LARGE: '70mb',   // Material uploads (base64 video ~50MB + 33% overhead)
+  MEDIUM: '10mb',  // AI content generation
+  SMALL: '1mb',    // Auth and admin endpoints
+  DEFAULT: '5mb',  // Default for other routes
+} as const;
+
+// Create body parsers with different size limits
+const largeBodyParser = express.json({ limit: BODY_LIMITS.LARGE });
+const mediumBodyParser = express.json({ limit: BODY_LIMITS.MEDIUM });
+const smallBodyParser = express.json({ limit: BODY_LIMITS.SMALL });
+const defaultBodyParser = express.json({ limit: BODY_LIMITS.DEFAULT });
+
+// Apply size limits based on route using a single dispatching middleware
+app.use((req, res, next) => {
+  let parser;
+
+  if (req.path.startsWith('/api/v1/materials')) {
+    // Material uploads need 70MB
+    parser = largeBodyParser;
+  } else if (req.path.startsWith('/api/v1/ai')) {
+    // AI generation content
+    parser = mediumBodyParser;
+  } else if (req.path.startsWith('/api/v1/auth') || req.path.startsWith('/api/v1/admin')) {
+    // Auth and admin endpoints
+    parser = smallBodyParser;
+  } else {
+    // Default for other routes
+    parser = defaultBodyParser;
+  }
+
+  return parser(req, res, next);
+});
+
+// URL-encoded parser with default limit to match JSON parser
+// Note: Material uploads use base64-encoded JSON, not URL-encoded forms,
+// so URL-encoded requests are limited to 5MB regardless of route
+app.use(express.urlencoded({ extended: true, limit: BODY_LIMITS.DEFAULT }));
 
 // Request logging
 app.use((req, res, next) => {
@@ -116,11 +184,21 @@ try {
 }
 
 if (hasFrontend) {
-  // Serve static files from web folder
-  app.use(express.static(webPath));
+  // Serve static files from web folder with caching
+  app.use(express.static(webPath, {
+    maxAge: config.NODE_ENV === 'production' ? '1y' : '0', // Cache static assets for 1 year in production
+    etag: true,
+    lastModified: true,
+    immutable: config.NODE_ENV === 'production', // Assets are immutable in production
+  }));
   
   // SPA fallback - serve index.html for any non-API GET requests
   app.get(/^(?!\/api\/).*$/, (req, res, next) => {
+    // Don't cache the index.html itself (SPA entry point should always be fresh)
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
     res.sendFile(indexPath, (err) => {
       if (err) {
         next(err);
