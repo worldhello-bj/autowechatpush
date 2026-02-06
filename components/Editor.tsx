@@ -16,6 +16,7 @@ import { getAccessToken, saveDraft, uploadImage, getAccessTokenByAccountId } fro
 import { draftApi, templateApi } from '../services/apiClient';
 import { wechatAccountService } from '../services/wechatAccountService';
 import analytics from '../services/analytics';
+import { useAuth } from './AuthContext';
 
 // Import utility functions from the new utils directory
 import { dataURLtoBlob, createDefaultCoverBlob } from './Editor/utils/imageUtils';
@@ -40,6 +41,9 @@ const DRAFT_KEY = 'wechat_editor_draft';
 const PROVIDER_KEY = 'ai_provider';
 
 const Editor: React.FC<EditorProps> = ({ onError }) => {
+  // Auth context for refreshing user quota
+  const { refreshUser } = useAuth();
+  
   // UI State
   const [showGuide, setShowGuide] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -60,7 +64,8 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     setArticleTitle,
     setArticleDigest,
     setHtmlContent,
-    convertBlocksToHtml
+    convertBlocksToHtml,
+    onQuotaConsumed: refreshUser // Refresh user quota after generation
   });
   const aiTools = useAITools({
     aiProvider,
@@ -69,7 +74,8 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
     setArticleTitle,
     setArticleDigest,
     setHtmlContent,
-    onError
+    onError,
+    onQuotaConsumed: refreshUser // Refresh user quota after AI tools usage
   });
 
   // Use article generator states and handlers

@@ -6,7 +6,8 @@ import {
   loginWithWeChat,
   refreshAccessToken, 
   logoutUser,
-  getUserById 
+  getUserById,
+  getUserQuotaStatus
 } from '../services/index.js';
 import { LoginRequest, RegisterRequest } from '../types/index.js';
 
@@ -127,11 +128,15 @@ export const me = async (req: Request, res: Response) => {
       return sendError(res, 404, 'USER_NOT_FOUND', 'User not found');
     }
     
+    // Get real-time quota status from quota service
+    const quotaStatus = getUserQuotaStatus(req.user.userId);
+    const remainingQuota = quotaStatus ? quotaStatus.remainingQuota : user.quota;
+    
     sendSuccess(res, {
       id: user.id,
       email: user.email,
       name: user.name,
-      quota: user.quota,
+      quota: remainingQuota,
       role: user.role,
     });
   } catch (error) {

@@ -43,6 +43,7 @@ export interface UseAIToolsProps {
   setArticleDigest: (digest: string) => void;
   setHtmlContent: (content: string) => void;
   onError: (msg: string) => void;
+  onQuotaConsumed?: () => void; // Callback to refresh user quota display
 }
 
 export const useAITools = ({
@@ -52,7 +53,8 @@ export const useAITools = ({
   setArticleTitle,
   setArticleDigest,
   setHtmlContent,
-  onError
+  onError,
+  onQuotaConsumed
 }: UseAIToolsProps): AIToolsState & AIToolsActions => {
   const [showAITools, setShowAITools] = useState(false);
   const [aiToolLoading, setAiToolLoading] = useState(false);
@@ -88,6 +90,7 @@ export const useAITools = ({
       if (response.success && response.data) {
         const titles = Array.isArray(response.data.result) ? response.data.result as string[] : [];
         setTitleSuggestions(titles);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       } else {
         throw new Error(response.error?.message || 'Failed to generate titles');
       }
@@ -111,6 +114,7 @@ export const useAITools = ({
       if (response.success && response.data) {
         const summary = typeof response.data.result === 'string' ? response.data.result : '';
         setArticleDigest(summary);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       } else {
         throw new Error(response.error?.message || 'Failed to generate summary');
       }
@@ -134,6 +138,7 @@ export const useAITools = ({
       if (response.success && response.data) {
         const kws = Array.isArray(response.data.result) ? response.data.result as string[] : [];
         setKeywords(kws);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       } else {
         throw new Error(response.error?.message || 'Failed to extract keywords');
       }

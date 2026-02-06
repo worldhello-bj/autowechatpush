@@ -20,7 +20,7 @@ import {
   createJsonStorage,
 } from '../utils/index.js';
 import { config } from '../config/index.js';
-import { initializeUserQuota, setUserTotalQuota } from './quotaService.js';
+import { initializeUserQuota, setUserTotalQuota, getUserQuotaStatus } from './quotaService.js';
 
 const logger = createLogger('auth-service');
 
@@ -214,7 +214,11 @@ export const loginWithWeChat = async (code: string): Promise<AuthResponse> => {
        
        logger.info('User logged in via WeChat', { userId });
 
-       return { accessToken, refreshToken, user: { id: userId, email: user.email, name: user.name, quota: user.quota, role: user.role } };
+       // Get real-time quota status
+       const quotaStatus = getUserQuotaStatus(userId);
+       const remainingQuota = quotaStatus ? quotaStatus.remainingQuota : user.quota;
+
+       return { accessToken, refreshToken, user: { id: userId, email: user.email, name: user.name, quota: remainingQuota, role: user.role } };
   } else {
        // Register new user
        const newUserId = uuidv4();
@@ -260,7 +264,11 @@ export const loginWithWeChat = async (code: string): Promise<AuthResponse> => {
        
        logger.info('User registered via WeChat', { userId: newUserId });
 
-       return { accessToken, refreshToken, user: { id: newUserId, email: newUser.email, name: newUser.name, quota: newUser.quota, role: newUser.role } };
+       // Get real-time quota status
+       const quotaStatus = getUserQuotaStatus(newUserId);
+       const remainingQuota = quotaStatus ? quotaStatus.remainingQuota : newUser.quota;
+
+       return { accessToken, refreshToken, user: { id: newUserId, email: newUser.email, name: newUser.name, quota: remainingQuota, role: newUser.role } };
   }
 };
 
@@ -322,6 +330,10 @@ export const registerUser = async (data: RegisterRequest): Promise<AuthResponse>
   
   logger.info('User registered successfully', { userId });
   
+  // Get real-time quota status
+  const quotaStatus = getUserQuotaStatus(userId);
+  const remainingQuota = quotaStatus ? quotaStatus.remainingQuota : user.quota;
+  
   return {
     accessToken,
     refreshToken,
@@ -329,7 +341,7 @@ export const registerUser = async (data: RegisterRequest): Promise<AuthResponse>
       id: userId,
       email: user.email,
       name: user.name,
-      quota: user.quota,
+      quota: remainingQuota,
       role: user.role,
     },
   };
@@ -380,6 +392,10 @@ export const loginUser = async (data: LoginRequest): Promise<AuthResponse> => {
   
   logger.info('User logged in successfully', { userId });
   
+  // Get real-time quota status
+  const quotaStatus = getUserQuotaStatus(userId);
+  const remainingQuota = quotaStatus ? quotaStatus.remainingQuota : user.quota;
+  
   return {
     accessToken,
     refreshToken,
@@ -387,7 +403,7 @@ export const loginUser = async (data: LoginRequest): Promise<AuthResponse> => {
       id: userId,
       email: user.email,
       name: user.name,
-      quota: user.quota,
+      quota: remainingQuota,
       role: user.role,
     },
   };
