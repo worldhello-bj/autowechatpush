@@ -12,6 +12,7 @@ interface UseArticleGeneratorProps {
   setHtmlContent?: (html: string) => void;
   convertBlocksToHtml?: (blocks: ArticleBlock[]) => string;
   onSuccess?: (result: any) => void;
+  onQuotaConsumed?: () => void; // Callback to refresh user quota display
 }
 
 export const useArticleGenerator = ({
@@ -21,7 +22,8 @@ export const useArticleGenerator = ({
   setArticleDigest,
   setHtmlContent,
   convertBlocksToHtml,
-  onSuccess
+  onSuccess,
+  onQuotaConsumed
 }: UseArticleGeneratorProps) => {
   // Core generation states
   const [topic, setTopic] = useState('');
@@ -91,6 +93,9 @@ export const useArticleGenerator = ({
         hasImage: !!imageContext,
         topicLength: topic.length,
       });
+
+      // Refresh user quota display after consuming quota
+      onQuotaConsumed?.();
 
     } catch (e: any) {
       console.error('[useArticleGenerator] Article generation error:', e);
