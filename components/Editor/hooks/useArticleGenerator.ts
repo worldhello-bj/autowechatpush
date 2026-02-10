@@ -283,7 +283,7 @@ ${JSON.stringify(batchPrompts, null, 2)}
                 let jsonStr = rawResult;
                 
                 // 1. Remove markdown code blocks
-                jsonStr = jsonStr.replace(/```json\s*|```/g, '');
+                jsonStr = jsonStr.replace(/```json\s*|```/g, '').trim();
                 
                 // 2. Find the first '[' and the last ']'
                 const firstBracket = jsonStr.indexOf('[');
@@ -295,14 +295,34 @@ ${JSON.stringify(batchPrompts, null, 2)}
                   console.log('4. JSON Parsing: Success');
                   console.log(`   Parsed ${generatedResults.length} items`);
                 } else {
-                  throw new Error('No JSON array structure found in response');
+                  // Try extracting individual JSON objects as fallback
+                  const objectMatches = jsonStr.match(/\{[^{}]*"(?:id|content)"[^{}]*\}/g);
+                  if (objectMatches && objectMatches.length > 0) {
+                    generatedResults = objectMatches.map(m => { try { return JSON.parse(m); } catch { console.warn('   Skipping malformed object:', m.slice(0, 80)); return null; } }).filter(Boolean);
+                    console.log('4. JSON Parsing: Extracted individual objects');
+                    console.log(`   Parsed ${generatedResults.length} items`);
+                  } else {
+                    throw new Error('No JSON array structure found in response');
+                  }
                 }
               } catch (e: any) {
                 console.warn('4. JSON Parsing: Failed', e.message);
                 console.log('   Attempting Paragraph Matching Fallback...');
                 
                 // Fallback: Treat raw response as sequence of paragraphs
-                const paragraphs = rawResult.split(/\n\n+/).map(p => p.trim()).filter(p => p.length > 0);
+                let paragraphs = rawResult.split(/\n\n+/).map(p => p.trim()).filter(p => p.length > 0);
+                
+                // If double-newline split yields too few results, try single-newline split
+                if (paragraphs.length < batch.length) {
+                  const singleNewlineParagraphs = rawResult.split(/\n/).map(p => p.trim()).filter(p => p.length > 0);
+                  if (singleNewlineParagraphs.length >= paragraphs.length) {
+                    paragraphs = singleNewlineParagraphs;
+                    console.log('   Using single-newline split');
+                  }
+                }
+
+                // Strip leading numbering (e.g. "1. ", "2. ", "1、", "（1）", fullwidth parentheses)
+                paragraphs = paragraphs.map(p => p.replace(/^(?:\d+[.、)\uff09]\s*|[（(]\d+[)）]\s*)/, ''));
                 
                 console.log(`   Fallback Analysis: Found ${paragraphs.length} paragraphs for ${batch.length} regions`);
                 
@@ -324,9 +344,22 @@ ${JSON.stringify(batchPrompts, null, 2)}
                 console.log(`   Fallback Result: Mapped ${generatedResults.length} regions`);
               }
 
-              // Map results back to regions
-              batch.forEach((region: TextRegion) => {
-                const result = generatedResults.find((r: any) => r.id === region.id);
+              // Map results back to regions — try ID match first, fall back to index
+              const resultIdSet = new Set(generatedResults.map((r: any) => r.id));
+              const idMatchCount = batch.filter((region: TextRegion) => resultIdSet.has(region.id)).length;
+              const useIndexFallback = idMatchCount === 0 && generatedResults.length > 0;
+              if (useIndexFallback) {
+                console.log('5. ID matching failed for all regions, using index-based mapping');
+              }
+
+              batch.forEach((region: TextRegion, batchIdx: number) => {
+                let result = generatedResults.find((r: any) => r.id === region.id);
+                
+                // Index-based fallback when no IDs matched
+                if (!result && useIndexFallback && batchIdx < generatedResults.length) {
+                  result = generatedResults[batchIdx];
+                }
+
                 const generatedText = result ? result.content : region.chineseSequence;
                 
                 if (!result) {

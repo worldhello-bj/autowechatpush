@@ -521,6 +521,24 @@ export const aiHelper = async (req: Request, res: Response) => {
       } catch {
         responseData = result.blocks.map(b => b.content).filter(c => c.trim());
       }
+    } else if (options?.contentType === 'batch_json') {
+      // For batch_json, try to extract and return clean JSON
+      const textContent = result.blocks.map(b => b.content).join('\n');
+      try {
+        const cleaned = textContent.replace(/```json\s*|```/g, '');
+        const firstBracket = cleaned.indexOf('[');
+        const lastBracket = cleaned.lastIndexOf(']');
+        if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+          const jsonStr = cleaned.substring(firstBracket, lastBracket + 1);
+          // Validate it's parseable JSON and return the clean string
+          JSON.parse(jsonStr);
+          responseData = jsonStr;
+        } else {
+          responseData = textContent;
+        }
+      } catch {
+        responseData = textContent;
+      }
     } else {
       // Return the full text content
       responseData = result.blocks.map(b => b.content).join('\n\n');
