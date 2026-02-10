@@ -11,7 +11,7 @@ export const ARTICLE_BLOCK_SCHEMA = {
         type: {
             type: "string",
             enum: ["header", "paragraph", "card", "list", "quote", "image", "divider", "code", "callout", "numbered_list", "highlight", "table", "qrcode", "faq", "countdown", "progress", "gift", "contact", "stats", "testimonial", "steps", "svg", "section"],
-            description: "Block type. Use 'section' for full-width container blocks with background color/decoration that contain nested child blocks - this creates rich 秀米-style layouts. Use 'header' for section titles, 'paragraph' for body text, 'card' for key points, 'list' for bullets, 'numbered_list' for steps, 'quote' for citations, 'image' for visual placeholders, 'divider' for section breaks, 'code' for code snippets, 'callout' for notices, 'highlight' for emphasized text, 'table' for structured data, 'svg' for decorative SVG graphics. Special types: 'qrcode' for QR code sections, 'faq' for Q&A blocks, 'countdown' for timers, 'progress' for progress bars, 'gift' for promotional boxes, 'contact' for contact info, 'stats' for statistics display, 'testimonial' for user reviews, 'steps' for step-by-step flows."
+            description: "Block type. DEFAULT: Use 'section' as the primary container — every article should be composed of section blocks with children inside. Only 'divider' and 'image' should appear at the top level outside sections. 'section' creates a full-width background container with colored background, decorations, and nested child blocks (paragraph, card, list, header, highlight, quote, callout, numbered_list). Other types (header, paragraph, card, list, quote, code, callout, numbered_list, highlight, table, svg, faq, stats, testimonial, steps, progress, gift, contact, countdown, qrcode) should only be used as children inside a section container."
         },
         content: { type: "string", description: "The main text content. For images, this is the description/prompt. For divider, this can be empty. For svg, provide SVG code or description." },
         title: { type: "string", description: "Title for card, header, callout, gift, faq, or table blocks." },
@@ -98,7 +98,7 @@ export const LAYOUT_ARTICLE_PARAMETERS = {
         digest: { type: "string", description: "A short summary (digest) of the article." },
         blocks: {
             type: "array",
-            description: "The content blocks of the article. Use diverse block types for visual variety.",
+            description: "The content blocks of the article. IMPORTANT: Use 'section' containers as the primary structure — all content (paragraphs, cards, lists, quotes, highlights) must be nested as children inside section blocks. Only 'divider' and 'image' may appear at the top level. Each section has its own background color, decoration, and contains multiple child blocks.",
             items: ARTICLE_BLOCK_SCHEMA
         }
     },
@@ -112,7 +112,7 @@ export const LAYOUT_ARTICLE_TOOL_DEF = {
     type: "function",
     function: {
         name: "layout_article",
-        description: "Generates a structured layout for a WeChat article based on content. Use various block types for rich formatting.",
+        description: "Generates a structured layout for a WeChat article. The article must be composed primarily of 'section' container blocks — each section has a background color, decoration, and contains nested child blocks (paragraphs, cards, lists, etc.). Only dividers and images may appear outside sections.",
         parameters: LAYOUT_ARTICLE_PARAMETERS
     }
 };
