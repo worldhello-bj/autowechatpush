@@ -158,11 +158,28 @@ const callDeepSeekAPI = async (
       throw new Error(errorMessage);
     }
 
-    const args = JSON.parse(toolCall.function.arguments);
-    const blocks = (args.blocks || []).map((b: Record<string, unknown>, index: number) => ({
-      id: `ds-${Date.now()}-${index}`,
-      ...b,
-    }));
+    let args: LayoutFunctionArgs;
+    try {
+      args = JSON.parse(toolCall.function.arguments);
+    } catch (parseError) {
+      logger.warn('Direct JSON parse failed for DeepSeek tool arguments, trying fallback parser', {
+        error: (parseError as Error).message,
+        argumentsPreview: toolCall.function.arguments.substring(0, 200)
+      });
+      args = parseJsonFromText(toolCall.function.arguments) as LayoutFunctionArgs;
+    }
+    const dsTimestamp = Date.now();
+    const blocks = (args.blocks || []).map((b: Record<string, unknown>, index: number) => {
+      const block = { id: `ds-${dsTimestamp}-${index}`, ...b };
+      // Assign IDs to nested children blocks
+      if (Array.isArray(block.children)) {
+        block.children = (block.children as Record<string, unknown>[]).map((child, childIdx) => ({
+          id: `ds-${dsTimestamp}-${index}-c${childIdx}`,
+          ...child,
+        }));
+      }
+      return block;
+    });
 
     success = true;
     return {
@@ -224,11 +241,28 @@ const callQwenAPI = async (
       throw new Error(errorMessage);
     }
 
-    const args = JSON.parse(toolCall.function.arguments);
-    const blocks = (args.blocks || []).map((b: Record<string, unknown>, index: number) => ({
-      id: `qw-${Date.now()}-${index}`,
-      ...b,
-    }));
+    let args: LayoutFunctionArgs;
+    try {
+      args = JSON.parse(toolCall.function.arguments);
+    } catch (parseError) {
+      logger.warn('Direct JSON parse failed for Qwen tool arguments, trying fallback parser', {
+        error: (parseError as Error).message,
+        argumentsPreview: toolCall.function.arguments.substring(0, 200)
+      });
+      args = parseJsonFromText(toolCall.function.arguments) as LayoutFunctionArgs;
+    }
+    const qwTimestamp = Date.now();
+    const blocks = (args.blocks || []).map((b: Record<string, unknown>, index: number) => {
+      const block = { id: `qw-${qwTimestamp}-${index}`, ...b };
+      // Assign IDs to nested children blocks
+      if (Array.isArray(block.children)) {
+        block.children = (block.children as Record<string, unknown>[]).map((child, childIdx) => ({
+          id: `qw-${qwTimestamp}-${index}-c${childIdx}`,
+          ...child,
+        }));
+      }
+      return block;
+    });
 
     success = true;
     return {

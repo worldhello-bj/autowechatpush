@@ -18,7 +18,15 @@ const getStyleClass = (style?: string) => {
     case 'gold': return { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-600', accent: 'bg-yellow-500' };
     case 'pink': return { bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-600', accent: 'bg-pink-500' };
     case 'cyan': return { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-600', accent: 'bg-cyan-500' };
+    case 'teal': return { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-600', accent: 'bg-teal-500' };
+    case 'indigo': return { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-600', accent: 'bg-indigo-500' };
+    case 'amber': return { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-600', accent: 'bg-amber-500' };
+    case 'rose': return { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-600', accent: 'bg-rose-500' };
+    case 'lime': return { bg: 'bg-lime-50', border: 'border-lime-200', text: 'text-lime-600', accent: 'bg-lime-500' };
     case 'gradient': return { bg: 'bg-gradient-to-r from-purple-50 to-blue-50', border: 'border-purple-200', text: 'text-purple-600', accent: 'bg-gradient-to-r from-purple-500 to-blue-500' };
+    case 'gradient_warm': return { bg: 'bg-gradient-to-r from-orange-50 to-rose-50', border: 'border-orange-200', text: 'text-orange-600', accent: 'bg-gradient-to-r from-orange-500 to-rose-500' };
+    case 'gradient_cool': return { bg: 'bg-gradient-to-r from-cyan-50 to-blue-50', border: 'border-cyan-200', text: 'text-cyan-600', accent: 'bg-gradient-to-r from-cyan-500 to-blue-500' };
+    case 'gradient_nature': return { bg: 'bg-gradient-to-r from-green-50 to-teal-50', border: 'border-green-200', text: 'text-green-600', accent: 'bg-gradient-to-r from-green-500 to-teal-500' };
     default: return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-600', accent: 'bg-green-500' };
   }
 };
@@ -195,6 +203,80 @@ const ArticlePreview: React.FC<ArticlePreviewProps> = ({ title, author, date, bl
         return (
           <div key={block.id} className="my-6 overflow-hidden">
             <div dangerouslySetInnerHTML={{ __html: block.content }} />
+          </div>
+        );
+      case BlockType.SECTION:
+        return (
+          <div key={block.id} className={`my-6 p-5 ${styleClass.bg} rounded-xl relative overflow-hidden`}>
+            {/* Background decoration */}
+            <div className={`absolute -top-5 -right-5 w-24 h-24 ${styleClass.accent} opacity-[0.06] rounded-full`}></div>
+            <div className={`absolute -bottom-3 left-5 w-16 h-16 ${styleClass.accent} opacity-[0.04] rounded-full`}></div>
+            {/* Content */}
+            <div className="relative z-10">
+              {block.title && <h3 className={`text-lg font-bold text-gray-800 mb-3 ${alignment}`}>{block.title}</h3>}
+              {block.content && <p className="text-sm text-gray-600 leading-relaxed mb-3">{block.content}</p>}
+              {/* Render children blocks */}
+              {block.children?.map((child, idx) => {
+                const childStyle = getStyleClass(child.style);
+                return (
+                  <div key={child.id || `child-${idx}`} className="mb-2">
+                    {child.type === BlockType.HEADER && (
+                      <h4 className="text-base font-bold text-gray-800 my-2">{child.content}</h4>
+                    )}
+                    {child.type === BlockType.PARAGRAPH && (
+                      <p className="text-sm text-gray-600 leading-relaxed">{child.content}</p>
+                    )}
+                    {child.type === BlockType.CARD && (
+                      <div className={`p-3 border ${childStyle.border} rounded-lg ${childStyle.bg} my-2`}>
+                        {child.title && <h5 className={`text-sm font-semibold ${childStyle.text} mb-1`}>{child.title}</h5>}
+                        <p className="text-xs text-gray-600 leading-relaxed">{child.content}</p>
+                      </div>
+                    )}
+                    {child.type === BlockType.LIST && (
+                      <ul className="my-2 space-y-1">
+                        {child.items?.map((item, i) => (
+                          <li key={i} className="flex items-start text-sm text-gray-600">
+                            <span className={`flex-shrink-0 w-1.5 h-1.5 mt-2 mr-2 ${childStyle.accent} rounded-full`}></span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {child.type === BlockType.HIGHLIGHT && (
+                      <div className={`p-3 ${childStyle.bg} rounded-md relative my-2`}>
+                        <div className={`absolute top-0 left-0 right-0 h-0.5 ${childStyle.accent}`}></div>
+                        <p className="text-sm text-gray-700 font-medium leading-relaxed">{child.content}</p>
+                      </div>
+                    )}
+                    {child.type === BlockType.QUOTE && (
+                      <div className={`p-3 ${childStyle.bg} border-l-4 ${childStyle.border} rounded-r-md my-2`}>
+                        <p className="text-sm text-gray-600 italic">{child.content}</p>
+                      </div>
+                    )}
+                    {(child.type === BlockType.DIVIDER) && (
+                      <div className="my-3 flex justify-center">
+                        <div className={`w-1/2 h-px ${childStyle.accent} opacity-30`}></div>
+                      </div>
+                    )}
+                    {/* Fallback for other types */}
+                    {(() => {
+                      const handledTypes = new Set([BlockType.HEADER, BlockType.PARAGRAPH, BlockType.CARD, BlockType.LIST, BlockType.HIGHLIGHT, BlockType.QUOTE, BlockType.DIVIDER, BlockType.NUMBERED_LIST]);
+                      return !handledTypes.has(child.type) ? <p className="text-sm text-gray-600 my-1">{child.content}</p> : null;
+                    })()}
+                    {child.type === BlockType.NUMBERED_LIST && (
+                      <ol className="my-2 space-y-2">
+                        {child.items?.map((item, i) => (
+                          <li key={i} className="flex items-start text-sm text-gray-600">
+                            <span className={`flex-shrink-0 w-5 h-5 mr-2 ${childStyle.accent} rounded-full flex items-center justify-center text-white text-xs font-bold`}>{i + 1}</span>
+                            <span className="pt-0.5">{item}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         );
       default:

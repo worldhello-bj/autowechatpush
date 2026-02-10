@@ -41,13 +41,6 @@ export const flushPersist = async () => {
     await persistInFlight;
   }
 
-  // Check if another flush started while we were waiting
-  // This can happen if multiple concurrent calls are waiting
-  if (persistInFlight) {
-    await persistInFlight;
-    return;
-  }
-
   // Start a new flush operation
   const payload: PersistedTemplateData = {
     version: '1.0',
@@ -56,7 +49,7 @@ export const flushPersist = async () => {
 
   const tempFile = `${TEMPLATES_FILE}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;
 
-  const currentPersist = (async () => {
+  persistInFlight = (async () => {
     try {
       await fs.promises.mkdir(DATA_DIR, { recursive: true });
       await fs.promises.writeFile(tempFile, JSON.stringify(payload, null, 2), 'utf-8');
@@ -70,14 +63,10 @@ export const flushPersist = async () => {
           await fs.promises.unlink(tempFile);
         }
       } catch { /* ignore */ }
-    }
-  })();
-
-  persistInFlight = currentPersist.finally(() => {
-    if (persistInFlight === currentPersist) {
+    } finally {
       persistInFlight = null;
     }
-  });
+  })();
 
   await persistInFlight;
 };

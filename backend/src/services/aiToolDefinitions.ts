@@ -10,8 +10,8 @@ export const ARTICLE_BLOCK_SCHEMA = {
     properties: {
         type: {
             type: "string",
-            enum: ["header", "paragraph", "card", "list", "quote", "image", "divider", "code", "callout", "numbered_list", "highlight", "table", "qrcode", "faq", "countdown", "progress", "gift", "contact", "stats", "testimonial", "steps", "svg"],
-            description: "Block type. Use 'header' for section titles, 'paragraph' for body text, 'card' for key points, 'list' for bullets, 'numbered_list' for steps, 'quote' for citations, 'image' for visual placeholders, 'divider' for section breaks, 'code' for code snippets, 'callout' for notices, 'highlight' for emphasized text, 'table' for structured data, 'svg' for decorative SVG graphics. Special types: 'qrcode' for QR code sections, 'faq' for Q&A blocks, 'countdown' for timers, 'progress' for progress bars, 'gift' for promotional boxes, 'contact' for contact info, 'stats' for statistics display, 'testimonial' for user reviews, 'steps' for step-by-step flows."
+            enum: ["header", "paragraph", "card", "list", "quote", "image", "divider", "code", "callout", "numbered_list", "highlight", "table", "qrcode", "faq", "countdown", "progress", "gift", "contact", "stats", "testimonial", "steps", "svg", "section"],
+            description: "Block type. DEFAULT: Use 'section' as the primary container — every article should be composed of section blocks with children inside. Only 'divider' and 'image' should appear at the top level outside sections. 'section' creates a full-width background container with colored background, decorations, and nested child blocks (paragraph, card, list, header, highlight, quote, callout, numbered_list). Other types (header, paragraph, card, list, quote, code, callout, numbered_list, highlight, table, svg, faq, stats, testimonial, steps, progress, gift, contact, countdown, qrcode) should only be used as children inside a section container."
         },
         content: { type: "string", description: "The main text content. For images, this is the description/prompt. For divider, this can be empty. For svg, provide SVG code or description." },
         title: { type: "string", description: "Title for card, header, callout, gift, faq, or table blocks." },
@@ -22,8 +22,8 @@ export const ARTICLE_BLOCK_SCHEMA = {
         },
         style: {
             type: "string",
-            enum: ["default", "primary", "warning", "quote", "red", "blue", "purple", "orange", "gold", "green", "pink", "cyan", "gradient"],
-            description: "Visual style color. Use varied colors for different sections."
+            enum: ["default", "primary", "warning", "quote", "red", "blue", "purple", "orange", "gold", "green", "pink", "cyan", "gradient", "teal", "indigo", "amber", "rose", "lime", "gradient_warm", "gradient_cool", "gradient_nature"],
+            description: "Visual style color. Use varied colors for different sections to create rich, vibrant articles. Gradient variants (gradient_warm, gradient_cool, gradient_nature) add modern flair."
         },
         level: { type: "number", enum: [1, 2, 3], description: "Header level (1=large, 2=medium, 3=small). Only for 'header' type." },
         alignment: { type: "string", enum: ["left", "center", "right"], description: "Text alignment." },
@@ -39,6 +39,37 @@ export const ARTICLE_BLOCK_SCHEMA = {
         percentage: { type: "number", description: "Progress percentage (0-100) for progress blocks." },
         author: { type: "string", description: "Author name for testimonial blocks." },
         role: { type: "string", description: "Author role/position for testimonial blocks." },
+        // Container section properties
+        children: {
+            type: "array",
+            description: "Child blocks nested inside a 'section' container. Each child is a regular block (paragraph, card, list, header, highlight, quote, etc.) rendered on top of the section's background. Use this to create rich layouts with colored backgrounds containing multiple content blocks.",
+            items: {
+                type: "object",
+                properties: {
+                    type: { type: "string", enum: ["header", "paragraph", "card", "list", "quote", "divider", "callout", "numbered_list", "highlight", "image"] },
+                    content: { type: "string" },
+                    title: { type: "string" },
+                    items: { type: "array", items: { type: "string" } },
+                    style: { type: "string", enum: ["default", "primary", "warning", "quote", "red", "blue", "purple", "orange", "gold", "green", "pink", "cyan", "gradient", "teal", "indigo", "amber", "rose", "lime", "gradient_warm", "gradient_cool", "gradient_nature"] },
+                    level: { type: "number", enum: [1, 2, 3] },
+                    alignment: { type: "string", enum: ["left", "center", "right"] },
+                    icon: { type: "string", enum: ["info", "warning", "success", "error", "tip", "note"] },
+                    fontSize: { type: "string", enum: ["small", "normal", "large", "xlarge"] },
+                    fontWeight: { type: "string", enum: ["normal", "bold", "light"] },
+                    fontStyle: { type: "string", enum: ["normal", "italic"] }
+                },
+                required: ["type", "content"]
+            }
+        },
+        backgroundStyle: {
+            type: "string",
+            enum: ["solid", "gradient", "pattern"],
+            description: "Background style for 'section' blocks. 'solid' uses the style color as background, 'gradient' uses gradient background, 'pattern' adds decorative patterns."
+        },
+        decoration: {
+            type: "string",
+            description: "Background decoration for 'section' blocks. Describe the decoration pattern, e.g., 'circles', 'dots', 'waves', 'geometric', 'stars'."
+        },
         // Typography properties for emphasis
         fontSize: {
             type: "string",
@@ -67,7 +98,7 @@ export const LAYOUT_ARTICLE_PARAMETERS = {
         digest: { type: "string", description: "A short summary (digest) of the article." },
         blocks: {
             type: "array",
-            description: "The content blocks of the article. Use diverse block types for visual variety.",
+            description: "The content blocks of the article. IMPORTANT: Use 'section' containers as the primary structure — all content (paragraphs, cards, lists, quotes, highlights) must be nested as children inside section blocks. Only 'divider' and 'image' may appear at the top level. Each section has its own background color, decoration, and contains multiple child blocks.",
             items: ARTICLE_BLOCK_SCHEMA
         }
     },
@@ -81,7 +112,7 @@ export const LAYOUT_ARTICLE_TOOL_DEF = {
     type: "function",
     function: {
         name: "layout_article",
-        description: "Generates a structured layout for a WeChat article based on content. Use various block types for rich formatting.",
+        description: "Generates a structured layout for a WeChat article. The article must be composed primarily of 'section' container blocks — each section has a background color, decoration, and contains nested child blocks (paragraphs, cards, lists, etc.). Only dividers and images may appear outside sections.",
         parameters: LAYOUT_ARTICLE_PARAMETERS
     }
 };
