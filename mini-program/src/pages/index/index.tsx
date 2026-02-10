@@ -7,7 +7,7 @@ import { AIProvider, ArticleBlock, BlockType } from '@shared/types';
 import { convertBlocksToHtml } from '../../utils/editor/blockConverter';
 
 export default function Index() {
-  const { user, isLoggedIn, isLoading } = useAuth();
+  const { isLoggedIn, isLoading, refreshUser } = useAuth();
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
   const [blocks, setBlocks] = useState<ArticleBlock[]>([]);
   const [articleTitle, setArticleTitle] = useState('');
@@ -33,7 +33,8 @@ export default function Index() {
     convertBlocksToHtml,
     onSuccess: (result) => {
       if (result.blocks) setBlocks(result.blocks);
-    }
+    },
+    onQuotaConsumed: refreshUser // Refresh user quota after generation
   });
 
   // 处理块内容修改

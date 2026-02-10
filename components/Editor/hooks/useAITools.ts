@@ -43,6 +43,7 @@ export interface UseAIToolsProps {
   setArticleDigest: (digest: string) => void;
   setHtmlContent: (content: string) => void;
   onError: (msg: string) => void;
+  onQuotaConsumed?: () => void; // Callback to refresh user quota display
 }
 
 export const useAITools = ({
@@ -52,7 +53,8 @@ export const useAITools = ({
   setArticleTitle,
   setArticleDigest,
   setHtmlContent,
-  onError
+  onError,
+  onQuotaConsumed
 }: UseAIToolsProps): AIToolsState & AIToolsActions => {
   const [showAITools, setShowAITools] = useState(false);
   const [aiToolLoading, setAiToolLoading] = useState(false);
@@ -88,6 +90,7 @@ export const useAITools = ({
       if (response.success && response.data) {
         const titles = Array.isArray(response.data.result) ? response.data.result as string[] : [];
         setTitleSuggestions(titles);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       } else {
         throw new Error(response.error?.message || 'Failed to generate titles');
       }
@@ -111,6 +114,7 @@ export const useAITools = ({
       if (response.success && response.data) {
         const summary = typeof response.data.result === 'string' ? response.data.result : '';
         setArticleDigest(summary);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       } else {
         throw new Error(response.error?.message || 'Failed to generate summary');
       }
@@ -134,6 +138,7 @@ export const useAITools = ({
       if (response.success && response.data) {
         const kws = Array.isArray(response.data.result) ? response.data.result as string[] : [];
         setKeywords(kws);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       } else {
         throw new Error(response.error?.message || 'Failed to extract keywords');
       }
@@ -166,6 +171,7 @@ export const useAITools = ({
             } as StyleSuggestion))
           : [];
         setStyleSuggestions(styles);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       } else {
         throw new Error(response.error?.message || 'Failed to suggest styles');
       }
@@ -188,6 +194,7 @@ export const useAITools = ({
       if (response.success && response.data) {
         const hook = typeof response.data.result === 'string' ? response.data.result : '';
         setGeneratedHook(hook);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       } else {
         throw new Error(response.error?.message || 'Failed to generate hook');
       }
@@ -210,6 +217,7 @@ export const useAITools = ({
       if (response.success && response.data) {
         const cta = typeof response.data.result === 'string' ? response.data.result : '';
         setGeneratedCTA(cta);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       } else {
         throw new Error(response.error?.message || 'Failed to generate CTA');
       }
@@ -284,6 +292,7 @@ export const useAITools = ({
         // 6. Inject back
         const newHtml = injectRewrittenContent(contentBlocks, rewriteResponse);
         setHtmlContent(newHtml);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       } else {
         throw new Error(response.error?.message || 'AI processing failed');
       }
@@ -349,6 +358,7 @@ export const useAITools = ({
         // 关闭模态框
         setShowRewriteModal(false);
         setRewriteTopic('');
+        onQuotaConsumed?.(); // Refresh quota after consuming
       } else {
         throw new Error(response.error?.message || '重写失败');
       }
