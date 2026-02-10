@@ -1080,151 +1080,482 @@ const expandedDividerTemplates: DesignTemplate[] = [
   }
 ];
 
-// --- Enhanced Block Templates (时间线、对比、横幅、标签、评分、多列) ---
-const enhancedBlockTemplates: DesignTemplate[] = [
+// --- Rich Layout Templates (丰富的排版布局模板) ---
+// These templates demonstrate diverse visual compositions using existing block types
+const richLayoutTemplates: DesignTemplate[] = [
+  // --- Header Layout Variations ---
   {
-    id: 'timeline-basic',
-    name: 'Timeline',
-    nameZh: '时间线',
+    id: 'header-icon-left',
+    name: 'Icon Left Header',
+    nameZh: '图标左侧标题',
+    category: 'header',
+    preview: 'Header with emoji icon on left',
+    previewZh: '左侧emoji图标标题',
+    html: `
+      <section style="margin: 24px 0; display: flex; align-items: center; gap: 12px;">
+        <section style="width: 42px; height: 42px; background: linear-gradient(135deg, #0d9488 0%, #10b981 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 12px rgba(13,148,136,0.3);">📌</section>
+        <section>
+          <section style="font-size: 18px; font-weight: bold; color: #333;">在此输入标题</section>
+          <section style="font-size: 12px; color: #999; margin-top: 2px;">副标题描述文字</section>
+        </section>
+      </section>
+    `
+  },
+  {
+    id: 'header-center-deco',
+    name: 'Center Decorated Header',
+    nameZh: '居中装饰标题',
+    category: 'header',
+    preview: 'Centered header with decorative elements',
+    previewZh: '带装饰元素的居中标题',
+    html: `
+      <section style="margin: 30px 0; text-align: center;">
+        <section style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px;">
+          <section style="width: 30px; height: 2px; background: linear-gradient(90deg, transparent, #e11d48);"></section>
+          <section style="font-size: 13px; color: #e11d48; letter-spacing: 4px;">✦ CHAPTER ✦</section>
+          <section style="width: 30px; height: 2px; background: linear-gradient(90deg, #e11d48, transparent);"></section>
+        </section>
+        <section style="font-size: 22px; font-weight: bold; color: #333; letter-spacing: 1px;">在此输入标题</section>
+        <section style="width: 40px; height: 3px; background: linear-gradient(90deg, #e11d48, #f97316); border-radius: 2px; margin: 10px auto 0;"></section>
+      </section>
+    `
+  },
+  {
+    id: 'header-full-bg',
+    name: 'Full Background Header',
+    nameZh: '全背景色标题',
+    category: 'header',
+    preview: 'Header with full-width background color',
+    previewZh: '全宽背景色标题',
+    html: `
+      <section style="margin: 24px 0; padding: 20px 24px; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border-radius: 12px; position: relative; overflow: hidden;">
+        <section style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></section>
+        <section style="position: absolute; bottom: -10px; left: 30px; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%;"></section>
+        <section style="font-size: 13px; color: rgba(255,255,255,0.7); letter-spacing: 2px; margin-bottom: 6px;">SECTION TITLE</section>
+        <section style="font-size: 20px; font-weight: bold; color: #fff;">在此输入标题</section>
+      </section>
+    `
+  },
+  {
+    id: 'header-side-stripe',
+    name: 'Side Stripe Header',
+    nameZh: '侧边条纹标题',
+    category: 'header',
+    preview: 'Header with colorful side stripe',
+    previewZh: '彩色侧边条纹标题',
+    html: `
+      <section style="margin: 24px 0; display: flex; align-items: stretch;">
+        <section style="width: 6px; background: linear-gradient(180deg, #f97316, #ef4444, #ec4899); border-radius: 3px; margin-right: 14px;"></section>
+        <section>
+          <section style="font-size: 19px; font-weight: bold; color: #333;">在此输入标题</section>
+          <section style="font-size: 13px; color: #888; margin-top: 4px;">这是一个带有侧边彩色条纹的标题样式</section>
+        </section>
+      </section>
+    `
+  },
+
+  // --- Content Card Layout Variations ---
+  {
+    id: 'card-gradient-top',
+    name: 'Gradient Top Card',
+    nameZh: '渐变顶部卡片',
+    category: 'card',
+    preview: 'Card with gradient top border',
+    previewZh: '顶部渐变边框卡片',
+    html: `
+      <section style="margin: 20px 0; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
+        <section style="height: 4px; background: linear-gradient(90deg, #fa5151, #f39c12, #07c160, #3498db, #9b59b6);"></section>
+        <section style="padding: 20px;">
+          <section style="font-size: 16px; font-weight: bold; color: #333; margin-bottom: 10px;">💡 卡片标题</section>
+          <section style="font-size: 14px; color: #666; line-height: 1.8;">在此输入卡片内容，这种布局适合展示重要信息或总结要点。</section>
+        </section>
+      </section>
+    `
+  },
+  {
+    id: 'card-icon-feature',
+    name: 'Icon Feature Card',
+    nameZh: '图标特色卡片',
+    category: 'card',
+    preview: 'Feature card with large icon',
+    previewZh: '带大图标的特色卡片',
+    html: `
+      <section style="margin: 20px 0; padding: 24px; background: linear-gradient(135deg, #ecfdf5 0%, #f0fdfa 100%); border-radius: 12px; border: 1px solid #a7f3d0; text-align: center;">
+        <section style="font-size: 36px; margin-bottom: 12px;">🎯</section>
+        <section style="font-size: 17px; font-weight: bold; color: #0d9488; margin-bottom: 8px;">特色功能标题</section>
+        <section style="font-size: 14px; color: #555; line-height: 1.7;">在此输入特色说明，这种卡片适合展示产品特色或核心卖点。</section>
+      </section>
+    `
+  },
+  {
+    id: 'card-stats-row',
+    name: 'Stats Row Card',
+    nameZh: '数据统计行卡片',
+    category: 'card',
+    preview: 'Horizontal stats display card',
+    previewZh: '横向数据统计展示',
+    html: `
+      <section style="margin: 20px 0; padding: 20px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px;">
+        <section style="display: flex; justify-content: space-around; text-align: center;">
+          <section>
+            <section style="font-size: 28px; font-weight: bold; color: #feca57;">100+</section>
+            <section style="font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 4px;">合作伙伴</section>
+          </section>
+          <section style="width: 1px; background: rgba(255,255,255,0.15);"></section>
+          <section>
+            <section style="font-size: 28px; font-weight: bold; color: #48dbfb;">50万</section>
+            <section style="font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 4px;">服务用户</section>
+          </section>
+          <section style="width: 1px; background: rgba(255,255,255,0.15);"></section>
+          <section>
+            <section style="font-size: 28px; font-weight: bold; color: #ff6b6b;">99%</section>
+            <section style="font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 4px;">满意度</section>
+          </section>
+        </section>
+      </section>
+    `
+  },
+  {
+    id: 'card-quote-golden',
+    name: 'Golden Quote Card',
+    nameZh: '金句卡片',
+    category: 'card',
+    preview: 'Beautiful golden quote card',
+    previewZh: '精美金句卡片',
+    html: `
+      <section style="margin: 24px 0; padding: 28px 24px; background: linear-gradient(135deg, #1a1a2e 0%, #2d1b69 100%); border-radius: 16px; text-align: center; position: relative;">
+        <section style="font-size: 40px; color: rgba(255,215,0,0.3); position: absolute; top: 10px; left: 20px;">"</section>
+        <section style="font-size: 17px; color: #fff; line-height: 1.8; font-style: italic; padding: 0 20px;">在此输入金句内容，一句话打动读者的心</section>
+        <section style="width: 40px; height: 2px; background: linear-gradient(90deg, #d4af37, #ffd700); margin: 16px auto 12px;"></section>
+        <section style="font-size: 13px; color: rgba(255,255,255,0.6);">—— 作者姓名</section>
+        <section style="font-size: 40px; color: rgba(255,215,0,0.3); position: absolute; bottom: 10px; right: 20px;">"</section>
+      </section>
+    `
+  },
+  {
+    id: 'card-highlight-box',
+    name: 'Highlight Box',
+    nameZh: '重点高亮框',
+    category: 'card',
+    preview: 'Highlighted information box',
+    previewZh: '高亮信息展示框',
+    html: `
+      <section style="margin: 20px 0; padding: 20px 24px; background-color: #fffbeb; border-left: 5px solid #d97706; border-radius: 0 8px 8px 0; position: relative;">
+        <section style="position: absolute; top: -8px; left: 12px; background: #d97706; color: #fff; font-size: 11px; padding: 2px 10px; border-radius: 0 0 6px 6px; font-weight: bold;">⚡ 划重点</section>
+        <section style="font-size: 15px; color: #92400e; line-height: 1.8; margin-top: 8px;">在此输入重点内容，这种布局非常适合突出关键信息或重要提醒。</section>
+      </section>
+    `
+  },
+
+  // --- List Layout Variations ---
+  {
+    id: 'list-checklist',
+    name: 'Checklist Style',
+    nameZh: '打勾清单列表',
+    category: 'list',
+    preview: 'Checklist with green checks',
+    previewZh: '绿色打勾清单',
+    html: `
+      <section style="margin: 20px 0; padding: 20px; background-color: #f6fffa; border-radius: 12px; border: 1px solid #e0f2e9;">
+        <section style="font-size: 16px; font-weight: bold; color: #07c160; margin-bottom: 14px;">✅ 清单标题</section>
+        <section style="display: flex; align-items: center; padding: 8px 0; border-bottom: 1px dashed #e0f2e9;">
+          <section style="width: 20px; height: 20px; background: #07c160; border-radius: 50%; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex-shrink: 0;">✓</section>
+          <section style="font-size: 14px; color: #555;">第一个清单项目</section>
+        </section>
+        <section style="display: flex; align-items: center; padding: 8px 0; border-bottom: 1px dashed #e0f2e9;">
+          <section style="width: 20px; height: 20px; background: #07c160; border-radius: 50%; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex-shrink: 0;">✓</section>
+          <section style="font-size: 14px; color: #555;">第二个清单项目</section>
+        </section>
+        <section style="display: flex; align-items: center; padding: 8px 0;">
+          <section style="width: 20px; height: 20px; background: #07c160; border-radius: 50%; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex-shrink: 0;">✓</section>
+          <section style="font-size: 14px; color: #555;">第三个清单项目</section>
+        </section>
+      </section>
+    `
+  },
+  {
+    id: 'list-tag-prefix',
+    name: 'Tag Prefix List',
+    nameZh: '标签前缀列表',
+    category: 'list',
+    preview: 'List with colorful tag prefixes',
+    previewZh: '彩色标签前缀列表',
+    html: `
+      <section style="margin: 20px 0;">
+        <section style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+          <section style="padding: 2px 10px; background-color: #fa5151; color: #fff; font-size: 12px; border-radius: 4px; margin-right: 10px; flex-shrink: 0; font-weight: bold;">01</section>
+          <section style="font-size: 14px; color: #444; line-height: 1.6;">列表项目内容一</section>
+        </section>
+        <section style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+          <section style="padding: 2px 10px; background-color: #3498db; color: #fff; font-size: 12px; border-radius: 4px; margin-right: 10px; flex-shrink: 0; font-weight: bold;">02</section>
+          <section style="font-size: 14px; color: #444; line-height: 1.6;">列表项目内容二</section>
+        </section>
+        <section style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+          <section style="padding: 2px 10px; background-color: #9b59b6; color: #fff; font-size: 12px; border-radius: 4px; margin-right: 10px; flex-shrink: 0; font-weight: bold;">03</section>
+          <section style="font-size: 14px; color: #444; line-height: 1.6;">列表项目内容三</section>
+        </section>
+      </section>
+    `
+  },
+  {
+    id: 'list-icon-card',
+    name: 'Icon Card List',
+    nameZh: '图标卡片列表',
+    category: 'list',
+    preview: 'List items as mini cards with icons',
+    previewZh: '图标迷你卡片列表',
+    html: `
+      <section style="margin: 20px 0;">
+        <section style="display: flex; align-items: center; padding: 14px 16px; background-color: #eef2ff; border-radius: 10px; margin-bottom: 10px;">
+          <section style="font-size: 22px; margin-right: 12px;">🚀</section>
+          <section>
+            <section style="font-size: 15px; font-weight: bold; color: #4f46e5;">项目标题</section>
+            <section style="font-size: 13px; color: #666; margin-top: 2px;">简短描述说明</section>
+          </section>
+        </section>
+        <section style="display: flex; align-items: center; padding: 14px 16px; background-color: #fff1f2; border-radius: 10px; margin-bottom: 10px;">
+          <section style="font-size: 22px; margin-right: 12px;">💡</section>
+          <section>
+            <section style="font-size: 15px; font-weight: bold; color: #e11d48;">项目标题</section>
+            <section style="font-size: 13px; color: #666; margin-top: 2px;">简短描述说明</section>
+          </section>
+        </section>
+        <section style="display: flex; align-items: center; padding: 14px 16px; background-color: #f0fdfa; border-radius: 10px;">
+          <section style="font-size: 22px; margin-right: 12px;">🎯</section>
+          <section>
+            <section style="font-size: 15px; font-weight: bold; color: #0d9488;">项目标题</section>
+            <section style="font-size: 13px; color: #666; margin-top: 2px;">简短描述说明</section>
+          </section>
+        </section>
+      </section>
+    `
+  },
+
+  // --- Quote Layout Variations ---
+  {
+    id: 'quote-bubble',
+    name: 'Speech Bubble Quote',
+    nameZh: '对话气泡引用',
+    category: 'quote',
+    preview: 'Quote styled as speech bubble',
+    previewZh: '对话气泡风格引用',
+    html: `
+      <section style="margin: 24px 0;">
+        <section style="padding: 18px 22px; background-color: #eef2ff; border-radius: 16px 16px 16px 4px; position: relative;">
+          <section style="font-size: 15px; color: #4f46e5; line-height: 1.8; font-style: italic;">"在此输入引用内容，这种气泡样式非常适合对话或名人名言。"</section>
+        </section>
+        <section style="display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-left: 12px;">
+          <section style="width: 32px; height: 32px; background: linear-gradient(135deg, #4f46e5, #7c3aed); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: bold;">A</section>
+          <section style="font-size: 13px; color: #666;">作者姓名 · 身份/来源</section>
+        </section>
+      </section>
+    `
+  },
+  {
+    id: 'quote-large-mark',
+    name: 'Large Quote Mark',
+    nameZh: '大引号引用',
+    category: 'quote',
+    preview: 'Quote with oversized quote marks',
+    previewZh: '带超大引号的引用',
+    html: `
+      <section style="margin: 24px 0; padding: 24px; background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%); border-radius: 12px; position: relative;">
+        <section style="font-size: 60px; color: #d4c4e8; position: absolute; top: 0; left: 16px; line-height: 1;">"</section>
+        <section style="font-size: 16px; color: #555; line-height: 1.9; padding: 20px 10px 0 40px; font-style: italic;">在此输入引用文字内容，大引号装饰让引用更加醒目和有设计感。</section>
+        <section style="text-align: right; margin-top: 12px; font-size: 13px; color: #9b59b6;">—— 来源出处</section>
+      </section>
+    `
+  },
+
+  // --- Callout/Notice Layout Variations ---
+  {
+    id: 'callout-warm-tip',
+    name: 'Warm Tip Box',
+    nameZh: '温馨提示框',
+    category: 'callout',
+    preview: 'Warm-styled tip callout',
+    previewZh: '暖色温馨提示',
+    html: `
+      <section style="margin: 20px 0; padding: 18px 20px; background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%); border-radius: 12px; border: 1px solid #fed7aa;">
+        <section style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+          <section style="font-size: 18px;">🌟</section>
+          <section style="font-size: 15px; font-weight: bold; color: #d97706;">温馨提示</section>
+        </section>
+        <section style="font-size: 14px; color: #92400e; line-height: 1.7; padding-left: 26px;">在此输入提示内容，适合放置友好提醒或注意事项。</section>
+      </section>
+    `
+  },
+  {
+    id: 'callout-gradient-notice',
+    name: 'Gradient Notice',
+    nameZh: '渐变通知框',
+    category: 'callout',
+    preview: 'Gradient background notice',
+    previewZh: '渐变背景通知',
+    html: `
+      <section style="margin: 20px 0; border-radius: 12px; overflow: hidden;">
+        <section style="padding: 12px 20px; background: linear-gradient(90deg, #4f46e5, #7c3aed); display: flex; align-items: center; gap: 8px;">
+          <section style="font-size: 16px;">📢</section>
+          <section style="font-size: 14px; font-weight: bold; color: #fff;">重要公告</section>
+        </section>
+        <section style="padding: 16px 20px; background-color: #eef2ff; font-size: 14px; color: #555; line-height: 1.7;">在此输入通知详情内容，渐变头部吸引注意力。</section>
+      </section>
+    `
+  },
+
+  // --- Special Section Layout Variations ---
+  {
+    id: 'special-feature-grid',
+    name: 'Feature Grid',
+    nameZh: '特色网格',
     category: 'special',
-    preview: 'Chronological timeline display',
-    previewZh: '时间线事件展示',
+    preview: '2x2 feature grid layout',
+    previewZh: '2x2特色展示网格',
+    html: `
+      <section style="margin: 24px 0;">
+        <section style="display: flex; gap: 10px; margin-bottom: 10px;">
+          <section style="flex: 1; padding: 20px; background-color: #eef2ff; border-radius: 12px; text-align: center;">
+            <section style="font-size: 28px; margin-bottom: 8px;">🎨</section>
+            <section style="font-size: 14px; font-weight: bold; color: #4f46e5; margin-bottom: 4px;">特色标题</section>
+            <section style="font-size: 12px; color: #888;">简短说明文字</section>
+          </section>
+          <section style="flex: 1; padding: 20px; background-color: #fff1f2; border-radius: 12px; text-align: center;">
+            <section style="font-size: 28px; margin-bottom: 8px;">⚡</section>
+            <section style="font-size: 14px; font-weight: bold; color: #e11d48; margin-bottom: 4px;">特色标题</section>
+            <section style="font-size: 12px; color: #888;">简短说明文字</section>
+          </section>
+        </section>
+        <section style="display: flex; gap: 10px;">
+          <section style="flex: 1; padding: 20px; background-color: #f0fdfa; border-radius: 12px; text-align: center;">
+            <section style="font-size: 28px; margin-bottom: 8px;">💎</section>
+            <section style="font-size: 14px; font-weight: bold; color: #0d9488; margin-bottom: 4px;">特色标题</section>
+            <section style="font-size: 12px; color: #888;">简短说明文字</section>
+          </section>
+          <section style="flex: 1; padding: 20px; background-color: #fffbeb; border-radius: 12px; text-align: center;">
+            <section style="font-size: 28px; margin-bottom: 8px;">🏆</section>
+            <section style="font-size: 14px; font-weight: bold; color: #d97706; margin-bottom: 4px;">特色标题</section>
+            <section style="font-size: 12px; color: #888;">简短说明文字</section>
+          </section>
+        </section>
+      </section>
+    `
+  },
+  {
+    id: 'special-step-flow',
+    name: 'Step Flow Layout',
+    nameZh: '步骤流程布局',
+    category: 'special',
+    preview: 'Horizontal step flow with arrows',
+    previewZh: '水平步骤流程带箭头',
     html: `
       <section style="margin: 24px 0; padding: 20px; background-color: #f8f9ff; border-radius: 12px;">
-        <section style="font-size: 17px; font-weight: bold; color: #4f46e5; margin-bottom: 16px;">📅 时间线标题</section>
-        <section style="border-left: 2px solid #e0e7ff; margin-left: 86px;">
-          <section style="display: flex; margin-bottom: 20px; position: relative;">
-            <section style="width: 80px; flex-shrink: 0; text-align: right; padding-right: 16px; font-size: 13px; color: #888; padding-top: 2px;">2024.01</section>
-            <section style="width: 12px; height: 12px; border-radius: 50%; background-color: #4f46e5; flex-shrink: 0; margin-top: 4px; border: 2px solid #fff; box-shadow: 0 0 0 2px #e0e7ff;"></section>
-            <section style="padding-left: 16px; flex: 1;">
-              <section style="font-size: 15px; font-weight: bold; color: #333;">第一个事件</section>
-              <section style="font-size: 13px; color: #666; line-height: 1.6;">事件描述内容</section>
-            </section>
+        <section style="font-size: 16px; font-weight: bold; color: #4f46e5; text-align: center; margin-bottom: 16px;">📋 操作流程</section>
+        <section style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+          <section style="text-align: center; flex: 1;">
+            <section style="width: 36px; height: 36px; background: linear-gradient(135deg, #4f46e5, #7c3aed); border-radius: 50%; color: #fff; font-size: 16px; font-weight: bold; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px;">1</section>
+            <section style="font-size: 13px; color: #555; font-weight: 500;">第一步</section>
           </section>
-          <section style="display: flex; margin-bottom: 20px; position: relative;">
-            <section style="width: 80px; flex-shrink: 0; text-align: right; padding-right: 16px; font-size: 13px; color: #888; padding-top: 2px;">2024.06</section>
-            <section style="width: 12px; height: 12px; border-radius: 50%; background-color: #4f46e5; flex-shrink: 0; margin-top: 4px; border: 2px solid #fff; box-shadow: 0 0 0 2px #e0e7ff;"></section>
-            <section style="padding-left: 16px; flex: 1;">
-              <section style="font-size: 15px; font-weight: bold; color: #333;">第二个事件</section>
-              <section style="font-size: 13px; color: #666; line-height: 1.6;">事件描述内容</section>
-            </section>
+          <section style="color: #c7d2fe; font-size: 16px;">→</section>
+          <section style="text-align: center; flex: 1;">
+            <section style="width: 36px; height: 36px; background: linear-gradient(135deg, #0d9488, #10b981); border-radius: 50%; color: #fff; font-size: 16px; font-weight: bold; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px;">2</section>
+            <section style="font-size: 13px; color: #555; font-weight: 500;">第二步</section>
+          </section>
+          <section style="color: #a7f3d0; font-size: 16px;">→</section>
+          <section style="text-align: center; flex: 1;">
+            <section style="width: 36px; height: 36px; background: linear-gradient(135deg, #d97706, #f59e0b); border-radius: 50%; color: #fff; font-size: 16px; font-weight: bold; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px;">3</section>
+            <section style="font-size: 13px; color: #555; font-weight: 500;">第三步</section>
+          </section>
+          <section style="color: #fde68a; font-size: 16px;">→</section>
+          <section style="text-align: center; flex: 1;">
+            <section style="width: 36px; height: 36px; background: linear-gradient(135deg, #e11d48, #f43f5e); border-radius: 50%; color: #fff; font-size: 16px; font-weight: bold; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px;">4</section>
+            <section style="font-size: 13px; color: #555; font-weight: 500;">完成</section>
           </section>
         </section>
       </section>
     `
   },
   {
-    id: 'comparison-basic',
-    name: 'Comparison',
-    nameZh: '对比框',
+    id: 'special-info-banner',
+    name: 'Info Banner',
+    nameZh: '信息横幅',
     category: 'special',
-    preview: 'Side-by-side comparison layout',
-    previewZh: '并排对比展示',
+    preview: 'Full-width info banner with gradient',
+    previewZh: '全宽渐变信息横幅',
     html: `
-      <section style="margin: 24px 0; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;">
-        <section style="padding: 12px 16px; background-color: #f8f9ff; font-weight: bold; font-size: 16px; color: #333; text-align: center; border-bottom: 1px solid #e5e7eb;">对比标题</section>
-        <section style="display: flex;">
-          <section style="flex: 1; border-right: 1px solid #e5e7eb;">
-            <section style="padding: 10px 16px; background-color: #4f46e5; color: #fff; font-weight: bold; font-size: 14px; text-align: center;">选项A</section>
-            <section style="padding: 8px 16px;">
-              <section style="padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: #555;">特点一</section>
-              <section style="padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: #555;">特点二</section>
-            </section>
-          </section>
+      <section style="margin: 24px 0; padding: 24px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; text-align: center; position: relative; overflow: hidden;">
+        <section style="position: absolute; top: -30px; right: -30px; width: 100px; height: 100px; background: rgba(255,255,255,0.08); border-radius: 50%;"></section>
+        <section style="position: absolute; bottom: -20px; left: -20px; width: 60px; height: 60px; background: rgba(255,255,255,0.05); border-radius: 50%;"></section>
+        <section style="font-size: 20px; font-weight: bold; color: #fff; margin-bottom: 8px;">横幅主标题</section>
+        <section style="font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.6;">在此输入横幅描述文字，适合重要公告或活动宣传。</section>
+      </section>
+    `
+  },
+  {
+    id: 'special-testimonial-card',
+    name: 'Testimonial Card',
+    nameZh: '用户评价卡片',
+    category: 'special',
+    preview: 'User testimonial with avatar',
+    previewZh: '带头像的用户评价',
+    html: `
+      <section style="margin: 20px 0; padding: 20px; background-color: #f8f9fa; border-radius: 12px;">
+        <section style="display: flex; gap: 14px;">
+          <section style="width: 44px; height: 44px; background: linear-gradient(135deg, #e11d48, #f43f5e); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; font-weight: bold; flex-shrink: 0;">U</section>
           <section style="flex: 1;">
-            <section style="padding: 10px 16px; background-color: #0d9488; color: #fff; font-weight: bold; font-size: 14px; text-align: center;">选项B</section>
-            <section style="padding: 8px 16px;">
-              <section style="padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: #555;">特点一</section>
-              <section style="padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: #555;">特点二</section>
+            <section style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <section style="font-size: 15px; font-weight: bold; color: #333;">用户名称</section>
+              <section style="font-size: 12px; color: #f39c12;">★★★★★</section>
             </section>
+            <section style="font-size: 14px; color: #666; line-height: 1.7; font-style: italic;">"在此输入用户评价内容，真实的反馈能增强说服力。"</section>
           </section>
         </section>
       </section>
     `
   },
+
+  // --- Divider Layout Variations ---
   {
-    id: 'banner-gradient',
-    name: 'Gradient Banner',
-    nameZh: '渐变横幅',
-    category: 'special',
-    preview: 'Full-width gradient banner',
-    previewZh: '全宽渐变横幅',
+    id: 'divider-rainbow',
+    name: 'Rainbow Divider',
+    nameZh: '彩虹分割线',
+    category: 'divider',
+    preview: 'Colorful rainbow divider line',
+    previewZh: '彩色彩虹分割线',
     html: `
-      <section style="margin: 24px 0; padding: 24px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; text-align: center;">
-        <section style="font-size: 20px; font-weight: bold; color: #fff; margin-bottom: 8px;">横幅标题</section>
-        <section style="font-size: 15px; color: rgba(255,255,255,0.9); line-height: 1.6;">横幅描述文字</section>
+      <section style="margin: 30px 0; padding: 0 20px;">
+        <section style="height: 3px; background: linear-gradient(90deg, #fa5151, #f39c12, #d4af37, #07c160, #3498db, #9b59b6, #eb4d9c); border-radius: 2px;"></section>
       </section>
     `
   },
   {
-    id: 'banner-warm',
-    name: 'Warm Banner',
-    nameZh: '暖色横幅',
-    category: 'special',
-    preview: 'Warm gradient banner',
-    previewZh: '暖色渐变横幅',
+    id: 'divider-icon-center',
+    name: 'Icon Center Divider',
+    nameZh: '中心图标分割线',
+    category: 'divider',
+    preview: 'Divider with icon in center',
+    previewZh: '中心带图标的分割线',
     html: `
-      <section style="margin: 24px 0; padding: 24px 20px; background: linear-gradient(135deg, #f97316 0%, #ef4444 100%); border-radius: 12px; text-align: center;">
-        <section style="font-size: 20px; font-weight: bold; color: #fff; margin-bottom: 8px;">横幅标题</section>
-        <section style="font-size: 15px; color: rgba(255,255,255,0.9); line-height: 1.6;">横幅描述文字</section>
+      <section style="margin: 30px 0; display: flex; align-items: center; justify-content: center; gap: 12px;">
+        <section style="flex: 1; max-width: 100px; height: 1px; background: linear-gradient(90deg, transparent, #d4c4e8);"></section>
+        <section style="width: 28px; height: 28px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px;">✦</section>
+        <section style="flex: 1; max-width: 100px; height: 1px; background: linear-gradient(90deg, #d4c4e8, transparent);"></section>
       </section>
     `
   },
   {
-    id: 'badge-list-basic',
-    name: 'Badge List',
-    nameZh: '标签列表',
-    category: 'special',
-    preview: 'Colorful badge/tag list',
-    previewZh: '彩色标签列表',
+    id: 'divider-dots-gradient',
+    name: 'Gradient Dots Divider',
+    nameZh: '渐变圆点分割线',
+    category: 'divider',
+    preview: 'Gradient colored dots divider',
+    previewZh: '渐变色圆点分割',
     html: `
-      <section style="margin: 20px 0;">
-        <section style="font-size: 15px; font-weight: bold; color: #333; margin-bottom: 12px;">标签标题</section>
-        <section style="display: flex; flex-wrap: wrap; gap: 8px;">
-          <section style="display: inline-block; padding: 6px 16px; background-color: rgba(250,81,81,0.08); color: #fa5151; border: 1px solid rgba(250,81,81,0.25); border-radius: 20px; font-size: 13px;">标签一</section>
-          <section style="display: inline-block; padding: 6px 16px; background-color: rgba(52,152,219,0.08); color: #3498db; border: 1px solid rgba(52,152,219,0.25); border-radius: 20px; font-size: 13px;">标签二</section>
-          <section style="display: inline-block; padding: 6px 16px; background-color: rgba(155,89,182,0.08); color: #9b59b6; border: 1px solid rgba(155,89,182,0.25); border-radius: 20px; font-size: 13px;">标签三</section>
-          <section style="display: inline-block; padding: 6px 16px; background-color: rgba(7,193,96,0.08); color: #07c160; border: 1px solid rgba(7,193,96,0.25); border-radius: 20px; font-size: 13px;">标签四</section>
-        </section>
-      </section>
-    `
-  },
-  {
-    id: 'rating-stars',
-    name: 'Star Rating',
-    nameZh: '星级评分',
-    category: 'special',
-    preview: 'Star rating display',
-    previewZh: '星级评分展示',
-    html: `
-      <section style="margin: 20px 0; padding: 20px; background-color: #fffbeb; border-radius: 12px; text-align: center;">
-        <section style="font-size: 32px; color: #f39c12; letter-spacing: 4px; margin-bottom: 8px;">★★★★☆</section>
-        <section style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 4px;">4.0/5.0</section>
-        <section style="font-size: 14px; color: #666; margin-top: 8px;">评分描述文字</section>
-      </section>
-    `
-  },
-  {
-    id: 'columns-three',
-    name: 'Three Columns',
-    nameZh: '三列布局',
-    category: 'special',
-    preview: 'Three-column content layout',
-    previewZh: '三列内容布局',
-    html: `
-      <section style="margin: 20px 0;">
-        <section style="font-size: 16px; font-weight: bold; color: #333; margin-bottom: 12px; text-align: center;">多列布局标题</section>
-        <section style="display: flex; gap: 12px;">
-          <section style="flex: 1; padding: 16px; background: #fff; border-radius: 8px; border: 1px solid #f0f0f0; border-top: 3px solid #fa5151;">
-            <section style="font-size: 14px; color: #444; line-height: 1.6;">第一列内容</section>
-          </section>
-          <section style="flex: 1; padding: 16px; background: #fff; border-radius: 8px; border: 1px solid #f0f0f0; border-top: 3px solid #3498db;">
-            <section style="font-size: 14px; color: #444; line-height: 1.6;">第二列内容</section>
-          </section>
-          <section style="flex: 1; padding: 16px; background: #fff; border-radius: 8px; border: 1px solid #f0f0f0; border-top: 3px solid #9b59b6;">
-            <section style="font-size: 14px; color: #444; line-height: 1.6;">第三列内容</section>
-          </section>
-        </section>
+      <section style="margin: 30px 0; display: flex; justify-content: center; gap: 6px;">
+        <section style="width: 6px; height: 6px; border-radius: 50%; background-color: #fa5151;"></section>
+        <section style="width: 6px; height: 6px; border-radius: 50%; background-color: #f39c12;"></section>
+        <section style="width: 6px; height: 6px; border-radius: 50%; background-color: #07c160;"></section>
+        <section style="width: 6px; height: 6px; border-radius: 50%; background-color: #3498db;"></section>
+        <section style="width: 6px; height: 6px; border-radius: 50%; background-color: #9b59b6;"></section>
       </section>
     `
   }
@@ -1244,7 +1575,7 @@ export const allDesignTemplates: DesignTemplate[] = [
   ...calloutTemplates,
   ...specialTemplates,
   ...expandedSpecialTemplates,
-  ...enhancedBlockTemplates
+  ...richLayoutTemplates
 ];
 
 // --- Get Template by ID ---

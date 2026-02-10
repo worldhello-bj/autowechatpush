@@ -22,15 +22,7 @@ export enum BlockType {
   STATS = 'stats',             // 数据统计卡片
   TESTIMONIAL = 'testimonial', // 用户评价
   STEPS = 'steps',             // 步骤流程
-  SVG = 'svg',                 // SVG图形/装饰
-  // Enhanced block types for richer article formatting
-  TIMELINE = 'timeline',       // 时间线
-  COMPARISON = 'comparison',   // 对比框
-  BANNER = 'banner',           // 横幅条
-  BADGE_LIST = 'badge_list',   // 标签列表
-  RATING = 'rating',           // 评分展示
-  ICON_LIST = 'icon_list',     // 图标列表
-  COLUMNS = 'columns',         // 多列布局
+  SVG = 'svg'                  // SVG图形/装饰
 }
 
 export interface ArticleBlock {
@@ -38,7 +30,7 @@ export interface ArticleBlock {
   type: BlockType;
   content: string; // Text content or Image URL
   title?: string; // For Card/Header
-  style?: 'default' | 'primary' | 'warning' | 'quote' | 'red' | 'blue' | 'purple' | 'orange' | 'gold' | 'green' | 'pink' | 'cyan' | 'gradient' | 'teal' | 'indigo' | 'amber' | 'rose' | 'lime' | 'gradient_warm' | 'gradient_cool' | 'gradient_nature';
+  style?: 'default' | 'primary' | 'warning' | 'quote' | 'red' | 'blue' | 'purple' | 'orange' | 'gold' | 'green' | 'pink' | 'cyan' | 'gradient';
   items?: string[]; // For List/Numbered List, FAQ questions, step descriptions
   level?: 1 | 2 | 3 | '1' | '2' | '3'; // For Header (h1, h2, h3) - accepts number or string
   alignment?: 'left' | 'center' | 'right'; // For text alignment
@@ -58,14 +50,6 @@ export interface ArticleBlock {
   percentage?: number; // For progress blocks (0-100)
   author?: string; // For testimonial blocks
   role?: string; // For testimonial blocks (author role/position)
-  // Properties for enhanced block types
-  events?: { date: string; title: string; description?: string }[]; // For timeline blocks
-  leftItems?: string[]; // For comparison blocks (left column)
-  rightItems?: string[]; // For comparison blocks (right column)
-  leftTitle?: string; // For comparison blocks (left header)
-  rightTitle?: string; // For comparison blocks (right header)
-  ratingValue?: number; // For rating blocks (0-5)
-  columnItems?: string[]; // For columns blocks (each item is a column)
 }
 
 export interface Article {
