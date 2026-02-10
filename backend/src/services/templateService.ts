@@ -34,7 +34,7 @@ interface PersistedTemplateData {
 /**
  * Flush template data to disk
  */
-const flushPersist = async () => {
+export const flushPersist = async () => {
   if (persistInFlight) {
     // Retry after current flush completes
     if (!persistTimer) {

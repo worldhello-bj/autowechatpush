@@ -6,7 +6,8 @@ import {
   deleteTemplate,
   getTemplateById,
   updateTemplate,
-  applyTemplateToContent
+  applyTemplateToContent,
+  flushPersist
 } from '../services/templateService.js';
 
 const logger = createLogger('template-controller');
@@ -36,6 +37,9 @@ export const create = async (req: Request, res: Response) => {
       sourceUrl,
       statistics
     });
+
+    // Ensure template is persisted to disk before responding
+    await flushPersist();
 
     sendSuccess(res, template, 201);
   } catch (error) {
@@ -78,6 +82,9 @@ export const remove = async (req: Request, res: Response) => {
     if (!success) {
       return sendError(res, 404, 'NOT_FOUND', 'Template not found or access denied');
     }
+
+    // Ensure deletion is persisted to disk before responding
+    await flushPersist();
 
     sendSuccess(res, { message: 'Template deleted successfully' });
   } catch (error) {
@@ -128,6 +135,9 @@ export const update = async (req: Request, res: Response) => {
     if (!template) {
       return sendError(res, 404, 'NOT_FOUND', 'Template not found or access denied');
     }
+
+    // Ensure update is persisted to disk before responding
+    await flushPersist();
 
     sendSuccess(res, template);
   } catch (error) {
