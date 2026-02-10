@@ -33,18 +33,23 @@ interface PersistedTemplateData {
 
 /**
  * Flush template data to disk
+ * Handles concurrent calls by waiting for ongoing flush and ensuring
+ * a new flush happens if data changed during the wait
  */
 export const flushPersist = async () => {
-  if (persistInFlight) {
-    // Wait for current flush to complete, then schedule another one if needed
+  // Wait for any ongoing flush to complete first
+  while (persistInFlight) {
     await persistInFlight;
-    // Check if another flush was started while we were waiting
-    if (persistInFlight) {
-      await persistInFlight;
-    }
+  }
+
+  // Check if another flush started while we were waiting
+  // This can happen if multiple concurrent calls are waiting
+  if (persistInFlight) {
+    await persistInFlight;
     return;
   }
 
+  // Start a new flush operation
   const payload: PersistedTemplateData = {
     version: '1.0',
     templates: Array.from(templates.values()),
