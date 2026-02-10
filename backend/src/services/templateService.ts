@@ -36,12 +36,11 @@ interface PersistedTemplateData {
  */
 export const flushPersist = async () => {
   if (persistInFlight) {
-    // Retry after current flush completes
-    if (!persistTimer) {
-      persistTimer = setTimeout(() => {
-        persistTimer = null;
-        void flushPersist();
-      }, 50);
+    // Wait for current flush to complete, then schedule another one if needed
+    await persistInFlight;
+    // Check if another flush was started while we were waiting
+    if (persistInFlight) {
+      await persistInFlight;
     }
     return;
   }
