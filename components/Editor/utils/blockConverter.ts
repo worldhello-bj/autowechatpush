@@ -86,7 +86,7 @@ export const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
         `;
       }
       case BlockType.PARAGRAPH:
-        return wxText(block.content, `${WX_TEXT_BASE} ${textAlign}`, alignment);
+        return wxText(block.content, WX_TEXT_BASE, alignment);
       case BlockType.QUOTE:
         return `
           <section style="margin: 20px 0; padding: 15px; ${isGradient ? `background: ${colors.bg}` : `background-color: ${colors.bg}`}; border-left: 4px solid ${isGradient ? '#667eea' : colors.main}; border-radius: 0 4px 4px 0;">
@@ -183,12 +183,12 @@ export const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
         `;
       case BlockType.TABLE: {
         const tableHeaders = block.headers?.map((h: string) => `
-          <section style="flex: 1; padding: 10px 12px; ${isGradient ? `background: ${colors.main}` : `background-color: ${colors.main}`}; color: #fff; font-weight: bold; font-size: 14px; text-align: center;"><span>${h}</span></section>
+          <section style="flex: 1; padding: 10px 12px; ${isGradient ? `background: ${colors.main}` : `background-color: ${colors.main}`}; color: #fff; font-weight: bold; font-size: 14px; text-align: center;"><p style="color: #fff; font-weight: bold;"><span>${h}</span></p></section>
         `).join('') || '';
         const tableRows = block.rows?.map((row: string[], rowIdx: number) => `
           <section style="display: flex; border-bottom: 1px solid #eee; ${rowIdx % 2 === 0 ? 'background-color: #fafafa;' : 'background-color: #fff;'}">
             ${row.map((cell: string) => `
-              <section style="flex: 1; padding: 10px 12px; font-size: 14px; color: #555; text-align: center;"><span>${cell}</span></section>
+              <section style="flex: 1; padding: 10px 12px; font-size: 14px; color: #555; text-align: center;"><p style="font-size: 14px; color: #555;"><span>${cell}</span></p></section>
             `).join('')}
           </section>
         `).join('') || '';
@@ -220,11 +220,11 @@ export const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
           return `
             <section style="margin-bottom: 16px; background: #f8f9fa; border-radius: 12px; overflow: hidden;">
               <section style="padding: 16px 20px; background: ${faqColor}; color: #fff; font-size: 15px; font-weight: bold; display: flex; align-items: center; gap: 8px;">
-                <span>Q</span>
-                <span>${question}</span>
+                <p style="color: #fff; font-weight: bold;"><span>Q</span></p>
+                <p style="color: #fff; font-weight: bold;"><span>${question}</span></p>
               </section>
               <section style="padding: 16px 20px; display: flex; align-items: flex-start; gap: 8px;">
-                <span style="color: ${faqColor}; font-weight: bold;">A</span>
+                <p style="color: ${faqColor}; font-weight: bold;"><span>A</span></p>
                 <p style="${WX_TEXT_SECONDARY}"><span>${answer}</span></p>
               </section>
             </section>
