@@ -39,7 +39,7 @@ export interface ArticleBlock {
   type: BlockType;
   content: string;
   title?: string;
-  style?: 'default' | 'primary' | 'warning' | 'quote' | 'red' | 'blue' | 'purple' | 'orange' | 'gold' | 'green' | 'pink' | 'cyan' | 'gradient';
+  style?: 'default' | 'primary' | 'warning' | 'quote' | 'red' | 'blue' | 'purple' | 'orange' | 'gold' | 'green' | 'pink' | 'cyan' | 'gradient' | 'teal' | 'indigo' | 'amber' | 'rose' | 'lime' | 'gradient_warm' | 'gradient_cool' | 'gradient_nature';
   items?: string[];
   level?: 1 | 2 | 3;
   alignment?: 'left' | 'center' | 'right';

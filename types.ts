@@ -31,7 +31,7 @@ export interface ArticleBlock {
   type: BlockType;
   content: string; // Text content or Image URL
   title?: string; // For Card/Header
-  style?: 'default' | 'primary' | 'warning' | 'quote' | 'red' | 'blue' | 'purple' | 'orange' | 'gold' | 'green' | 'pink' | 'cyan' | 'gradient';
+  style?: 'default' | 'primary' | 'warning' | 'quote' | 'red' | 'blue' | 'purple' | 'orange' | 'gold' | 'green' | 'pink' | 'cyan' | 'gradient' | 'teal' | 'indigo' | 'amber' | 'rose' | 'lime' | 'gradient_warm' | 'gradient_cool' | 'gradient_nature';
   items?: string[]; // For List/Numbered List, FAQ questions, step descriptions
   level?: 1 | 2 | 3 | '1' | '2' | '3'; // For Header (h1, h2, h3) - accepts number or string
   alignment?: 'left' | 'center' | 'right'; // For text alignment

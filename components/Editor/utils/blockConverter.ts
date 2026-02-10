@@ -52,8 +52,13 @@ const renderChildBlock = (child: ArticleBlock): string => {
       return `<section style="margin: 10px 0; padding: 12px 14px; background-color: #f0f8ff; border-left: 3px solid #3498db; border-radius: 0 6px 6px 0;"><p style="${WX_TEXT_SECONDARY}"><span>${child.content}</span></p></section>`;
     case BlockType.DIVIDER:
       return `<section style="margin: 14px 0; text-align: center;"><section style="display: inline-block; width: 50%; height: 1px; ${childIsGradient ? `background: ${childColors.main}` : `background-color: ${childColors.main}`}; opacity: 0.3;"></section></section>`;
-    case BlockType.IMAGE:
+    case BlockType.IMAGE: {
+      const isChildUrl = child.content.startsWith('http') || child.content.startsWith('data:');
+      if (isChildUrl) {
+        return `<section style="margin: 10px 0; text-align: center;"><img src="${child.content}" style="width: 100%; height: auto; border-radius: 6px; display: block;" />${child.title ? `<p style="font-size: 12px; color: #888; margin-top: 6px; letter-spacing: 1px;"><span>${child.title}</span></p>` : ''}</section>`;
+      }
       return `<section style="margin: 10px 0; text-align: center;"><p style="font-size: 13px; color: #999; letter-spacing: 1px;"><span>${child.content}</span></p></section>`;
+    }
     default:
       return wxText(child.content, WX_TEXT_SECONDARY, childAlignment);
   }
@@ -65,7 +70,7 @@ export const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
   
   return blocks.map(block => {
     const colors = getStyleColors(block.style);
-    const isGradient = block.style === 'gradient';
+    const isGradient = block.style === 'gradient' || (block.style?.startsWith('gradient_') ?? false);
     const alignment = block.alignment || 'left';
     const textAlign = `text-align: ${alignment};`;
 
