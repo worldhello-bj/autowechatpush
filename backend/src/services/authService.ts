@@ -216,10 +216,7 @@ export const loginWithWeChat = async (code: string): Promise<AuthResponse> => {
 
        // Get real-time quota status
        const quotaStatus = getUserQuotaStatus(userId);
-       if (!quotaStatus) {
-         logger.warn('Quota status not found for WeChat user, user may need quota initialization', { userId });
-       }
-       const remainingQuota = quotaStatus ? quotaStatus.remainingQuota : user.quota;
+       const remainingQuota = quotaStatus.remainingQuota;
 
        return { accessToken, refreshToken, user: { id: userId, email: user.email, name: user.name, quota: remainingQuota, role: user.role } };
   } else {
@@ -252,6 +249,8 @@ export const loginWithWeChat = async (code: string): Promise<AuthResponse> => {
        
        persistData();
        initializeUserQuota(newUserId, QuotaPlan.FREE);
+       // Sync quota service with user record to use the intended starter quota
+       setUserTotalQuota(newUserId, newUser.quota);
        
        const tokenPayload = { userId: newUserId, email: newUser.email, role: newUser.role };
        const accessToken = generateAccessToken(tokenPayload);
@@ -269,10 +268,9 @@ export const loginWithWeChat = async (code: string): Promise<AuthResponse> => {
 
        // Get real-time quota status
        const quotaStatus = getUserQuotaStatus(newUserId);
-       if (!quotaStatus) {
-         logger.warn('Quota status not found for new WeChat user, user may need quota initialization', { userId: newUserId });
-       }
-       const remainingQuota = quotaStatus ? quotaStatus.remainingQuota : newUser.quota;
+       const remainingQuota = quotaStatus.remainingQuota;
+
+       return { accessToken, refreshToken, user: { id: newUserId, email: newUser.email, name: newUser.name, quota: remainingQuota, role: newUser.role } };
 
        return { accessToken, refreshToken, user: { id: newUserId, email: newUser.email, name: newUser.name, quota: remainingQuota, role: newUser.role } };
   }
@@ -338,10 +336,7 @@ export const registerUser = async (data: RegisterRequest): Promise<AuthResponse>
   
   // Get real-time quota status
   const quotaStatus = getUserQuotaStatus(userId);
-  if (!quotaStatus) {
-    logger.warn('Quota status not found for new user, user may need quota initialization', { userId });
-  }
-  const remainingQuota = quotaStatus ? quotaStatus.remainingQuota : user.quota;
+  const remainingQuota = quotaStatus.remainingQuota;
   
   return {
     accessToken,
@@ -403,10 +398,7 @@ export const loginUser = async (data: LoginRequest): Promise<AuthResponse> => {
   
   // Get real-time quota status
   const quotaStatus = getUserQuotaStatus(userId);
-  if (!quotaStatus) {
-    logger.warn('Quota status not found for user, user may need quota initialization', { userId });
-  }
-  const remainingQuota = quotaStatus ? quotaStatus.remainingQuota : user.quota;
+  const remainingQuota = quotaStatus.remainingQuota;
   
   return {
     accessToken,

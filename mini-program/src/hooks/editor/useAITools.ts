@@ -164,6 +164,7 @@ export const useAITools = ({
             } as StyleSuggestion))
           : [];
         setStyleSuggestions(styles);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       }
     } catch (e: any) {
       onError(e.message || "建议风格失败");
@@ -184,6 +185,7 @@ export const useAITools = ({
       if (response.success && response.data) {
         const hook = typeof response.data.result === 'string' ? response.data.result : '';
         setGeneratedHook(hook);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       }
     } catch (e: any) {
       onError(e.message || "生成引言失败");
@@ -200,6 +202,7 @@ export const useAITools = ({
       if (response.success && response.data) {
         const cta = typeof response.data.result === 'string' ? response.data.result : '';
         setGeneratedCTA(cta);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       }
     } catch (e: any) {
       onError(e.message || "生成结尾失败");

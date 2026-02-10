@@ -171,6 +171,7 @@ export const useAITools = ({
             } as StyleSuggestion))
           : [];
         setStyleSuggestions(styles);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       } else {
         throw new Error(response.error?.message || 'Failed to suggest styles');
       }
@@ -193,6 +194,7 @@ export const useAITools = ({
       if (response.success && response.data) {
         const hook = typeof response.data.result === 'string' ? response.data.result : '';
         setGeneratedHook(hook);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       } else {
         throw new Error(response.error?.message || 'Failed to generate hook');
       }
@@ -215,6 +217,7 @@ export const useAITools = ({
       if (response.success && response.data) {
         const cta = typeof response.data.result === 'string' ? response.data.result : '';
         setGeneratedCTA(cta);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       } else {
         throw new Error(response.error?.message || 'Failed to generate CTA');
       }
@@ -289,6 +292,7 @@ export const useAITools = ({
         // 6. Inject back
         const newHtml = injectRewrittenContent(contentBlocks, rewriteResponse);
         setHtmlContent(newHtml);
+        onQuotaConsumed?.(); // Refresh quota after consuming
       } else {
         throw new Error(response.error?.message || 'AI processing failed');
       }
@@ -354,6 +358,7 @@ export const useAITools = ({
         // 关闭模态框
         setShowRewriteModal(false);
         setRewriteTopic('');
+        onQuotaConsumed?.(); // Refresh quota after consuming
       } else {
         throw new Error(response.error?.message || '重写失败');
       }

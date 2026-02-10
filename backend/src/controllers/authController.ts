@@ -130,10 +130,7 @@ export const me = async (req: Request, res: Response) => {
     
     // Get real-time quota status from quota service
     const quotaStatus = getUserQuotaStatus(req.user.userId);
-    if (!quotaStatus) {
-      logger.warn('Quota status not found, user may need quota initialization', { userId: req.user.userId });
-    }
-    const remainingQuota = quotaStatus ? quotaStatus.remainingQuota : user.quota;
+    const remainingQuota = quotaStatus.remainingQuota;
     
     sendSuccess(res, {
       id: user.id,

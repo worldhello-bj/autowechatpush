@@ -7,7 +7,7 @@ import { AIProvider, ArticleBlock, BlockType } from '@shared/types';
 import { convertBlocksToHtml } from '../../utils/editor/blockConverter';
 
 export default function Index() {
-  const { user, isLoggedIn, isLoading, refreshUser } = useAuth();
+  const { isLoggedIn, isLoading, refreshUser } = useAuth();
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
   const [blocks, setBlocks] = useState<ArticleBlock[]>([]);
   const [articleTitle, setArticleTitle] = useState('');
