@@ -251,9 +251,10 @@ const ArticlePreview: React.FC<ArticlePreviewProps> = ({ title, author, date, bl
                       </div>
                     )}
                     {/* Fallback for other types */}
-                    {![BlockType.HEADER, BlockType.PARAGRAPH, BlockType.CARD, BlockType.LIST, BlockType.HIGHLIGHT, BlockType.QUOTE, BlockType.DIVIDER].includes(child.type) && child.type !== BlockType.NUMBERED_LIST && (
-                      <p className="text-sm text-gray-600 my-1">{child.content}</p>
-                    )}
+                    {(() => {
+                      const handledTypes = new Set([BlockType.HEADER, BlockType.PARAGRAPH, BlockType.CARD, BlockType.LIST, BlockType.HIGHLIGHT, BlockType.QUOTE, BlockType.DIVIDER, BlockType.NUMBERED_LIST]);
+                      return !handledTypes.has(child.type) ? <p className="text-sm text-gray-600 my-1">{child.content}</p> : null;
+                    })()}
                     {child.type === BlockType.NUMBERED_LIST && (
                       <ol className="my-2 space-y-2">
                         {child.items?.map((item, i) => (

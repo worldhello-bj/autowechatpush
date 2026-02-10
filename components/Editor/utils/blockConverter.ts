@@ -6,6 +6,43 @@ import { getCalloutIcon } from './styleUtils';
 // Default header level when not specified
 const DEFAULT_HEADER_LEVEL = 2;
 
+// --- Helper: Render a child block inside a section container (simplified styling) ---
+const renderChildBlock = (child: ArticleBlock): string => {
+  const childColors = getStyleColors(child.style);
+  const childIsGradient = child.style === 'gradient' || (child.style?.startsWith('gradient_') ?? false);
+  const childAlignment = child.alignment || 'left';
+  const childTextAlign = `text-align: ${childAlignment};`;
+  
+  switch (child.type) {
+    case BlockType.HEADER:
+      const childHeaderLevel = Number(child.level) || 2;
+      const childHeaderSize = childHeaderLevel === 1 ? '20px' : childHeaderLevel === 2 ? '17px' : '15px';
+      return `<section style="margin: 12px 0 8px 0; font-size: ${childHeaderSize}; font-weight: bold; color: #333; ${childTextAlign}">${child.content}</section>`;
+    case BlockType.PARAGRAPH:
+      return `<section style="margin-bottom: 10px; font-size: 14px; line-height: 1.8; color: #555; ${childTextAlign}">${child.content}</section>`;
+    case BlockType.CARD:
+      return `<section style="margin: 10px 0; padding: 14px; border: 1px solid ${childColors.border}; ${childIsGradient ? `background: ${childColors.bg}` : `background-color: ${childColors.bg}`}; border-radius: 8px;">${child.title ? `<section style="font-size: 14px; font-weight: bold; color: ${typeof childColors.main === 'string' && childColors.main.startsWith('linear') ? '#333' : childColors.main}; margin-bottom: 6px;">${child.title}</section>` : ''}<section style="font-size: 13px; color: #555; line-height: 1.6;">${child.content}</section></section>`;
+    case BlockType.LIST:
+      const childListItems = (child.items || []).map((item: string) => `<section style="display: flex; align-items: flex-start; margin-bottom: 6px;"><section style="width: 5px; height: 5px; ${childIsGradient ? `background: ${childColors.main}` : `background-color: ${childColors.main}`}; border-radius: 50%; margin-top: 8px; margin-right: 8px; flex-shrink: 0;"></section><section style="font-size: 14px; color: #555; line-height: 1.6;">${item}</section></section>`).join('');
+      return `<section style="margin: 10px 0;">${childListItems}</section>`;
+    case BlockType.NUMBERED_LIST:
+      const childNumItems = (child.items || []).map((item: string, idx: number) => `<section style="display: flex; align-items: flex-start; margin-bottom: 8px;"><section style="width: 20px; height: 20px; ${childIsGradient ? `background: ${childColors.main}` : `background-color: ${childColors.main}`}; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex-shrink: 0;"><section style="color: #fff; font-size: 11px; font-weight: bold;">${idx + 1}</section></section><section style="font-size: 14px; color: #555; line-height: 1.6; padding-top: 1px;">${item}</section></section>`).join('');
+      return `<section style="margin: 10px 0;">${childNumItems}</section>`;
+    case BlockType.QUOTE:
+      return `<section style="margin: 10px 0; padding: 12px; ${childIsGradient ? `background: ${childColors.bg}` : `background-color: ${childColors.bg}`}; border-left: 3px solid ${childIsGradient ? '#667eea' : childColors.main}; border-radius: 0 4px 4px 0;"><section style="font-size: 14px; color: #666; font-style: italic; line-height: 1.6;">${child.content}</section></section>`;
+    case BlockType.HIGHLIGHT:
+      return `<section style="margin: 10px 0; padding: 14px 16px; ${childIsGradient ? `background: ${childColors.bg}` : `background-color: ${childColors.bg}`}; border-radius: 6px; position: relative;"><section style="position: absolute; top: 0; left: 0; width: 100%; height: 3px; ${childIsGradient ? `background: ${childColors.main}` : `background-color: ${childColors.main}`}; border-radius: 6px 6px 0 0;"></section><section style="font-size: 14px; color: #333; line-height: 1.7; font-weight: 500;">${child.content}</section></section>`;
+    case BlockType.CALLOUT:
+      return `<section style="margin: 10px 0; padding: 12px 14px; background-color: #f0f8ff; border-left: 3px solid #3498db; border-radius: 0 6px 6px 0;"><section style="font-size: 14px; color: #555; line-height: 1.6;">${child.content}</section></section>`;
+    case BlockType.DIVIDER:
+      return `<section style="margin: 14px 0; text-align: center;"><section style="display: inline-block; width: 50%; height: 1px; ${childIsGradient ? `background: ${childColors.main}` : `background-color: ${childColors.main}`}; opacity: 0.3;"></section></section>`;
+    case BlockType.IMAGE:
+      return `<section style="margin: 10px 0; text-align: center;"><section style="padding: 20px; border: 1px dashed #ddd; border-radius: 6px; background: rgba(255,255,255,0.5); color: #999; font-size: 13px;">${child.content}</section></section>`;
+    default:
+      return `<section style="margin: 8px 0; font-size: 14px; color: #555; line-height: 1.7;">${child.content}</section>`;
+  }
+};
+
 // --- Helper: Convert Blocks to WeChat-compatible HTML ---
 export const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
   if (!blocks || blocks.length === 0) return '';
@@ -262,42 +299,8 @@ export const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
           `;
         }
         
-        // Render child blocks recursively
-        const childrenHtml = (block.children || []).map(child => {
-          const childColors = getStyleColors(child.style);
-          const childIsGradient = child.style === 'gradient' || child.style?.startsWith('gradient_');
-          const childAlignment = child.alignment || 'left';
-          const childTextAlign = `text-align: ${childAlignment};`;
-          
-          switch (child.type) {
-            case 'header':
-              const childHeaderLevel = Number(child.level) || 2;
-              const childHeaderSize = childHeaderLevel === 1 ? '20px' : childHeaderLevel === 2 ? '17px' : '15px';
-              return `<section style="margin: 12px 0 8px 0; font-size: ${childHeaderSize}; font-weight: bold; color: #333; ${childTextAlign}">${child.content}</section>`;
-            case 'paragraph':
-              return `<section style="margin-bottom: 10px; font-size: 14px; line-height: 1.8; color: #555; ${childTextAlign}">${child.content}</section>`;
-            case 'card':
-              return `<section style="margin: 10px 0; padding: 14px; border: 1px solid ${childColors.border}; ${childIsGradient ? `background: ${childColors.bg}` : `background-color: ${childColors.bg}`}; border-radius: 8px;">${child.title ? `<section style="font-size: 14px; font-weight: bold; color: ${typeof childColors.main === 'string' && childColors.main.startsWith('linear') ? '#333' : childColors.main}; margin-bottom: 6px;">${child.title}</section>` : ''}<section style="font-size: 13px; color: #555; line-height: 1.6;">${child.content}</section></section>`;
-            case 'list':
-              const childListItems = (child.items || []).map((item: string) => `<section style="display: flex; align-items: flex-start; margin-bottom: 6px;"><section style="width: 5px; height: 5px; ${childIsGradient ? `background: ${childColors.main}` : `background-color: ${childColors.main}`}; border-radius: 50%; margin-top: 8px; margin-right: 8px; flex-shrink: 0;"></section><section style="font-size: 14px; color: #555; line-height: 1.6;">${item}</section></section>`).join('');
-              return `<section style="margin: 10px 0;">${childListItems}</section>`;
-            case 'numbered_list':
-              const childNumItems = (child.items || []).map((item: string, idx: number) => `<section style="display: flex; align-items: flex-start; margin-bottom: 8px;"><section style="width: 20px; height: 20px; ${childIsGradient ? `background: ${childColors.main}` : `background-color: ${childColors.main}`}; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex-shrink: 0;"><section style="color: #fff; font-size: 11px; font-weight: bold;">${idx + 1}</section></section><section style="font-size: 14px; color: #555; line-height: 1.6; padding-top: 1px;">${item}</section></section>`).join('');
-              return `<section style="margin: 10px 0;">${childNumItems}</section>`;
-            case 'quote':
-              return `<section style="margin: 10px 0; padding: 12px; ${childIsGradient ? `background: ${childColors.bg}` : `background-color: ${childColors.bg}`}; border-left: 3px solid ${childIsGradient ? '#667eea' : childColors.main}; border-radius: 0 4px 4px 0;"><section style="font-size: 14px; color: #666; font-style: italic; line-height: 1.6;">${child.content}</section></section>`;
-            case 'highlight':
-              return `<section style="margin: 10px 0; padding: 14px 16px; ${childIsGradient ? `background: ${childColors.bg}` : `background-color: ${childColors.bg}`}; border-radius: 6px; position: relative;"><section style="position: absolute; top: 0; left: 0; width: 100%; height: 3px; ${childIsGradient ? `background: ${childColors.main}` : `background-color: ${childColors.main}`}; border-radius: 6px 6px 0 0;"></section><section style="font-size: 14px; color: #333; line-height: 1.7; font-weight: 500;">${child.content}</section></section>`;
-            case 'callout':
-              return `<section style="margin: 10px 0; padding: 12px 14px; background-color: #f0f8ff; border-left: 3px solid #3498db; border-radius: 0 6px 6px 0;"><section style="font-size: 14px; color: #555; line-height: 1.6;">${child.content}</section></section>`;
-            case 'divider':
-              return `<section style="margin: 14px 0; text-align: center;"><section style="display: inline-block; width: 50%; height: 1px; ${childIsGradient ? `background: ${childColors.main}` : `background-color: ${childColors.main}`}; opacity: 0.3;"></section></section>`;
-            case 'image':
-              return `<section style="margin: 10px 0; text-align: center;"><section style="padding: 20px; border: 1px dashed #ddd; border-radius: 6px; background: rgba(255,255,255,0.5); color: #999; font-size: 13px;">${child.content}</section></section>`;
-            default:
-              return `<section style="margin: 8px 0; font-size: 14px; color: #555; line-height: 1.7;">${child.content}</section>`;
-          }
-        }).join('');
+        // Render child blocks using helper function
+        const childrenHtml = (block.children || []).map(child => renderChildBlock(child)).join('');
         
         return `
           <section style="margin: 24px 0; padding: 24px 20px; ${sectionBg} border-radius: 12px; position: relative; overflow: hidden;">
