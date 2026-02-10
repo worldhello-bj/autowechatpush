@@ -240,7 +240,7 @@ const ArticlePreview: React.FC<ArticlePreviewProps> = ({ title, author, date, bl
                 ))}
               </div>
               <div className="flex-1">
-                <div className="px-3 py-2 bg-indigo-500 text-white text-sm font-semibold text-center">{block.rightTitle || '选项B'}</div>
+                <div className={`px-3 py-2 ${styleClass.accent} text-white text-sm font-semibold text-center opacity-85`}>{block.rightTitle || '选项B'}</div>
                 {(block.rightItems || []).map((item: string, idx: number) => (
                   <div key={idx} className="px-3 py-2 text-sm text-gray-600 border-b border-gray-50">{item}</div>
                 ))}

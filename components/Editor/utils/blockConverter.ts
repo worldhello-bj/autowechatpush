@@ -252,7 +252,7 @@ export const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
                 <section style="padding: 8px 16px;">${leftItems}</section>
               </section>
               <section style="flex: 1;">
-                <section style="padding: 10px 16px; background-color: #667eea; color: #fff; font-weight: bold; font-size: 14px; text-align: center;">${block.rightTitle || '选项B'}</section>
+                <section style="padding: 10px 16px; ${isGradient ? `background: ${colors.main}` : `background-color: ${colors.main}`}; color: #fff; font-weight: bold; font-size: 14px; text-align: center; opacity: 0.85;">${block.rightTitle || '选项B'}</section>
                 <section style="padding: 8px 16px;">${rightItemsHtml}</section>
               </section>
             </section>
