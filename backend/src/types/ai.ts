@@ -30,6 +30,14 @@ export enum BlockType {
   TESTIMONIAL = 'testimonial',
   STEPS = 'steps',
   SVG = 'svg',
+  // Enhanced block types for richer article formatting
+  TIMELINE = 'timeline',
+  COMPARISON = 'comparison',
+  BANNER = 'banner',
+  BADGE_LIST = 'badge_list',
+  RATING = 'rating',
+  ICON_LIST = 'icon_list',
+  COLUMNS = 'columns',
 }
 
 // Article block structure
@@ -38,7 +46,7 @@ export interface ArticleBlock {
   type: BlockType;
   content: string;
   title?: string;
-  style?: 'default' | 'primary' | 'warning' | 'quote' | 'red' | 'blue' | 'purple' | 'orange' | 'gold' | 'green' | 'pink' | 'cyan' | 'gradient';
+  style?: 'default' | 'primary' | 'warning' | 'quote' | 'red' | 'blue' | 'purple' | 'orange' | 'gold' | 'green' | 'pink' | 'cyan' | 'gradient' | 'teal' | 'indigo' | 'amber' | 'rose' | 'lime' | 'gradient_warm' | 'gradient_cool' | 'gradient_nature';
   items?: string[];
   level?: 1 | 2 | 3;
   alignment?: 'left' | 'center' | 'right';
@@ -56,6 +64,14 @@ export interface ArticleBlock {
   percentage?: number;
   author?: string;
   role?: string;
+  // Properties for enhanced block types
+  events?: { date: string; title: string; description?: string }[];
+  leftItems?: string[];
+  rightItems?: string[];
+  leftTitle?: string;
+  rightTitle?: string;
+  ratingValue?: number;
+  columnItems?: string[];
 }
 
 // AI Chat request schema

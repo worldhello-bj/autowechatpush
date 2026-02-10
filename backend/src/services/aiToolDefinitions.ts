@@ -10,8 +10,8 @@ export const ARTICLE_BLOCK_SCHEMA = {
     properties: {
         type: {
             type: "string",
-            enum: ["header", "paragraph", "card", "list", "quote", "image", "divider", "code", "callout", "numbered_list", "highlight", "table", "qrcode", "faq", "countdown", "progress", "gift", "contact", "stats", "testimonial", "steps", "svg"],
-            description: "Block type. Use 'header' for section titles, 'paragraph' for body text, 'card' for key points, 'list' for bullets, 'numbered_list' for steps, 'quote' for citations, 'image' for visual placeholders, 'divider' for section breaks, 'code' for code snippets, 'callout' for notices, 'highlight' for emphasized text, 'table' for structured data, 'svg' for decorative SVG graphics. Special types: 'qrcode' for QR code sections, 'faq' for Q&A blocks, 'countdown' for timers, 'progress' for progress bars, 'gift' for promotional boxes, 'contact' for contact info, 'stats' for statistics display, 'testimonial' for user reviews, 'steps' for step-by-step flows."
+            enum: ["header", "paragraph", "card", "list", "quote", "image", "divider", "code", "callout", "numbered_list", "highlight", "table", "qrcode", "faq", "countdown", "progress", "gift", "contact", "stats", "testimonial", "steps", "svg", "timeline", "comparison", "banner", "badge_list", "rating", "icon_list", "columns"],
+            description: "Block type. Use 'header' for section titles, 'paragraph' for body text, 'card' for key points, 'list' for bullets, 'numbered_list' for steps, 'quote' for citations, 'image' for visual placeholders, 'divider' for section breaks, 'code' for code snippets, 'callout' for notices, 'highlight' for emphasized text, 'table' for structured data, 'svg' for decorative SVG graphics. Special types: 'qrcode' for QR code sections, 'faq' for Q&A blocks, 'countdown' for timers, 'progress' for progress bars, 'gift' for promotional boxes, 'contact' for contact info, 'stats' for statistics display, 'testimonial' for user reviews, 'steps' for step-by-step flows. Enhanced types: 'timeline' for chronological events, 'comparison' for side-by-side comparisons, 'banner' for full-width colored banners, 'badge_list' for tag/badge style items, 'rating' for star ratings, 'icon_list' for emoji/icon decorated lists, 'columns' for multi-column layouts."
         },
         content: { type: "string", description: "The main text content. For images, this is the description/prompt. For divider, this can be empty. For svg, provide SVG code or description." },
         title: { type: "string", description: "Title for card, header, callout, gift, faq, or table blocks." },
@@ -22,8 +22,8 @@ export const ARTICLE_BLOCK_SCHEMA = {
         },
         style: {
             type: "string",
-            enum: ["default", "primary", "warning", "quote", "red", "blue", "purple", "orange", "gold", "green", "pink", "cyan", "gradient"],
-            description: "Visual style color. Use varied colors for different sections."
+            enum: ["default", "primary", "warning", "quote", "red", "blue", "purple", "orange", "gold", "green", "pink", "cyan", "gradient", "teal", "indigo", "amber", "rose", "lime", "gradient_warm", "gradient_cool", "gradient_nature"],
+            description: "Visual style color. Use varied colors for different sections to create rich, vibrant articles. Gradient variants (gradient_warm, gradient_cool, gradient_nature) add modern flair."
         },
         level: { type: "number", enum: [1, 2, 3], description: "Header level (1=large, 2=medium, 3=small). Only for 'header' type." },
         alignment: { type: "string", enum: ["left", "center", "right"], description: "Text alignment." },
@@ -39,6 +39,14 @@ export const ARTICLE_BLOCK_SCHEMA = {
         percentage: { type: "number", description: "Progress percentage (0-100) for progress blocks." },
         author: { type: "string", description: "Author name for testimonial blocks." },
         role: { type: "string", description: "Author role/position for testimonial blocks." },
+        // Properties for enhanced block types
+        events: { type: "array", items: { type: "object", properties: { date: { type: "string" }, title: { type: "string" }, description: { type: "string" } }, required: ["date", "title"] }, description: "Timeline events array with date, title, and optional description." },
+        leftItems: { type: "array", items: { type: "string" }, description: "Left column items for comparison blocks." },
+        rightItems: { type: "array", items: { type: "string" }, description: "Right column items for comparison blocks." },
+        leftTitle: { type: "string", description: "Left column header for comparison blocks." },
+        rightTitle: { type: "string", description: "Right column header for comparison blocks." },
+        ratingValue: { type: "number", description: "Star rating value (0-5) for rating blocks." },
+        columnItems: { type: "array", items: { type: "string" }, description: "Content items for multi-column layout. Each item becomes a separate column." },
         // Typography properties for emphasis
         fontSize: {
             type: "string",

@@ -215,6 +215,120 @@ export const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
             ${block.content ? `<section style="font-size: 13px; color: #666; margin-top: 8px;">${block.content}</section>` : ''}
           </section>
         `;
+      
+      // --- Enhanced Block Types ---
+      case BlockType.TIMELINE:
+        const timelineEvents = (block.events || []).map((event: { date: string; title: string; description?: string }, idx: number) => {
+          const eventColor = idx % 2 === 0 ? colors.main : (isGradient ? '#764ba2' : colors.border);
+          return `
+            <section style="display: flex; margin-bottom: 20px; position: relative;">
+              <section style="width: 80px; flex-shrink: 0; text-align: right; padding-right: 16px; font-size: 13px; color: #888; padding-top: 2px;">${event.date}</section>
+              <section style="width: 12px; height: 12px; border-radius: 50%; ${isGradient ? `background: ${colors.main}` : `background-color: ${typeof eventColor === 'string' && eventColor.startsWith('linear') ? colors.main : eventColor}`}; flex-shrink: 0; margin-top: 4px; border: 2px solid #fff; box-shadow: 0 0 0 2px ${colors.border};"></section>
+              <section style="padding-left: 16px; flex: 1;">
+                <section style="font-size: 15px; font-weight: bold; color: #333; margin-bottom: 4px;">${event.title}</section>
+                ${event.description ? `<section style="font-size: 13px; color: #666; line-height: 1.6;">${event.description}</section>` : ''}
+              </section>
+            </section>
+          `;
+        }).join('');
+        return `
+          <section style="margin: 24px 0; padding: 20px; ${isGradient ? `background: ${colors.bg}` : `background-color: ${colors.bg}`}; border-radius: 12px;">
+            ${block.title ? `<section style="font-size: 17px; font-weight: bold; ${isGradient ? `background: ${colors.main}; -webkit-background-clip: text; -webkit-text-fill-color: transparent;` : `color: ${colors.main};`} margin-bottom: 16px;">${block.title}</section>` : ''}
+            <section style="border-left: 2px solid ${colors.border}; margin-left: 86px;">
+              ${timelineEvents}
+            </section>
+          </section>
+        `;
+      
+      case BlockType.COMPARISON:
+        const leftItems = (block.leftItems || []).map((item: string) => `<section style="padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: #555;">${item}</section>`).join('');
+        const rightItemsHtml = (block.rightItems || []).map((item: string) => `<section style="padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: #555;">${item}</section>`).join('');
+        return `
+          <section style="margin: 24px 0; border-radius: 12px; overflow: hidden; border: 1px solid ${colors.border};">
+            ${block.title ? `<section style="padding: 12px 16px; ${isGradient ? `background: ${colors.bg}` : `background-color: ${colors.bg}`}; font-weight: bold; font-size: 16px; color: #333; text-align: center; border-bottom: 1px solid ${colors.border};">${block.title}</section>` : ''}
+            <section style="display: flex;">
+              <section style="flex: 1; border-right: 1px solid ${colors.border};">
+                <section style="padding: 10px 16px; ${isGradient ? `background: ${colors.main}` : `background-color: ${colors.main}`}; color: #fff; font-weight: bold; font-size: 14px; text-align: center;">${block.leftTitle || '选项A'}</section>
+                <section style="padding: 8px 16px;">${leftItems}</section>
+              </section>
+              <section style="flex: 1;">
+                <section style="padding: 10px 16px; background-color: #667eea; color: #fff; font-weight: bold; font-size: 14px; text-align: center;">${block.rightTitle || '选项B'}</section>
+                <section style="padding: 8px 16px;">${rightItemsHtml}</section>
+              </section>
+            </section>
+          </section>
+        `;
+      
+      case BlockType.BANNER:
+        return `
+          <section style="margin: 24px 0; padding: 24px 20px; ${isGradient ? `background: ${colors.main}` : `background-color: ${colors.main}`}; border-radius: 12px; text-align: center;">
+            ${block.title ? `<section style="font-size: 20px; font-weight: bold; color: #fff; margin-bottom: 8px;">${block.title}</section>` : ''}
+            <section style="font-size: 15px; color: rgba(255,255,255,0.9); line-height: 1.6;">${block.content}</section>
+          </section>
+        `;
+      
+      case BlockType.BADGE_LIST:
+        const badges = (block.items || []).map((item: string, idx: number) => {
+          const badgeColors = ['#fa5151', '#3498db', '#9b59b6', '#f39c12', '#07c160', '#eb4d9c', '#00bcd4', '#4f46e5', '#0d9488', '#d97706'];
+          const badgeColor = badgeColors[idx % badgeColors.length];
+          return `<section style="display: inline-block; padding: 6px 16px; margin: 4px; background-color: ${badgeColor}15; color: ${badgeColor}; border: 1px solid ${badgeColor}40; border-radius: 20px; font-size: 13px; font-weight: 500;">${item}</section>`;
+        }).join('');
+        return `
+          <section style="margin: 20px 0; ${textAlign}">
+            ${block.title ? `<section style="font-size: 15px; font-weight: bold; color: #333; margin-bottom: 12px;">${block.title}</section>` : ''}
+            <section style="display: flex; flex-wrap: wrap; gap: 4px;">${badges}</section>
+          </section>
+        `;
+      
+      case BlockType.RATING:
+        const ratingVal = block.ratingValue || 0;
+        const fullStars = Math.floor(ratingVal);
+        const hasHalf = ratingVal % 1 >= 0.5;
+        const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
+        const starsHtml = '★'.repeat(fullStars) + (hasHalf ? '½' : '') + '☆'.repeat(emptyStars);
+        return `
+          <section style="margin: 20px 0; padding: 20px; ${isGradient ? `background: ${colors.bg}` : `background-color: ${colors.bg}`}; border-radius: 12px; text-align: center;">
+            <section style="font-size: 32px; color: #f39c12; letter-spacing: 4px; margin-bottom: 8px;">${starsHtml}</section>
+            <section style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 4px;">${ratingVal.toFixed(1)}/5.0</section>
+            ${block.content ? `<section style="font-size: 14px; color: #666; margin-top: 8px;">${block.content}</section>` : ''}
+            ${block.title ? `<section style="font-size: 13px; color: #999; margin-top: 4px;">${block.title}</section>` : ''}
+          </section>
+        `;
+      
+      case BlockType.ICON_LIST:
+        const iconItems = (block.items || []).map((item: string) => {
+          return `
+            <section style="display: flex; align-items: flex-start; margin-bottom: 12px; padding: 10px 16px; ${isGradient ? `background: ${colors.bg}` : `background-color: ${colors.bg}`}; border-radius: 8px;">
+              <section style="font-size: 14px; color: #444; line-height: 1.6;">${item}</section>
+            </section>
+          `;
+        }).join('');
+        return `
+          <section style="margin: 20px 0;">
+            ${block.title ? `<section style="font-size: 16px; font-weight: bold; ${isGradient ? `background: ${colors.main}; -webkit-background-clip: text; -webkit-text-fill-color: transparent;` : `color: ${colors.main};`} margin-bottom: 12px;">${block.title}</section>` : ''}
+            ${iconItems}
+          </section>
+        `;
+      
+      case BlockType.COLUMNS:
+        const colItems = block.columnItems || block.items || [];
+        const colCount = colItems.length || 1;
+        const colsHtml = colItems.map((item: string, idx: number) => {
+          const colColors = ['#fa5151', '#3498db', '#9b59b6', '#07c160', '#f39c12', '#4f46e5', '#0d9488'];
+          const topColor = colColors[idx % colColors.length];
+          return `
+            <section style="flex: 1; padding: 16px; background: #fff; border-radius: 8px; border: 1px solid #f0f0f0; position: relative; overflow: hidden;">
+              <section style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background-color: ${topColor};"></section>
+              <section style="font-size: 14px; color: #444; line-height: 1.6; padding-top: 4px;">${item}</section>
+            </section>
+          `;
+        }).join('');
+        return `
+          <section style="margin: 20px 0;">
+            ${block.title ? `<section style="font-size: 16px; font-weight: bold; color: #333; margin-bottom: 12px; ${textAlign}">${block.title}</section>` : ''}
+            <section style="display: flex; gap: 12px;">${colsHtml}</section>
+          </section>
+        `;
       default:
         return '';
     }

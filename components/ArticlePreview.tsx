@@ -19,6 +19,14 @@ const getStyleClass = (style?: string) => {
     case 'pink': return { bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-600', accent: 'bg-pink-500' };
     case 'cyan': return { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-600', accent: 'bg-cyan-500' };
     case 'gradient': return { bg: 'bg-gradient-to-r from-purple-50 to-blue-50', border: 'border-purple-200', text: 'text-purple-600', accent: 'bg-gradient-to-r from-purple-500 to-blue-500' };
+    case 'teal': return { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-600', accent: 'bg-teal-500' };
+    case 'indigo': return { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-600', accent: 'bg-indigo-500' };
+    case 'amber': return { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-600', accent: 'bg-amber-500' };
+    case 'rose': return { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-600', accent: 'bg-rose-500' };
+    case 'lime': return { bg: 'bg-lime-50', border: 'border-lime-200', text: 'text-lime-600', accent: 'bg-lime-500' };
+    case 'gradient_warm': return { bg: 'bg-gradient-to-r from-orange-50 to-red-50', border: 'border-orange-200', text: 'text-orange-600', accent: 'bg-gradient-to-r from-orange-500 to-red-500' };
+    case 'gradient_cool': return { bg: 'bg-gradient-to-r from-blue-50 to-purple-50', border: 'border-blue-200', text: 'text-blue-600', accent: 'bg-gradient-to-r from-blue-500 to-purple-500' };
+    case 'gradient_nature': return { bg: 'bg-gradient-to-r from-emerald-50 to-teal-50', border: 'border-emerald-200', text: 'text-emerald-600', accent: 'bg-gradient-to-r from-emerald-500 to-teal-500' };
     default: return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-600', accent: 'bg-green-500' };
   }
 };
@@ -195,6 +203,114 @@ const ArticlePreview: React.FC<ArticlePreviewProps> = ({ title, author, date, bl
         return (
           <div key={block.id} className="my-6 overflow-hidden">
             <div dangerouslySetInnerHTML={{ __html: block.content }} />
+          </div>
+        );
+      
+      // --- Enhanced Block Types ---
+      case BlockType.TIMELINE:
+        return (
+          <div key={block.id} className={`mx-4 my-6 p-5 ${styleClass.bg} rounded-xl`}>
+            {block.title && <h3 className={`text-lg font-bold ${styleClass.text} mb-4`}>{block.title}</h3>}
+            <div className="border-l-2 border-gray-300 ml-4 pl-4 space-y-4">
+              {(block.events || []).map((event: { date: string; title: string; description?: string }, idx: number) => (
+                <div key={idx} className="relative">
+                  <div className={`absolute -left-[1.4rem] top-1 w-3 h-3 rounded-full ${styleClass.accent}`}></div>
+                  <p className="text-xs text-gray-500">{event.date}</p>
+                  <p className="font-semibold text-gray-800 text-sm">{event.title}</p>
+                  {event.description && <p className="text-gray-600 text-xs mt-1">{event.description}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      
+      case BlockType.COMPARISON:
+        return (
+          <div key={block.id} className={`mx-4 my-6 rounded-xl overflow-hidden border ${styleClass.border}`}>
+            {block.title && (
+              <div className={`px-4 py-3 ${styleClass.bg} font-semibold text-gray-800 border-b ${styleClass.border} text-center`}>
+                {block.title}
+              </div>
+            )}
+            <div className="flex">
+              <div className="flex-1 border-r border-gray-200">
+                <div className={`px-3 py-2 ${styleClass.accent} text-white text-sm font-semibold text-center`}>{block.leftTitle || '选项A'}</div>
+                {(block.leftItems || []).map((item: string, idx: number) => (
+                  <div key={idx} className="px-3 py-2 text-sm text-gray-600 border-b border-gray-50">{item}</div>
+                ))}
+              </div>
+              <div className="flex-1">
+                <div className="px-3 py-2 bg-indigo-500 text-white text-sm font-semibold text-center">{block.rightTitle || '选项B'}</div>
+                {(block.rightItems || []).map((item: string, idx: number) => (
+                  <div key={idx} className="px-3 py-2 text-sm text-gray-600 border-b border-gray-50">{item}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      
+      case BlockType.BANNER:
+        return (
+          <div key={block.id} className={`my-6 p-6 ${styleClass.accent} rounded-xl text-center`}>
+            {block.title && <h3 className="text-xl font-bold text-white mb-2">{block.title}</h3>}
+            <p className="text-white text-sm opacity-90">{block.content}</p>
+          </div>
+        );
+      
+      case BlockType.BADGE_LIST:
+        return (
+          <div key={block.id} className={`mx-4 my-6 ${alignment}`}>
+            {block.title && <h3 className="text-base font-semibold text-gray-800 mb-3">{block.title}</h3>}
+            <div className="flex flex-wrap gap-2">
+              {(block.items || []).map((item: string, idx: number) => {
+                const tagColors = ['text-red-600 bg-red-50 border-red-200', 'text-blue-600 bg-blue-50 border-blue-200', 'text-purple-600 bg-purple-50 border-purple-200', 'text-amber-600 bg-amber-50 border-amber-200', 'text-green-600 bg-green-50 border-green-200', 'text-pink-600 bg-pink-50 border-pink-200', 'text-cyan-600 bg-cyan-50 border-cyan-200', 'text-indigo-600 bg-indigo-50 border-indigo-200'];
+                return <span key={idx} className={`inline-block px-3 py-1 rounded-full border text-xs font-medium ${tagColors[idx % tagColors.length]}`}>{item}</span>;
+              })}
+            </div>
+          </div>
+        );
+      
+      case BlockType.RATING:
+        const ratingVal = block.ratingValue || 0;
+        return (
+          <div key={block.id} className={`mx-4 my-6 p-5 ${styleClass.bg} rounded-xl text-center`}>
+            <div className="text-3xl text-yellow-400 tracking-widest mb-2">
+              {'★'.repeat(Math.floor(ratingVal))}{'☆'.repeat(5 - Math.floor(ratingVal))}
+            </div>
+            <div className="text-2xl font-bold text-gray-800">{ratingVal.toFixed(1)}/5.0</div>
+            {block.content && <p className="text-sm text-gray-600 mt-2">{block.content}</p>}
+            {block.title && <p className="text-xs text-gray-400 mt-1">{block.title}</p>}
+          </div>
+        );
+      
+      case BlockType.ICON_LIST:
+        return (
+          <div key={block.id} className="mx-4 my-6">
+            {block.title && <h3 className={`text-base font-semibold ${styleClass.text} mb-3`}>{block.title}</h3>}
+            <div className="space-y-2">
+              {(block.items || []).map((item: string, idx: number) => (
+                <div key={idx} className={`p-3 ${styleClass.bg} rounded-lg text-sm text-gray-700 leading-relaxed`}>
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      
+      case BlockType.COLUMNS:
+        return (
+          <div key={block.id} className="mx-4 my-6">
+            {block.title && <h3 className={`text-base font-semibold text-gray-800 mb-3 ${alignment}`}>{block.title}</h3>}
+            <div className="flex gap-3">
+              {(block.columnItems || block.items || []).map((item: string, idx: number) => {
+                const topColors = ['border-t-red-500', 'border-t-blue-500', 'border-t-purple-500', 'border-t-green-500', 'border-t-amber-500', 'border-t-indigo-500', 'border-t-teal-500'];
+                return (
+                  <div key={idx} className={`flex-1 p-4 bg-white rounded-lg border border-gray-100 border-t-[3px] ${topColors[idx % topColors.length]}`}>
+                    <p className="text-sm text-gray-600 leading-relaxed">{item}</p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         );
       default:

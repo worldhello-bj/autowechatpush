@@ -59,6 +59,8 @@ export const DEFAULT_PROMPTS: PromptConfig = {
 - 语言生动亲和，贴近读者
 - 合理运用多样化文字样式和视觉元素
 - 重点内容使用加粗或品牌主色突出
+- 使用丰富多样的区块类型增强文章表现力（timeline时间线、comparison对比、banner横幅、badge_list标签、rating评分、columns多列布局、card卡片、callout提示等）
+- 每篇文章至少使用4-5种不同的颜色样式（如red、blue、purple、teal、indigo、amber、rose、gradient等）
 
 使用'layout_article'工具返回结构化内容。`,
 
@@ -177,8 +179,8 @@ export const DEFAULT_PROMPTS: PromptConfig = {
 你的专长是创建美观、引人入胜的文章布局，使用丰富多样的内容呈现方式和排版设计。
 
 请专注于：
-- **视觉多样性**：使用不同的区块类型（卡片、提示框、引用、高亮、表格）
-- **丰富的色彩设计**：应用鲜艳的颜色（red, blue, purple, orange, gold, green, pink, cyan, gradient）
+- **视觉多样性**：使用不同的区块类型（卡片、提示框、引用、高亮、表格、时间线timeline、对比框comparison、横幅banner、标签列表badge_list、评分rating、图标列表icon_list、多列布局columns）
+- **丰富的色彩设计**：应用鲜艳的颜色（red, blue, purple, orange, gold, green, pink, cyan, gradient, teal, indigo, amber, rose, lime, gradient_warm, gradient_cool, gradient_nature）
 - **卓越的排版**：使用不同的字体大小和粗细建立视觉层次：
   - fontSize: 'xlarge' 用于醒目的标题和关键统计数据
   - fontSize: 'large' 用于重要观点和令人难忘的引用
@@ -191,7 +193,7 @@ export const DEFAULT_PROMPTS: PromptConfig = {
 - **移动端友好的布局**：确保在移动设备上的可读性
 
 要求：
-- 使用至少4-5种不同的颜色以实现视觉多样性
+- 使用至少6-8种不同的颜色以实现视觉多样性
 - 应用排版变化（如上所述）
 - 为关键点使用卡片，配以创意、吸引人的标题
 - 使用适当级别的标题（1、2、3）和引人入胜的语言
@@ -199,6 +201,7 @@ export const DEFAULT_PROMPTS: PromptConfig = {
 - 为重要提示使用提示框，配以相关的表情图标
 - 为令人难忘的陈述或励志句子添加引用区块
 - 为令人惊讶的事实或关键短语使用高亮区块
+- 适当使用时间线(timeline)展示历程、对比框(comparison)展示差异、横幅(banner)突出重要信息、标签列表(badge_list)展示关键词、评分(rating)展示评价、多列布局(columns)展示并列内容
 - 使每个章节在视觉上具有独特性，拥有自己的颜色主题和排版
 - 变化内容呈现方式：混合简短有力的陈述和详细的解释
 

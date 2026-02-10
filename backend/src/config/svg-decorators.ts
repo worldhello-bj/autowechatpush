@@ -83,6 +83,70 @@ export const STAR_ACCENT: SVGDecorator = {
 };
 
 /**
+ * Wave Divider (波浪分隔线)
+ */
+export const WAVE_DIVIDER: SVGDecorator = {
+  id: 'wave-divider',
+  name: 'Wave Divider',
+  position: 'before',
+  svg: `<svg viewBox="0 0 400 20" style="display: block; width: 100%; height: 20px; margin: 15px 0;">
+    <path d="M0,10 C50,0 100,20 150,10 C200,0 250,20 300,10 C350,0 400,20 400,10" fill="none" stroke="#e0e0e0" stroke-width="1.5"/>
+  </svg>`,
+};
+
+/**
+ * Diamond Pattern (菱形装饰)
+ */
+export const DIAMOND_PATTERN: SVGDecorator = {
+  id: 'diamond-pattern',
+  name: 'Diamond Pattern',
+  position: 'before',
+  svg: `<section style="display: flex; gap: 6px; justify-content: center; margin: 12px 0;">
+    <section style="width: 8px; height: 8px; background-color: #667eea; transform: rotate(45deg);"></section>
+    <section style="width: 8px; height: 8px; background-color: #764ba2; transform: rotate(45deg);"></section>
+    <section style="width: 8px; height: 8px; background-color: #667eea; transform: rotate(45deg);"></section>
+  </section>`,
+};
+
+/**
+ * Gradient Bar (渐变色条)
+ */
+export const GRADIENT_BAR: SVGDecorator = {
+  id: 'gradient-bar',
+  name: 'Gradient Bar',
+  position: 'before',
+  svg: `<section style="height: 4px; background: linear-gradient(90deg, #fa5151, #f39c12, #07c160, #3498db, #9b59b6); border-radius: 2px; margin: 15px 0;"></section>`,
+};
+
+/**
+ * Leaf Decoration (叶子装饰)
+ */
+export const LEAF_DECORATION: SVGDecorator = {
+  id: 'leaf-decoration',
+  name: 'Leaf Decoration',
+  position: 'before',
+  svg: `<section style="display: flex; gap: 4px; justify-content: center; margin: 10px 0; font-size: 16px;">
+    <span style="color: #07c160;">🌿</span>
+    <span style="color: #10b981;">•</span>
+    <span style="color: #07c160;">🌿</span>
+  </section>`,
+};
+
+/**
+ * Circle Badge (圆形徽章)
+ */
+export const CIRCLE_BADGE: SVGDecorator = {
+  id: 'circle-badge',
+  name: 'Circle Badge',
+  position: 'before',
+  svg: `<section style="display: flex; gap: 4px; justify-content: center; margin: 10px 0;">
+    <section style="width: 10px; height: 10px; border-radius: 50%; border: 2px solid #4f46e5;"></section>
+    <section style="width: 10px; height: 10px; border-radius: 50%; background-color: #4f46e5;"></section>
+    <section style="width: 10px; height: 10px; border-radius: 50%; border: 2px solid #4f46e5;"></section>
+  </section>`,
+};
+
+/**
  * All available decorators
  */
 export const ALL_DECORATORS: SVGDecorator[] = [
@@ -91,6 +155,11 @@ export const ALL_DECORATORS: SVGDecorator[] = [
   CORNER_TRIANGLE,
   DIVIDER_LINE,
   STAR_ACCENT,
+  WAVE_DIVIDER,
+  DIAMOND_PATTERN,
+  GRADIENT_BAR,
+  LEAF_DECORATION,
+  CIRCLE_BADGE,
 ];
 
 /**
