@@ -17,7 +17,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, '..', '..', 'data');
 const TEMPLATES_FILE = path.join(DATA_DIR, 'user_templates.json');
-let persistTimer: NodeJS.Timeout | null = null;
 let persistInFlight: Promise<void> | null = null;
 
 // In-memory storage with disk persistence
@@ -33,19 +32,23 @@ interface PersistedTemplateData {
 
 /**
  * Flush template data to disk
+ * Handles concurrent calls by waiting for ongoing flush and ensuring
+ * a new flush happens if data changed during the wait
  */
-const flushPersist = async () => {
+export const flushPersist = async () => {
+  // Wait for any ongoing flush to complete first
+  while (persistInFlight) {
+    await persistInFlight;
+  }
+
+  // Check if another flush started while we were waiting
+  // This can happen if multiple concurrent calls are waiting
   if (persistInFlight) {
-    // Retry after current flush completes
-    if (!persistTimer) {
-      persistTimer = setTimeout(() => {
-        persistTimer = null;
-        void flushPersist();
-      }, 50);
-    }
+    await persistInFlight;
     return;
   }
 
+  // Start a new flush operation
   const payload: PersistedTemplateData = {
     version: '1.0',
     templates: Array.from(templates.values()),
@@ -81,14 +84,13 @@ const flushPersist = async () => {
 
 /**
  * Schedule template data persistence (debounced)
+ * @deprecated This function had a bug where it only saved the first change in a 2-second window.
+ * Use flushPersist() directly instead for reliable persistence.
  */
 const persistData = () => {
-  if (persistTimer) return;
-
-  persistTimer = setTimeout(() => {
-    persistTimer = null;
-    void flushPersist();
-  }, 2000); // 2 second debounce
+  // Call flushPersist directly to avoid debounce bug
+  // The old implementation would ignore subsequent changes within 2 seconds
+  void flushPersist();
 };
 
 /**
