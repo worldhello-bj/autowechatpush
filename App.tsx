@@ -669,7 +669,7 @@ const AppLayout: React.FC = () => {
 // --- Main App Component (with AuthProvider) ---
 const App: React.FC = () => {
   return (
-    <HashRouter>
+    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <AppLayout />
       </AuthProvider>
