@@ -17,7 +17,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, '..', '..', 'data');
 const TEMPLATES_FILE = path.join(DATA_DIR, 'user_templates.json');
-let persistTimer: NodeJS.Timeout | null = null;
 let persistInFlight: Promise<void> | null = null;
 
 // In-memory storage with disk persistence
@@ -85,14 +84,13 @@ export const flushPersist = async () => {
 
 /**
  * Schedule template data persistence (debounced)
+ * @deprecated This function had a bug where it only saved the first change in a 2-second window.
+ * Use flushPersist() directly instead for reliable persistence.
  */
 const persistData = () => {
-  if (persistTimer) return;
-
-  persistTimer = setTimeout(() => {
-    persistTimer = null;
-    void flushPersist();
-  }, 2000); // 2 second debounce
+  // Call flushPersist directly to avoid debounce bug
+  // The old implementation would ignore subsequent changes within 2 seconds
+  void flushPersist();
 };
 
 /**
