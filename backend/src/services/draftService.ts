@@ -13,7 +13,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, '..', '..', 'data');
 const DRAFTS_FILE = path.join(DATA_DIR, 'drafts.json');
-let persistTimer: NodeJS.Timeout | null = null;
 let persistInFlight: Promise<void> | null = null;
 
 // In-memory storage with disk persistence
@@ -29,18 +28,22 @@ interface PersistedDraftData {
 
 /**
  * Flush draft data to disk
+ * Handles concurrent calls by waiting for ongoing flush and ensuring
+ * a new flush happens if data changed during the wait
  */
-const flushPersist = async () => {
+export const flushPersist = async () => {
+  // Wait for any ongoing flush to complete first
+  while (persistInFlight) {
+    await persistInFlight;
+  }
+
+  // Check if another flush started while we were waiting
   if (persistInFlight) {
-    if (!persistTimer) {
-      persistTimer = setTimeout(() => {
-        persistTimer = null;
-        void flushPersist();
-      }, 50);
-    }
+    await persistInFlight;
     return;
   }
 
+  // Start a new flush operation
   const payload: PersistedDraftData = {
     version: '1.0',
     drafts: Array.from(drafts.values()),
@@ -75,14 +78,13 @@ const flushPersist = async () => {
 
 /**
  * Schedule draft data persistence
+ * @deprecated This function had a bug where it only saved the first change in a 2-second window.
+ * Use flushPersist() directly instead for reliable persistence.
  */
 const persistData = () => {
-  if (persistTimer) return;
-
-  persistTimer = setTimeout(() => {
-    persistTimer = null;
-    void flushPersist();
-  }, 2000);
+  // Call flushPersist directly to avoid debounce bug
+  // The old implementation would ignore subsequent changes within 2 seconds
+  void flushPersist();
 };
 
 /**

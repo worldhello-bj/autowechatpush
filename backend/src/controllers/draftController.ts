@@ -4,7 +4,8 @@ import {
   saveDraft, 
   getUserDrafts, 
   deleteDraft,
-  getDraftById
+  getDraftById,
+  flushPersist
 } from '../services/draftService.js';
 
 const logger = createLogger('draft-controller');
@@ -32,6 +33,9 @@ export const save = async (req: Request, res: Response) => {
       content,
       topic
     });
+
+    // Ensure draft is persisted to disk before responding
+    await flushPersist();
 
     sendSuccess(res, draft, 201);
   } catch (error) {
@@ -74,6 +78,9 @@ export const remove = async (req: Request, res: Response) => {
     if (!success) {
       return sendError(res, 404, 'NOT_FOUND', 'Draft not found or access denied');
     }
+
+    // Ensure deletion is persisted to disk before responding
+    await flushPersist();
 
     sendSuccess(res, { message: 'Draft deleted successfully' });
   } catch (error) {
