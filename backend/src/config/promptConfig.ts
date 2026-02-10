@@ -59,9 +59,10 @@ export const DEFAULT_PROMPTS: PromptConfig = {
 - 语言生动亲和，贴近读者
 - 合理运用多样化文字样式和视觉元素
 - 重点内容使用加粗或品牌主色突出
-- 灵活运用丰富的布局形式：用card展示要点、highlight突出核心观点、callout做温馨提示、quote引用名言、table展示对比数据、numbered_list做步骤流程、stats展示关键数字
+- 使用section容器包裹内容：type:'section'创建带背景色和装饰的全宽区块，在children中放置paragraph、card、list、highlight等子blocks
+- 灵活运用丰富的布局形式：用section容器包裹相关内容、card展示要点、highlight突出核心观点、callout做温馨提示、quote引用名言、table展示对比数据、numbered_list做步骤流程
+- 每篇文章至少使用3-5个section容器，每个用不同颜色和装饰
 - 每篇文章至少使用4-5种不同的颜色样式（如red、blue、purple、teal、indigo、amber、rose、gradient等）
-- 每个章节使用不同的布局模式，避免连续使用相同的block类型
 
 使用'layout_article'工具返回结构化内容。`,
 
@@ -179,7 +180,47 @@ export const DEFAULT_PROMPTS: PromptConfig = {
 
 你的专长是创建美观、引人入胜的文章布局，精通多种排版布局形式和模板设计。
 
-**布局模板库** - 请灵活组合以下排版模式，避免千篇一律：
+🏗️ **核心布局模式：全文容器区块 (section)**
+这是最重要的排版技巧！使用 type:'section' 创建带背景色和装饰的全宽容器，在容器内放置子blocks：
+
+**section容器用法示例**：
+\`\`\`json
+{
+  "type": "section",
+  "title": "章节标题",
+  "content": "",
+  "style": "blue",
+  "backgroundStyle": "solid",
+  "decoration": "circles",
+  "children": [
+    { "type": "paragraph", "content": "段落文字..." },
+    { "type": "card", "title": "要点", "content": "卡片内容...", "style": "blue" },
+    { "type": "list", "content": "", "items": ["条目1", "条目2"], "style": "blue" }
+  ]
+}
+\`\`\`
+
+**section背景样式 (backgroundStyle)**：
+- "solid"：纯色背景（使用style指定的颜色浅色背景）
+- "gradient"：渐变背景（更丰富的视觉效果）
+- "pattern"：带图案的背景
+
+**section装饰 (decoration)**：
+- "circles"：圆形气泡装饰（适合现代感设计）
+- "dots"：点阵装饰（适合简约设计）
+- "waves"：底部波浪效果（适合流畅感设计）
+- "geometric"：几何形状装饰（适合科技感设计）
+- "stars"：星标装饰（适合活泼设计）
+
+**推荐的section布局组合**：
+1. 📘 **知识要点型**：蓝色section + header子块 + 多个card子块
+2. 🌿 **自然清新型**：绿色/teal section + circles装饰 + paragraph + list子块
+3. 🎯 **重点强调型**：渐变section + highlight子块 + numbered_list子块
+4. 💡 **提示说明型**：amber/gold section + dots装饰 + callout子块 + paragraph
+5. 🏆 **成就展示型**：indigo section + geometric装饰 + card子块 (带数据)
+6. 💭 **引用回顾型**：rose/pink section + waves装饰 + quote子块 + paragraph
+
+**重要**：每篇文章应至少使用3-5个section容器，每个section用不同的颜色和装饰风格！
 
 📐 **标题布局模式**（每种标题用不同风格）：
 - 🎀 绸带式标题：彩色背景条 + 白字，左右带三角装饰
@@ -188,62 +229,47 @@ export const DEFAULT_PROMPTS: PromptConfig = {
 - 🔢 大号序号标题：圆角方块序号 + 标题文字并列
 - 🏷️ 徽章式标题：圆角边框 + 顶部标签
 - 📌 图钉式标题：装饰图标 + 加粗标题
-- ✦ 星标式标题：前后装饰符号 + 居中标题
 
 📦 **内容卡片布局模式**：
 - 💡 要点卡片：带图标和彩色左边框的要点总结
 - 🎯 特色展示卡：圆角边框 + 彩色顶部条 + 图标标题
 - 📊 数据卡片：大号数字 + 标签说明，多组并列
-- 🏆 成就卡片：渐变背景 + 居中数据 + 底部说明
 - 📝 信息卡片：浅色背景 + 标题 + 分条内容
-- ⭐ 亮点卡片：背景高亮 + emoji装饰 + 关键信息
 
 📋 **列表布局模式**：
 - ✅ 打勾清单：绿色对勾 + 水平分隔条目
-- 🔵 圆点列表：彩色圆点 + 缩进内容
 - 🔢 编号步骤：圆形编号 + 步骤说明
-- 📎 标签式列表：彩色标签前缀 + 内容说明
 - 💎 图标列表：emoji前缀 + 文字描述
 
 💬 **引用和强调布局模式**：
 - 📜 经典引用：灰色背景 + 左边框 + 斜体
 - 🌟 高亮引用：浅色渐变背景 + 顶部彩色条
-- 💭 对话气泡：圆角背景 + 引号装饰
-- 🔥 热点高亮：醒目背景色 + 加粗文字
 - ✨ 金句卡片：深色背景 + 居中大字 + 装饰线
 
 📏 **分隔装饰布局模式**：
-- ∿∿∿ 波浪线分隔
 - ◆◆◆ 菱形装饰分隔
 - ━━━ 渐变彩色条分隔
 - 🌿•🌿 叶子装饰分隔
 - ○●○ 圆形装饰分隔
-- ⋯⋯⋯ 点线分隔
-- 🌟 ✨ 🌟 星标分隔
 
 **色彩设计要求**：
 - 应用丰富的颜色（red, blue, purple, orange, gold, green, pink, cyan, teal, indigo, amber, rose, lime）
 - 使用渐变效果（gradient, gradient_warm, gradient_cool, gradient_nature）
 - 每篇文章使用至少6-8种不同的颜色
-- 每个章节拥有独立的颜色主题
-- 颜色搭配要协调美观
+- 每个section容器拥有独立的颜色主题
 
 **排版层次要求**：
 - fontSize: 'xlarge' 用于醒目的数据和重要标题
 - fontSize: 'large' 用于章节核心观点和引用
 - fontSize: 'small' 用于脚注、备注和补充说明
 - fontWeight: 'bold' 用于关键词和重点强调
-- fontStyle: 'italic' 用于引用内容和特殊术语
-- alignment: 'center' 用于标题、引用和重要声明
 
 **整体布局原则**：
-- 不要连续使用相同的block类型，追求视觉节奏感
-- 每个章节选用不同的布局模式组合
-- 混合使用简短有力的声明和详细的段落说明
-- 善用card、highlight、callout、quote、table、stats等区块类型丰富版面
+- 优先使用section容器包裹内容，创建丰富的背景层次
+- 不同的section使用不同的颜色和装饰，追求视觉节奏感
+- section内部的子blocks选用不同类型，避免千篇一律
 - 段落之间用不同风格的divider分隔
-- 为callout配以适当的icon（info、warning、success、tip、note）
-- 为card配以创意的标题，吸引读者注意
+- 善用card、highlight、callout、quote等区块丰富版面
 
 使用'layout_article'工具返回优化后的完整文章结构。`
   }

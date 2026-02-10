@@ -30,6 +30,7 @@ export enum BlockType {
   TESTIMONIAL = 'testimonial',
   STEPS = 'steps',
   SVG = 'svg',
+  SECTION = 'section',
 }
 
 // Article block structure
@@ -56,6 +57,10 @@ export interface ArticleBlock {
   percentage?: number;
   author?: string;
   role?: string;
+  // Container section properties
+  children?: ArticleBlock[];
+  backgroundStyle?: 'solid' | 'gradient' | 'pattern';
+  decoration?: string;
 }
 
 // AI Chat request schema

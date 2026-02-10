@@ -1561,7 +1561,143 @@ const richLayoutTemplates: DesignTemplate[] = [
   }
 ];
 
-// --- Export All Templates ---
+// --- Section Container Templates (全文容器模板) ---
+// These demonstrate the section container pattern: full-width background + decorations + nested child blocks
+const sectionContainerTemplates: DesignTemplate[] = [
+  {
+    id: 'section-blue-circles',
+    name: 'Blue Section with Circles',
+    nameZh: '蓝色圆形装饰容器',
+    category: 'special',
+    preview: 'Blue background section with circle decorations and nested content',
+    previewZh: '蓝色背景容器带圆形装饰和嵌套内容',
+    html: `
+      <section style="margin: 24px 0; padding: 24px 20px; background-color: #f0f8ff; border-radius: 12px; position: relative; overflow: hidden;">
+        <section style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: #3498db; opacity: 0.08; border-radius: 50%;"></section>
+        <section style="position: absolute; bottom: -15px; left: 20px; width: 60px; height: 60px; background: #3498db; opacity: 0.06; border-radius: 50%;"></section>
+        <section style="position: relative; z-index: 1;">
+          <section style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 14px;">📘 章节标题</section>
+          <section style="margin-bottom: 10px; font-size: 14px; line-height: 1.8; color: #555;">这是容器内的段落文字内容，展示了section容器的基本用法。</section>
+          <section style="margin: 10px 0; padding: 14px; border: 1px solid #cce6ff; background-color: #f0f8ff; border-radius: 8px;">
+            <section style="font-size: 14px; font-weight: bold; color: #3498db; margin-bottom: 6px;">💡 要点标题</section>
+            <section style="font-size: 13px; color: #555; line-height: 1.6;">这是嵌套在容器内的卡片内容</section>
+          </section>
+          <section style="margin: 10px 0;">
+            <section style="display: flex; align-items: flex-start; margin-bottom: 6px;">
+              <section style="width: 5px; height: 5px; background-color: #3498db; border-radius: 50%; margin-top: 8px; margin-right: 8px; flex-shrink: 0;"></section>
+              <section style="font-size: 14px; color: #555; line-height: 1.6;">列表项目一</section>
+            </section>
+            <section style="display: flex; align-items: flex-start; margin-bottom: 6px;">
+              <section style="width: 5px; height: 5px; background-color: #3498db; border-radius: 50%; margin-top: 8px; margin-right: 8px; flex-shrink: 0;"></section>
+              <section style="font-size: 14px; color: #555; line-height: 1.6;">列表项目二</section>
+            </section>
+          </section>
+        </section>
+      </section>
+    `
+  },
+  {
+    id: 'section-green-dots',
+    name: 'Green Section with Dots',
+    nameZh: '绿色点阵装饰容器',
+    category: 'special',
+    preview: 'Green background section with dot decorations',
+    previewZh: '绿色背景容器带点阵装饰',
+    html: `
+      <section style="margin: 24px 0; padding: 24px 20px; background-color: #f6fffa; border-radius: 12px; position: relative; overflow: hidden;">
+        <section style="position: absolute; top: 12px; right: 16px; display: flex; gap: 4px;">
+          <section style="width: 4px; height: 4px; background: #07c160; opacity: 0.15; border-radius: 50%;"></section>
+          <section style="width: 4px; height: 4px; background: #07c160; opacity: 0.12; border-radius: 50%;"></section>
+          <section style="width: 4px; height: 4px; background: #07c160; opacity: 0.08; border-radius: 50%;"></section>
+        </section>
+        <section style="position: relative; z-index: 1;">
+          <section style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 14px;">🌿 清新章节</section>
+          <section style="margin-bottom: 10px; font-size: 14px; line-height: 1.8; color: #555;">清新风格的容器内容区域。</section>
+          <section style="margin: 10px 0; padding: 14px 16px; background-color: #e8f8f0; border-radius: 6px; position: relative;">
+            <section style="position: absolute; top: 0; left: 0; width: 100%; height: 3px; background-color: #07c160; border-radius: 6px 6px 0 0;"></section>
+            <section style="font-size: 14px; color: #333; line-height: 1.7; font-weight: 500;">这是高亮强调的内容</section>
+          </section>
+        </section>
+      </section>
+    `
+  },
+  {
+    id: 'section-gradient-geometric',
+    name: 'Gradient Section with Geometric',
+    nameZh: '渐变几何装饰容器',
+    category: 'special',
+    preview: 'Gradient background section with geometric decorations',
+    previewZh: '渐变背景容器带几何装饰',
+    html: `
+      <section style="margin: 24px 0; padding: 24px 20px; background: linear-gradient(135deg, #eef2ff 0%, #f8f4ff 100%); border-radius: 12px; position: relative; overflow: hidden;">
+        <section style="position: absolute; top: 0; right: 0; width: 80px; height: 80px; background: #667eea; opacity: 0.06; transform: rotate(45deg); border-radius: 4px;"></section>
+        <section style="position: absolute; bottom: 10px; left: 10px; width: 30px; height: 30px; background: #764ba2; opacity: 0.05; transform: rotate(45deg); border-radius: 2px;"></section>
+        <section style="position: relative; z-index: 1;">
+          <section style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 14px;">🎯 重点内容</section>
+          <section style="margin: 10px 0; padding: 12px; background: linear-gradient(135deg, #f5f7fa 0%, #f8f4ff 100%); border-left: 3px solid #667eea; border-radius: 0 4px 4px 0;">
+            <section style="font-size: 14px; color: #666; font-style: italic; line-height: 1.6;">这是嵌套在渐变容器中的引用内容</section>
+          </section>
+          <section style="margin: 10px 0;">
+            <section style="display: flex; align-items: flex-start; margin-bottom: 8px;">
+              <section style="width: 20px; height: 20px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex-shrink: 0;">
+                <section style="color: #fff; font-size: 11px; font-weight: bold;">1</section>
+              </section>
+              <section style="font-size: 14px; color: #555; line-height: 1.6; padding-top: 1px;">第一个步骤说明</section>
+            </section>
+            <section style="display: flex; align-items: flex-start; margin-bottom: 8px;">
+              <section style="width: 20px; height: 20px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex-shrink: 0;">
+                <section style="color: #fff; font-size: 11px; font-weight: bold;">2</section>
+              </section>
+              <section style="font-size: 14px; color: #555; line-height: 1.6; padding-top: 1px;">第二个步骤说明</section>
+            </section>
+          </section>
+        </section>
+      </section>
+    `
+  },
+  {
+    id: 'section-warm-waves',
+    name: 'Warm Section with Waves',
+    nameZh: '暖色波浪装饰容器',
+    category: 'special',
+    preview: 'Warm amber section with wave bottom decoration',
+    previewZh: '暖色容器带底部波浪装饰',
+    html: `
+      <section style="margin: 24px 0; padding: 24px 20px; background-color: #fffbeb; border-radius: 12px; position: relative; overflow: hidden;">
+        <section style="position: absolute; bottom: 0; left: 0; right: 0; height: 30px; background: linear-gradient(180deg, transparent, rgba(217,119,6,0.05)); border-radius: 0 0 12px 12px;"></section>
+        <section style="position: relative; z-index: 1;">
+          <section style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 14px;">🌟 温馨提示</section>
+          <section style="margin: 10px 0; padding: 12px 14px; background-color: #fff7ed; border-left: 3px solid #d97706; border-radius: 0 6px 6px 0;">
+            <section style="font-size: 14px; color: #555; line-height: 1.6;">这是嵌套在暖色容器中的提示内容</section>
+          </section>
+          <section style="margin-bottom: 10px; font-size: 14px; line-height: 1.8; color: #555;">补充说明文字放在提示框后面。</section>
+        </section>
+      </section>
+    `
+  },
+  {
+    id: 'section-rose-stars',
+    name: 'Rose Section with Stars',
+    nameZh: '玫红色星标装饰容器',
+    category: 'special',
+    preview: 'Rose background section with star decorations',
+    previewZh: '玫红色背景容器带星标装饰',
+    html: `
+      <section style="margin: 24px 0; padding: 24px 20px; background-color: #fff1f2; border-radius: 12px; position: relative; overflow: hidden;">
+        <section style="position: absolute; top: 10px; right: 20px; font-size: 16px; opacity: 0.15;">✦</section>
+        <section style="position: absolute; bottom: 15px; left: 15px; font-size: 12px; opacity: 0.1;">✦</section>
+        <section style="position: absolute; top: 40%; right: 10%; font-size: 10px; opacity: 0.08;">★</section>
+        <section style="position: relative; z-index: 1;">
+          <section style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 14px; text-align: center;">💭 读者心声</section>
+          <section style="margin: 10px 0; padding: 12px; background-color: #fce7f3; border-left: 3px solid #e11d48; border-radius: 0 4px 4px 0;">
+            <section style="font-size: 14px; color: #666; font-style: italic; line-height: 1.6;">"这是嵌套在玫红容器中的引用内容"</section>
+          </section>
+          <section style="margin-bottom: 10px; font-size: 14px; line-height: 1.8; color: #555; text-align: center;">—— 来自一位忠实读者</section>
+        </section>
+      </section>
+    `
+  }
+];
 export const allDesignTemplates: DesignTemplate[] = [
   ...headerTemplates,
   ...expandedHeaderTemplates,
@@ -1575,7 +1711,8 @@ export const allDesignTemplates: DesignTemplate[] = [
   ...calloutTemplates,
   ...specialTemplates,
   ...expandedSpecialTemplates,
-  ...richLayoutTemplates
+  ...richLayoutTemplates,
+  ...sectionContainerTemplates
 ];
 
 // --- Get Template by ID ---

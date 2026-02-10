@@ -22,7 +22,8 @@ export enum BlockType {
   STATS = 'stats',             // 数据统计卡片
   TESTIMONIAL = 'testimonial', // 用户评价
   STEPS = 'steps',             // 步骤流程
-  SVG = 'svg'                  // SVG图形/装饰
+  SVG = 'svg',                 // SVG图形/装饰
+  SECTION = 'section'          // 容器区块：带背景色/装饰的全宽容器，内含子blocks
 }
 
 export interface ArticleBlock {
@@ -50,6 +51,10 @@ export interface ArticleBlock {
   percentage?: number; // For progress blocks (0-100)
   author?: string; // For testimonial blocks
   role?: string; // For testimonial blocks (author role/position)
+  // Container section properties
+  children?: ArticleBlock[]; // Nested child blocks for 'section' container type
+  backgroundStyle?: 'solid' | 'gradient' | 'pattern'; // Background type for section
+  decoration?: string; // Background decoration description (e.g., 'circles', 'dots', 'waves')
 }
 
 export interface Article {
