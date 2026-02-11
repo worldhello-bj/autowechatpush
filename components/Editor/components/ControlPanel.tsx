@@ -249,14 +249,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 
           {useTemplate && (
             <div className="space-y-3 animate-fade-in">
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => setShowDesignTemplates(true)}
-                  className="py-2 bg-white border border-pink-300 text-pink-700 rounded-lg hover:bg-pink-50 transition flex items-center justify-center gap-1 text-sm font-medium shadow-sm"
-                >
-                  <span className="material-icons text-sm">palette</span>
-                  系统模板
-                </button>
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={onOpenContentTemplates}
                   className="py-2 bg-white border border-orange-300 text-orange-700 rounded-lg hover:bg-orange-50 transition flex items-center justify-center gap-1 text-sm font-medium shadow-sm"
