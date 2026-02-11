@@ -19,6 +19,8 @@ interface TextRegion {
   generatedChinese?: string;   // AI生成的纯汉字内容
 }
 
+const PARAGRAPH_SEPARATOR = '===SPLIT===';
+
 interface UseArticleGeneratorProps {
   aiProvider: AIProvider;
   onError: (msg: string) => void;
@@ -225,7 +227,7 @@ export const useArticleGenerator = ({
           const batch = templateTextRegions;
           
           // Construct prompt with full context
-          const batchPrompts = batch.map((region: TextRegion, idx: number) => {
+          const batchPrompts: Array<{ id: string; index: number; type: string; originalText: string; charLimit: number }> = batch.map((region: TextRegion, idx: number) => {
             const paragraphType = region.type === 'header' ? '标题' :
                                  region.type === 'quote' ? '引用段落' :
                                  '正文段落';
@@ -238,25 +240,23 @@ export const useArticleGenerator = ({
             };
           });
 
-          const prompt = `请阅读以下文章结构和原始内容，然后为主题"${topic}"创作一篇新文章。
+          // Build a simplified prompt list showing only index, type, and charLimit
+          const simplifiedList = batchPrompts
+            .map(p => `[${p.index}] ${p.type}（${p.charLimit}字）：${p.originalText}`)
+            .join('\n');
 
-任务要求：
-1. **结构保持**：严格按照提供的段落顺序和类型生成新内容，不要增加或减少段落。
-2. **上下文连贯**：新文章必须逻辑通顺、内容连贯，是一篇完整的文章。
-3. **内容替换**：为每个段落生成新的内容，替换原始内容。
-4. **字数严格控制**：生成的每个段落字数必须与原文长度（charLimit）基本一致（允许±10%波动），切勿过长或过短，以免破坏排版布局。
-5. **格式输出**：请直接返回 JSON 数组（如果可能），或直接按顺序输出新段落内容（用空行分隔）。
-6. **end标记**：如果生成了"end"或类似的结束标记，之后的内容将被忽略。
+          const prompt = `请为主题"${topic}"创作一篇新文章，严格按照以下${batch.length}个段落的顺序和类型输出。
 
-原始内容结构列表：
-${JSON.stringify(batchPrompts, null, 2)}
+要求：
+1. 按顺序输出${batch.length}个段落，每个段落之间用 ${PARAGRAPH_SEPARATOR} 分隔。
+2. 每个段落字数必须与原文长度基本一致（允许±10%波动）。
+3. 不要输出编号、标签或任何额外格式，只输出纯文本内容。
+4. 不要增加或减少段落数量，必须恰好${batch.length}个。
 
-请开始创作，并尽量以 JSON 格式返回结果：
-[
-  { "id": "region-id-1", "content": "新段落内容..." },
-  ...
-]
-如果无法返回JSON，请确保按顺序输出段落内容。`;
+原始段落列表：
+${simplifiedList}
+
+请直接输出内容，段落间用 ${PARAGRAPH_SEPARATOR} 分隔：`;
 
           try {
             console.group('[useArticleGenerator] Template Generation Process');
@@ -265,104 +265,44 @@ ${JSON.stringify(batchPrompts, null, 2)}
             
             console.log('2. Calling AI API...');
             const startTime = Date.now();
-            const batchResponse = await aiApi.helper('custom', prompt, aiProvider, {
-              contentType: 'batch_json',
-            });
+            const batchResponse = await aiApi.helper('custom', prompt, aiProvider);
             console.log(`   API Latency: ${Date.now() - startTime}ms`);
 
             if (batchResponse.success && batchResponse.data) {
-              let generatedResults: any[] = [];
               const rawResult = batchResponse.data.result as string;
               
               console.log('3. Response Received');
               console.log(`   Length: ${rawResult.length} chars`);
               console.log('   Raw Preview:', rawResult.slice(0, 200) + '...');
 
-              try {
-                // Robust JSON extraction
-                let jsonStr = rawResult;
-                
-                // 1. Remove markdown code blocks
-                jsonStr = jsonStr.replace(/```json\s*|```/g, '').trim();
-                
-                // 2. Find the first '[' and the last ']'
-                const firstBracket = jsonStr.indexOf('[');
-                const lastBracket = jsonStr.lastIndexOf(']');
-                
-                if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
-                  jsonStr = jsonStr.substring(firstBracket, lastBracket + 1);
-                  generatedResults = JSON.parse(jsonStr);
-                  console.log('4. JSON Parsing: Success');
-                  console.log(`   Parsed ${generatedResults.length} items`);
-                } else {
-                  // Try extracting individual JSON objects as fallback
-                  const objectMatches = jsonStr.match(/\{[^{}]*"(?:id|content)"[^{}]*\}/g);
-                  if (objectMatches && objectMatches.length > 0) {
-                    generatedResults = objectMatches.map(m => { try { return JSON.parse(m); } catch { console.warn('   Skipping malformed object:', m.slice(0, 80)); return null; } }).filter(Boolean);
-                    console.log('4. JSON Parsing: Extracted individual objects');
-                    console.log(`   Parsed ${generatedResults.length} items`);
-                  } else {
-                    throw new Error('No JSON array structure found in response');
-                  }
-                }
-              } catch (e: any) {
-                console.warn('4. JSON Parsing: Failed', e.message);
-                console.log('   Attempting Paragraph Matching Fallback...');
-                
-                // Fallback: Treat raw response as sequence of paragraphs
-                let paragraphs = rawResult.split(/\n\n+/).map(p => p.trim()).filter(p => p.length > 0);
-                
-                // If double-newline split yields too few results, try single-newline split
+              // Client-side parsing: split by separator and map by index
+              let paragraphs: string[];
+              if (rawResult.includes(PARAGRAPH_SEPARATOR)) {
+                paragraphs = rawResult.split(PARAGRAPH_SEPARATOR).map(p => p.trim()).filter(p => p.length > 0);
+                console.log(`4. Split by ${PARAGRAPH_SEPARATOR}: Found ${paragraphs.length} paragraphs`);
+              } else {
+                // Fallback: try double-newline, then single-newline
+                paragraphs = rawResult.split(/\n\n+/).map(p => p.trim()).filter(p => p.length > 0);
                 if (paragraphs.length < batch.length) {
-                  const singleNewlineParagraphs = rawResult.split(/\n/).map(p => p.trim()).filter(p => p.length > 0);
-                  if (singleNewlineParagraphs.length >= paragraphs.length) {
-                    paragraphs = singleNewlineParagraphs;
-                    console.log('   Using single-newline split');
+                  const singleSplit = rawResult.split(/\n/).map(p => p.trim()).filter(p => p.length > 0);
+                  if (singleSplit.length > paragraphs.length) {
+                    paragraphs = singleSplit;
                   }
                 }
-
-                // Strip leading numbering (e.g. "1. ", "2. ", "1、", "（1）", fullwidth parentheses)
+                // Strip leading numbering (e.g. "1. ", "2、", "（1）")
                 paragraphs = paragraphs.map(p => p.replace(/^(?:\d+[.、)\uff09]\s*|[（(]\d+[)）]\s*)/, ''));
-                
-                console.log(`   Fallback Analysis: Found ${paragraphs.length} paragraphs for ${batch.length} regions`);
-                
-                if (paragraphs.length !== batch.length) {
-                  console.warn(`   Count Mismatch: Expected ${batch.length}, got ${paragraphs.length}. Alignment might be imperfect.`);
-                }
-
-                // Map paragraphs to regions 1:1
-                generatedResults = paragraphs.map((para, idx) => {
-                  if (idx < batch.length) {
-                    return {
-                      id: batch[idx].id,
-                      content: para
-                    };
-                  }
-                  return null;
-                }).filter(Boolean);
-                
-                console.log(`   Fallback Result: Mapped ${generatedResults.length} regions`);
+                console.log(`4. Newline fallback split: Found ${paragraphs.length} paragraphs`);
               }
 
-              // Map results back to regions — try ID match first, fall back to index
-              const resultIdSet = new Set(generatedResults.map((r: any) => r.id));
-              const idMatchCount = batch.filter((region: TextRegion) => resultIdSet.has(region.id)).length;
-              const useIndexFallback = idMatchCount === 0 && generatedResults.length > 0;
-              if (useIndexFallback) {
-                console.log('5. ID matching failed for all regions, using index-based mapping');
+              if (paragraphs.length !== batch.length) {
+                console.warn(`   Count Mismatch: Expected ${batch.length}, got ${paragraphs.length}`);
               }
 
+              // Map paragraphs to regions by index (client-side structuring)
               batch.forEach((region: TextRegion, batchIdx: number) => {
-                let result = generatedResults.find((r: any) => r.id === region.id);
+                const generatedText = batchIdx < paragraphs.length ? paragraphs[batchIdx] : region.chineseSequence;
                 
-                // Index-based fallback when no IDs matched
-                if (!result && useIndexFallback && batchIdx < generatedResults.length) {
-                  result = generatedResults[batchIdx];
-                }
-
-                const generatedText = result ? result.content : region.chineseSequence;
-                
-                if (!result) {
+                if (batchIdx >= paragraphs.length) {
                   console.warn(`   Missing content for region ${region.id} (index ${region.index}), using original text.`);
                 }
                 
