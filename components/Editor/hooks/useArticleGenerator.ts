@@ -227,25 +227,69 @@ export const useArticleGenerator = ({
           const batch = templateTextRegions;
           
           // Construct prompt with full context
-          const batchPrompts: Array<{ id: string; index: number; type: string; originalText: string; charLimit: number }> = batch.map((region: TextRegion, idx: number) => {
-            const paragraphType = region.type === 'header' ? '标题' :
-                                 region.type === 'quote' ? '引用段落' :
+          const isContentTemplate = !!articleTemplate.isContentTemplate;
+          
+          const batchPrompts: Array<{ id: string; index: number; type: string; originalText: string; charLimit: number; charRange?: string }> = batch.map((region: TextRegion, idx: number) => {
+            const isHeading = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(region.type);
+            const paragraphType = isHeading ? '标题' :
+                                 region.type === 'blockquote' ? '引用段落' :
                                  '正文段落';
+
+            // For content templates: use flexible ranges based on semantic role
+            // For user templates ("我的模板"): use exact char counts from real content
+            let charRange: string | undefined;
+            if (isContentTemplate) {
+              if (isHeading) {
+                charRange = '5-30字';
+              } else {
+                charRange = '80-300字';
+              }
+            }
+
             return {
               id: region.id,
               index: idx + 1,
               type: paragraphType,
-              originalText: region.originalText, // Include full text for context
-              charLimit: region.chineseSequence.length
+              originalText: region.originalText,
+              charLimit: region.chineseSequence.length,
+              charRange
             };
           });
 
-          // Build a simplified prompt list showing only index, type, and charLimit
+          // Build prompt list with appropriate constraints
           const simplifiedList = batchPrompts
-            .map(p => `[${p.index}] ${p.type}（约${p.charLimit}字）`)
+            .map(p => {
+              if (p.charRange) {
+                // Content template: include placeholder text as semantic hint
+                const hint = p.originalText.replace(/[^\u4e00-\u9fff\w\s，。、：]/g, '').trim();
+                return `[${p.index}] ${p.type}（${p.charRange}）— 提示：${hint}`;
+              }
+              return `[${p.index}] ${p.type}（约${p.charLimit}字）`;
+            })
             .join('\n');
 
-          const prompt = `你是一个内容创作者。请围绕主题"${topic}"创作一篇全新的文章。
+          let prompt: string;
+          if (isContentTemplate) {
+            // Content template prompt: flexible, role-aware, encourage expansion
+            prompt = `你是一个专业内容创作者。请围绕主题"${topic}"创作一篇高质量的完整文章，严格遵循以下预设版式结构。
+
+这是一个预先设计好的文章版式模板，每个区域的"提示"说明了该位置应该放什么类型的内容。请根据提示创作对应内容。
+
+文章版式结构（共${batch.length}个区域）：
+${simplifiedList}
+
+输出规则：
+1. 必须恰好输出${batch.length}个段落，用 ${PARAGRAPH_SEPARATOR} 分隔。
+2. "标题"区域：输出简短有力的标题（5-30字），要吸引读者。
+3. "正文段落"区域：自由发挥，充分展开论述（80-300字），内容要充实、有深度、有价值。不要受限于提示文字的长度，大胆扩充内容。
+4. 参考每个区域的"提示"来决定写什么类型的内容（如简介、步骤说明、总结等）。
+5. 只输出纯文本，不要输出编号、标签或任何格式标记。
+6. 所有内容必须围绕"${topic}"这个主题展开。
+
+请直接输出${batch.length}个段落，用 ${PARAGRAPH_SEPARATOR} 分隔：`;
+          } else {
+            // User template prompt: strict character alignment
+            prompt = `你是一个内容创作者。请围绕主题"${topic}"创作一篇全新的文章。
 
 重要：你必须创作关于"${topic}"的全新内容，不要复制或改写下面的参考文本。参考文本仅用于展示文章结构和每段的字数要求。
 
@@ -259,6 +303,7 @@ ${simplifiedList}
 4. 所有内容必须围绕"${topic}"这个主题展开。
 
 请直接输出${batch.length}个段落，用 ${PARAGRAPH_SEPARATOR} 分隔：`;
+          }
 
           try {
             console.group('[useArticleGenerator] Template Generation Process');
@@ -804,14 +849,24 @@ ${simplifiedList}
             el.setAttribute('title', '点击查看原始内容'); // Tooltip hint
             el.classList.add('ai-template-region'); // Add class for styling/identification
             
+            // Detect semantic type from tag name and styling
+            let regionType = el.tagName.toLowerCase();
+            const style = el.getAttribute('style') || '';
+            const isBold = /font-weight:\s*(bold|[6-9]00)/.test(style);
+            const fontSizeMatch = style.match(/font-size:\s*(\d+)/);
+            const fontSize = fontSizeMatch ? parseInt(fontSizeMatch[1]) : 14;
+            // Promote styled <p> to heading if it looks like a title (bold + large font + short text)
+            if (!['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(regionType) && isBold && fontSize >= 17 && text.trim().length < 50) {
+              regionType = 'h2';
+            }
+
             regions.push({
               id,
               index: regionIndex,
-              type: el.tagName.toLowerCase(),
+              type: regionType,
               originalText: text,
               chineseSequence: text.replace(/[^\u4e00-\u9fff]/g, ''),
-              htmlContent: el.outerHTML, // This will capture the element BEFORE placeholder replacement? No, reference.
-              // Wait, el.outerHTML is dynamic. I need to capture it NOW or ensure I replace AFTER.
+              htmlContent: el.outerHTML,
               level: 1,
               marker: id
             });
@@ -880,8 +935,12 @@ ${simplifiedList}
       // Find element by data-ai-id
       const el = doc.querySelector(`[data-ai-id="${region.id}"]`);
       if (el) {
-        // Direct text replacement
-        el.textContent = region.generatedChinese;
+        // Convert basic markdown formatting to HTML before injection
+        const htmlContent = region.generatedChinese
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.+?)\*/g, '<em>$1</em>')
+          .replace(/~~(.+?)~~/g, '<del>$1</del>');
+        el.innerHTML = htmlContent;
         
         // Clean up template markers
         el.removeAttribute('data-ai-id');
@@ -996,6 +1055,31 @@ ${simplifiedList}
     });
   };
 
+  // Process content template HTML and set as article template for AI generation
+  const handleSelectContentTemplate = (name: string, html: string): void => {
+    console.log('[handleSelectContentTemplate] Processing content template:', name);
+    const { taggedHtml, textRegions } = processTemplateHtml(html);
+    console.log('[handleSelectContentTemplate] Extracted', textRegions.length, 'text regions');
+
+    const templateObj = {
+      title: name,
+      digest: '',
+      originalHtml: taggedHtml,
+      textRegions,
+      svgBlocks: [],
+      isContentTemplate: true, // Content templates have placeholder text, not real content
+      statistics: {
+        totalBlocks: textRegions.length,
+        textRegions: textRegions.length,
+        imageBlocks: 0,
+        codeBlocks: 0
+      }
+    };
+
+    setArticleTemplate(templateObj);
+    setUseTemplate(true);
+  };
+
   // Check for existing draft on mount
   const checkForDraft = () => {
     const raw = localStorage.getItem('wechat_editor_draft');
@@ -1075,6 +1159,7 @@ ${simplifiedList}
     performImport,
     handleRewrite,
     handleSaveTemplate,
+    handleSelectContentTemplate,
     saveLocalDraft,
     loadLocalDraft,
     handleInsertHookContent,

@@ -53,6 +53,7 @@ interface ControlPanelProps {
   templateUrl: string;
   setTemplateUrl: (url: string) => void;
   isExtractingTemplate: boolean;
+  articleTemplateName: string | null;
   onOpenUserTemplatePicker: () => void;
   onOpenContentTemplates: () => void;
 
@@ -114,6 +115,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   templateUrl,
   setTemplateUrl,
   isExtractingTemplate,
+  articleTemplateName,
   onOpenUserTemplatePicker,
   onOpenContentTemplates,
   wechatAccounts,
@@ -251,20 +253,27 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             <div className="space-y-3 animate-fade-in">
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => setShowDesignTemplates(true)}
-                  className="py-2 bg-white border border-pink-300 text-pink-700 rounded-lg hover:bg-pink-50 transition flex items-center justify-center gap-1 text-sm font-medium shadow-sm"
+                  onClick={onOpenContentTemplates}
+                  className="py-2 bg-white border border-orange-300 text-orange-700 rounded-lg hover:bg-orange-50 transition flex items-center justify-center gap-1 text-sm font-medium shadow-sm"
                 >
-                  <span className="material-icons text-sm">palette</span>
-                  系统模板
+                  <span className="material-icons text-sm">article</span>
+                  全文模板
                 </button>
                 <button
                   onClick={onOpenUserTemplatePicker}
-                  className="py-2 bg-white border border-orange-300 text-orange-700 rounded-lg hover:bg-orange-50 transition flex items-center justify-center gap-1 text-sm font-medium shadow-sm"
+                  className="py-2 bg-white border border-teal-300 text-teal-700 rounded-lg hover:bg-teal-50 transition flex items-center justify-center gap-1 text-sm font-medium shadow-sm"
                 >
                   <span className="material-icons text-sm">folder_open</span>
                   我的模板
                 </button>
               </div>
+              
+              {articleTemplateName && (
+                <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                  <span className="material-icons text-green-600 text-sm">check_circle</span>
+                  <span className="text-xs text-green-700 font-medium truncate">已选模板：{articleTemplateName}</span>
+                </div>
+              )}
               
               {!isFormattingMode && (
                 <p className="text-xs text-gray-500 bg-white/50 p-2 rounded border border-orange-100">

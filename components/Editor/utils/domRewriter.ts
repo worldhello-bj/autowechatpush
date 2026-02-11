@@ -20,8 +20,8 @@ export function extractContentBlocksFromHTML(html: string): ContentBlock[] {
       const element = node as Element;
       const tagName = element.tagName.toLowerCase();
 
-      // 跳过不可见或装饰性元素
-      if (['script', 'style', 'meta', 'link'].includes(tagName)) {
+      // 跳过不可见或装饰性元素（包括SVG，避免破坏模板中的SVG结构）
+      if (['script', 'style', 'meta', 'link', 'svg'].includes(tagName)) {
         return;
       }
 
@@ -45,7 +45,7 @@ export function extractContentBlocksFromHTML(html: string): ContentBlock[] {
             type: blockType,
             originalText: text,
             charLimit,
-            domRef: parentElement // 保存DOM引用用于回填
+            domRef: node // 保存Text节点引用用于回填，避免textContent覆盖兄弟节点
           });
 
           index++;
@@ -160,24 +160,26 @@ export function injectRewrittenContent(
     responseMap.set(block.index, block.newContent);
   });
 
-  // 更新DOM节点
+  // 更新DOM节点（通过Text节点的nodeValue，避免textContent破坏子元素结构）
   originalBlocks.forEach(block => {
     const newContent = responseMap.get(block.index);
     if (newContent && block.domRef) {
-      // 使用textContent确保只更新文本内容，保留原有样式
-      block.domRef.textContent = newContent;
+      block.domRef.nodeValue = newContent;
     }
   });
 
   // 从第一个根元素获取更新后的HTML
-  // 注意：这里假设所有内容块都在同一个根容器下
+  // 注意：domRef现在指向Text节点，需要向上遍历找到根容器（tempDiv）
   if (originalBlocks.length > 0 && originalBlocks[0].domRef) {
-    let rootElement = originalBlocks[0].domRef;
-    // 找到最顶层的容器
-    while (rootElement.parentElement && rootElement.parentElement !== document.body) {
-      rootElement = rootElement.parentElement;
+    let rootNode: Node = originalBlocks[0].domRef;
+    // 向上遍历找到最顶层的容器（即extractContentBlocksFromHTML创建的disconnected tempDiv）
+    // tempDiv.parentNode为null（因为未连接到document），所以循环会在tempDiv处停止
+    while (rootNode.parentNode && rootNode.parentNode.nodeType !== Node.DOCUMENT_NODE) {
+      rootNode = rootNode.parentNode;
     }
-    return rootElement.innerHTML;
+    if (rootNode instanceof Element) {
+      return rootNode.innerHTML;
+    }
   }
 
   return '';
