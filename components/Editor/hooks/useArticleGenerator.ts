@@ -272,8 +272,10 @@ ${simplifiedList}
               const rawResult = batchResponse.data.result as string;
               
               console.log('3. Response Received');
+              console.log(`   Type: ${typeof rawResult}`);
               console.log(`   Length: ${rawResult.length} chars`);
-              console.log('   Raw Preview:', rawResult.slice(0, 200) + '...');
+              console.log(`   Contains ===SPLIT===: ${rawResult.includes(PARAGRAPH_SEPARATOR)}`);
+              console.log('   Full Raw Response:', rawResult);
 
               // Client-side parsing: split by separator and map by index
               let paragraphs: string[];
@@ -281,21 +283,29 @@ ${simplifiedList}
                 paragraphs = rawResult.split(PARAGRAPH_SEPARATOR).map(p => p.trim()).filter(p => p.length > 0);
                 console.log(`4. Split by ${PARAGRAPH_SEPARATOR}: Found ${paragraphs.length} paragraphs`);
               } else {
+                console.warn(`4. Separator "${PARAGRAPH_SEPARATOR}" NOT found in response, using newline fallback`);
                 // Fallback: try double-newline, then single-newline
                 paragraphs = rawResult.split(/\n\n+/).map(p => p.trim()).filter(p => p.length > 0);
+                console.log(`   Double-newline split: ${paragraphs.length} paragraphs`);
                 if (paragraphs.length < batch.length) {
                   const singleSplit = rawResult.split(/\n/).map(p => p.trim()).filter(p => p.length > 0);
+                  console.log(`   Single-newline split: ${singleSplit.length} paragraphs`);
                   if (singleSplit.length > paragraphs.length) {
                     paragraphs = singleSplit;
                   }
                 }
                 // Strip leading numbering (e.g. "1. ", "2、", "（1）")
                 paragraphs = paragraphs.map(p => p.replace(/^(?:\d+[.、)\uff09]\s*|[（(]\d+[)）]\s*)/, ''));
-                console.log(`4. Newline fallback split: Found ${paragraphs.length} paragraphs`);
+                console.log(`   After cleanup: ${paragraphs.length} paragraphs`);
               }
 
+              console.log(`5. Paragraph Details (expected ${batch.length}):`);
+              paragraphs.forEach((p, i) => {
+                console.log(`   [${i}] (${p.length} chars): ${p.slice(0, 80)}${p.length > 80 ? '...' : ''}`);
+              });
+
               if (paragraphs.length !== batch.length) {
-                console.warn(`   Count Mismatch: Expected ${batch.length}, got ${paragraphs.length}`);
+                console.warn(`   ⚠️ Count Mismatch: Expected ${batch.length}, got ${paragraphs.length}`);
               }
 
               // Map paragraphs to regions by index (client-side structuring)
@@ -303,7 +313,7 @@ ${simplifiedList}
                 const generatedText = batchIdx < paragraphs.length ? paragraphs[batchIdx] : region.chineseSequence;
                 
                 if (batchIdx >= paragraphs.length) {
-                  console.warn(`   Missing content for region ${region.id} (index ${region.index}), using original text.`);
+                  console.warn(`   ⚠️ Missing content for region ${region.id} (index ${region.index}), using original text.`);
                 }
                 
                 newTextRegions.push({
@@ -727,6 +737,9 @@ ${simplifiedList}
    * Uses DOM parser to robustly identify leaf text nodes
    */
   const processTemplateHtml = (html: string): { taggedHtml: string; textRegions: TextRegion[] } => {
+    console.log('[processTemplateHtml] Input HTML length:', html.length);
+    console.log('[processTemplateHtml] Input HTML preview:', html.slice(0, 300) + '...');
+    
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     const regions: TextRegion[] = [];
@@ -810,8 +823,17 @@ ${simplifiedList}
 
     traverse(doc.body);
 
+    const taggedHtml = doc.body.innerHTML;
+    console.log('[processTemplateHtml] Tagged HTML length:', taggedHtml.length);
+    console.log('[processTemplateHtml] Regions found:', regions.length);
+    console.log('[processTemplateHtml] data-ai-id count in HTML:', (taggedHtml.match(/data-ai-id=/g) || []).length);
+    if (regions.length > 0) {
+      console.log('[processTemplateHtml] First region:', { id: regions[0].id, type: regions[0].type, textPreview: regions[0].originalText.slice(0, 50) });
+      console.log('[processTemplateHtml] Last region:', { id: regions[regions.length - 1].id, type: regions[regions.length - 1].type, textPreview: regions[regions.length - 1].originalText.slice(0, 50) });
+    }
+
     return {
-      taggedHtml: doc.body.innerHTML,
+      taggedHtml,
       textRegions: regions
     };
   };
@@ -822,10 +844,15 @@ ${simplifiedList}
    */
   const applyTemplateWithTextReplacement = (template: any, newTextRegions: TextRegion[]): string => {
     console.log('[applyTemplateWithTextReplacement] Starting DOM-based replacement');
+    console.log('[applyTemplateWithTextReplacement] Template originalHtml length:', template.originalHtml.length);
+    console.log('[applyTemplateWithTextReplacement] data-ai-id count in template HTML:', (template.originalHtml.match(/data-ai-id=/g) || []).length);
+    console.log('[applyTemplateWithTextReplacement] Regions to replace:', newTextRegions.length);
+    console.log('[applyTemplateWithTextReplacement] Regions with generatedChinese:', newTextRegions.filter(r => r.generatedChinese).length);
     
     const parser = new DOMParser();
     const doc = parser.parseFromString(template.originalHtml, 'text/html');
     let replacedCount = 0;
+    let notFoundCount = 0;
 
     // Restore SVG placeholders first (if any)
     if (template.svgBlocks) {
@@ -833,8 +860,11 @@ ${simplifiedList}
       // For now, let's keep SVGs as is, assuming they are preserved in doc.body.innerHTML
     }
 
-    newTextRegions.forEach(region => {
-      if (!region.generatedChinese) return;
+    newTextRegions.forEach((region, idx) => {
+      if (!region.generatedChinese) {
+        console.warn(`[applyTemplateWithTextReplacement] Region ${idx} (${region.id}): no generatedChinese, skipping`);
+        return;
+      }
 
       // Find element by data-ai-id
       const el = doc.querySelector(`[data-ai-id="${region.id}"]`);
@@ -849,12 +879,13 @@ ${simplifiedList}
         
         replacedCount++;
       } else {
-        console.warn(`[applyTemplateWithTextReplacement] Could not find element with id ${region.id}`);
+        notFoundCount++;
+        console.warn(`[applyTemplateWithTextReplacement] Region ${idx}: Could not find element with data-ai-id="${region.id}"`);
       }
 
     });
 
-    console.log(`[applyTemplateWithTextReplacement] Replaced ${replacedCount} regions`);
+    console.log(`[applyTemplateWithTextReplacement] Result: ${replacedCount} replaced, ${notFoundCount} not found out of ${newTextRegions.length} total`);
     
     let resultHtml = doc.body.innerHTML;
 

@@ -584,6 +584,13 @@ export const generatePlainText = async (
   const baseUrl = provider === AIProvider.DEEPSEEK ? DEEPSEEK_BASE_URL : QWEN_BASE_URL;
   const model = provider === AIProvider.DEEPSEEK ? 'deepseek-chat' : 'qwen-plus';
 
+  logger.info('[generatePlainText] Starting plain text call', {
+    provider,
+    model,
+    promptLength: prompt.length,
+    promptPreview: prompt.slice(0, 300),
+  });
+
   try {
     const response = await fetchWithTimeout(baseUrl, {
       method: 'POST',
@@ -603,6 +610,7 @@ export const generatePlainText = async (
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } };
       errorMessage = `${provider} API Error: ${errorData.error?.message || response.statusText}`;
+      logger.error('[generatePlainText] API error', { errorMessage, status: response.status });
       throw new Error(errorMessage);
     }
 
@@ -611,6 +619,12 @@ export const generatePlainText = async (
     };
 
     const content = data.choices?.[0]?.message?.content || '';
+    logger.info('[generatePlainText] Response received', {
+      contentLength: content.length,
+      contentPreview: content.slice(0, 500),
+      hasSplitSeparator: content.includes('===SPLIT==='),
+      splitCount: content.split('===SPLIT===').length,
+    });
     success = true;
     return content;
   } finally {

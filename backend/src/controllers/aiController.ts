@@ -493,7 +493,19 @@ export const aiHelper = async (req: Request, res: Response) => {
     if (action === 'custom') {
       // Custom action uses plain text completion (no tool calling)
       // so the AI response is returned as-is without being split into blocks
+      logger.info('[aiHelper] Custom action: using generatePlainText (no tool calling)', {
+        promptLength: prompt.length,
+        provider: selectedProvider,
+        requestId: req.requestId,
+      });
       const plainResult = await generatePlainText(prompt, selectedProvider);
+      logger.info('[aiHelper] Custom action: plain text result', {
+        resultLength: plainResult.length,
+        resultType: typeof plainResult,
+        resultPreview: plainResult.slice(0, 300),
+        hasSplitSeparator: plainResult.includes('===SPLIT==='),
+        requestId: req.requestId,
+      });
       responseData = plainResult;
     } else {
       const result = await generateArticle({
