@@ -570,6 +570,92 @@ const callQwenForTemplateFill = async (
 };
 
 /**
+ * Generate plain text response from AI without tool calling.
+ * Used for custom prompts where structured article layout is not needed.
+ */
+export const generatePlainText = async (
+  prompt: string,
+  provider: AIProvider
+): Promise<string> => {
+  const apiKey = await getApiKeyFromPool(provider);
+  let success = false;
+  let errorMessage: string | undefined;
+
+  const baseUrl = provider === AIProvider.DEEPSEEK ? DEEPSEEK_BASE_URL : QWEN_BASE_URL;
+  const model = provider === AIProvider.DEEPSEEK ? 'deepseek-chat' : 'qwen-plus';
+
+  logger.info('[generatePlainText] Starting plain text call', {
+    provider,
+    model,
+    promptLength: prompt.length,
+    promptPreview: prompt.slice(0, 300),
+  });
+
+  try {
+    const response = await fetchWithTimeout(baseUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'user', content: prompt },
+        ],
+        max_tokens: 4096,
+        // No tools/tool_choice — plain text completion
+      }),
+    }, 60000);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } };
+      errorMessage = `${provider} API Error: ${errorData.error?.message || response.statusText}`;
+      logger.error('[generatePlainText] API error', { errorMessage, status: response.status });
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json() as {
+      choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+    };
+
+    logger.info('[generatePlainText] Raw API response structure', {
+      hasChoices: !!data.choices,
+      choicesLength: data.choices?.length,
+      finishReason: data.choices?.[0]?.finish_reason,
+      hasContent: !!data.choices?.[0]?.message?.content,
+      contentLength: data.choices?.[0]?.message?.content?.length || 0,
+      usage: data.usage,
+    });
+
+    const content = data.choices?.[0]?.message?.content || '';
+
+    if (!content) {
+      logger.error('[generatePlainText] Empty response from AI', {
+        provider,
+        model,
+        promptLength: prompt.length,
+        finishReason: data.choices?.[0]?.finish_reason,
+        fullResponse: JSON.stringify(data).slice(0, 1000),
+      });
+    }
+
+    logger.info('[generatePlainText] Response received', {
+      contentLength: content.length,
+      contentPreview: content.slice(0, 500),
+      hasSplitSeparator: content.includes('===SPLIT==='),
+      splitCount: content.split('===SPLIT===').length,
+      finishReason: data.choices?.[0]?.finish_reason,
+    });
+    success = true;
+    return content;
+  } finally {
+    releaseApiKey(apiKey, success, errorMessage);
+  }
+};
+
+/**
  * Parallel AI generation with race strategy
  * Uses Promise.race to return the first successful response
  */

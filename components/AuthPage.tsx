@@ -110,6 +110,7 @@ interface AnimatedFormFieldProps {
   onToggle?: () => void;
   showPassword?: boolean;
   disabled?: boolean;
+  autoComplete?: string;
 }
 
 const AnimatedFormField: React.FC<AnimatedFormFieldProps> = ({
@@ -121,7 +122,8 @@ const AnimatedFormField: React.FC<AnimatedFormFieldProps> = ({
   showToggle,
   onToggle,
   showPassword,
-  disabled
+  disabled,
+  autoComplete
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -154,6 +156,7 @@ const AnimatedFormField: React.FC<AnimatedFormFieldProps> = ({
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           disabled={disabled}
+          autoComplete={autoComplete}
           className="w-full bg-transparent pl-12 pr-12 py-4 text-white placeholder:text-white/40 focus:outline-none text-base disabled:opacity-50"
           placeholder=""
         />
@@ -354,6 +357,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
                 onChange={(e) => setName(e.target.value)}
                 icon="badge"
                 disabled={isLoading}
+                autoComplete="username"
               />
             )}
 
@@ -365,6 +369,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
               onChange={(e) => setEmail(e.target.value)}
               icon="person"
               disabled={isLoading}
+              autoComplete={mode === 'login' ? "username" : "email"}
             />
 
             {/* Password Field */}
@@ -378,6 +383,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
               onToggle={() => setShowPassword(!showPassword)}
               showPassword={showPassword}
               disabled={isLoading}
+              autoComplete={mode === 'login' ? "current-password" : "new-password"}
             />
 
             {/* Confirm Password - Register Only */}
@@ -390,6 +396,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
                 icon="lock_reset"
                 showPassword={showPassword}
                 disabled={isLoading}
+                autoComplete="new-password"
               />
             )}
 

@@ -19,6 +19,8 @@ interface TextRegion {
   generatedChinese?: string;   // AI生成的纯汉字内容
 }
 
+const PARAGRAPH_SEPARATOR = '===SPLIT===';
+
 interface UseArticleGeneratorProps {
   aiProvider: AIProvider;
   onError: (msg: string) => void;
@@ -225,7 +227,7 @@ export const useArticleGenerator = ({
           const batch = templateTextRegions;
           
           // Construct prompt with full context
-          const batchPrompts = batch.map((region: TextRegion, idx: number) => {
+          const batchPrompts: Array<{ id: string; index: number; type: string; originalText: string; charLimit: number }> = batch.map((region: TextRegion, idx: number) => {
             const paragraphType = region.type === 'header' ? '标题' :
                                  region.type === 'quote' ? '引用段落' :
                                  '正文段落';
@@ -238,25 +240,25 @@ export const useArticleGenerator = ({
             };
           });
 
-          const prompt = `请阅读以下文章结构和原始内容，然后为主题"${topic}"创作一篇新文章。
+          // Build a simplified prompt list showing only index, type, and charLimit
+          const simplifiedList = batchPrompts
+            .map(p => `[${p.index}] ${p.type}（约${p.charLimit}字）`)
+            .join('\n');
 
-任务要求：
-1. **结构保持**：严格按照提供的段落顺序和类型生成新内容，不要增加或减少段落。
-2. **上下文连贯**：新文章必须逻辑通顺、内容连贯，是一篇完整的文章。
-3. **内容替换**：为每个段落生成新的内容，替换原始内容。
-4. **字数严格控制**：生成的每个段落字数必须与原文长度（charLimit）基本一致（允许±10%波动），切勿过长或过短，以免破坏排版布局。
-5. **格式输出**：请直接返回 JSON 数组（如果可能），或直接按顺序输出新段落内容（用空行分隔）。
-6. **end标记**：如果生成了"end"或类似的结束标记，之后的内容将被忽略。
+          const prompt = `你是一个内容创作者。请围绕主题"${topic}"创作一篇全新的文章。
 
-原始内容结构列表：
-${JSON.stringify(batchPrompts, null, 2)}
+重要：你必须创作关于"${topic}"的全新内容，不要复制或改写下面的参考文本。参考文本仅用于展示文章结构和每段的字数要求。
 
-请开始创作，并尽量以 JSON 格式返回结果：
-[
-  { "id": "region-id-1", "content": "新段落内容..." },
-  ...
-]
-如果无法返回JSON，请确保按顺序输出段落内容。`;
+文章结构（共${batch.length}个段落）：
+${simplifiedList}
+
+输出规则：
+1. 必须恰好输出${batch.length}个段落，用 ${PARAGRAPH_SEPARATOR} 分隔。
+2. 每段字数严格遵循上面括号中的字数要求（允许±10%波动）。
+3. 只输出纯文本，不要输出编号、标签或任何格式标记。
+4. 所有内容必须围绕"${topic}"这个主题展开。
+
+请直接输出${batch.length}个段落，用 ${PARAGRAPH_SEPARATOR} 分隔：`;
 
           try {
             console.group('[useArticleGenerator] Template Generation Process');
@@ -265,72 +267,64 @@ ${JSON.stringify(batchPrompts, null, 2)}
             
             console.log('2. Calling AI API...');
             const startTime = Date.now();
-            const batchResponse = await aiApi.helper('custom', prompt, aiProvider, {
-              contentType: 'batch_json',
-            });
-            console.log(`   API Latency: ${Date.now() - startTime}ms`);
+            const batchResponse = await aiApi.helper('custom', prompt, aiProvider);
+            const latency = Date.now() - startTime;
+            console.log(`   API Latency: ${latency}ms`);
+            console.log('   Response success:', batchResponse.success);
+            console.log('   Response data:', batchResponse.data ? 'present' : 'missing');
+            console.log('   Response error:', batchResponse.error || 'none');
 
             if (batchResponse.success && batchResponse.data) {
-              let generatedResults: any[] = [];
               const rawResult = batchResponse.data.result as string;
               
               console.log('3. Response Received');
+              console.log(`   Type: ${typeof rawResult}`);
               console.log(`   Length: ${rawResult.length} chars`);
-              console.log('   Raw Preview:', rawResult.slice(0, 200) + '...');
+              console.log(`   Is empty: ${!rawResult || rawResult.length === 0}`);
+              console.log(`   Contains ===SPLIT===: ${rawResult.includes(PARAGRAPH_SEPARATOR)}`);
+              console.log('   Full Raw Response:', rawResult);
 
-              try {
-                // Robust JSON extraction
-                let jsonStr = rawResult;
-                
-                // 1. Remove markdown code blocks
-                jsonStr = jsonStr.replace(/```json\s*|```/g, '');
-                
-                // 2. Find the first '[' and the last ']'
-                const firstBracket = jsonStr.indexOf('[');
-                const lastBracket = jsonStr.lastIndexOf(']');
-                
-                if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
-                  jsonStr = jsonStr.substring(firstBracket, lastBracket + 1);
-                  generatedResults = JSON.parse(jsonStr);
-                  console.log('4. JSON Parsing: Success');
-                  console.log(`   Parsed ${generatedResults.length} items`);
-                } else {
-                  throw new Error('No JSON array structure found in response');
-                }
-              } catch (e: any) {
-                console.warn('4. JSON Parsing: Failed', e.message);
-                console.log('   Attempting Paragraph Matching Fallback...');
-                
-                // Fallback: Treat raw response as sequence of paragraphs
-                const paragraphs = rawResult.split(/\n\n+/).map(p => p.trim()).filter(p => p.length > 0);
-                
-                console.log(`   Fallback Analysis: Found ${paragraphs.length} paragraphs for ${batch.length} regions`);
-                
-                if (paragraphs.length !== batch.length) {
-                  console.warn(`   Count Mismatch: Expected ${batch.length}, got ${paragraphs.length}. Alignment might be imperfect.`);
-                }
-
-                // Map paragraphs to regions 1:1
-                generatedResults = paragraphs.map((para, idx) => {
-                  if (idx < batch.length) {
-                    return {
-                      id: batch[idx].id,
-                      content: para
-                    };
-                  }
-                  return null;
-                }).filter(Boolean);
-                
-                console.log(`   Fallback Result: Mapped ${generatedResults.length} regions`);
+              if (!rawResult || rawResult.length === 0) {
+                console.error('   ❌ AI returned empty response! Check backend logs for details.');
               }
 
-              // Map results back to regions
-              batch.forEach((region: TextRegion) => {
-                const result = generatedResults.find((r: any) => r.id === region.id);
-                const generatedText = result ? result.content : region.chineseSequence;
+              // Client-side parsing: split by separator and map by index
+              let paragraphs: string[];
+              if (rawResult.includes(PARAGRAPH_SEPARATOR)) {
+                paragraphs = rawResult.split(PARAGRAPH_SEPARATOR).map(p => p.trim()).filter(p => p.length > 0);
+                console.log(`4. Split by ${PARAGRAPH_SEPARATOR}: Found ${paragraphs.length} paragraphs`);
+              } else {
+                console.warn(`4. Separator "${PARAGRAPH_SEPARATOR}" NOT found in response, using newline fallback`);
+                // Fallback: try double-newline, then single-newline
+                paragraphs = rawResult.split(/\n\n+/).map(p => p.trim()).filter(p => p.length > 0);
+                console.log(`   Double-newline split: ${paragraphs.length} paragraphs`);
+                if (paragraphs.length < batch.length) {
+                  const singleSplit = rawResult.split(/\n/).map(p => p.trim()).filter(p => p.length > 0);
+                  console.log(`   Single-newline split: ${singleSplit.length} paragraphs`);
+                  if (singleSplit.length > paragraphs.length) {
+                    paragraphs = singleSplit;
+                  }
+                }
+                // Strip leading numbering (e.g. "1. ", "2、", "（1）")
+                paragraphs = paragraphs.map(p => p.replace(/^(?:\d+[.、)\uff09]\s*|[（(]\d+[)）]\s*)/, ''));
+                console.log(`   After cleanup: ${paragraphs.length} paragraphs`);
+              }
+
+              console.log(`5. Paragraph Details (expected ${batch.length}):`);
+              paragraphs.forEach((p, i) => {
+                console.log(`   [${i}] (${p.length} chars): ${p.slice(0, 80)}${p.length > 80 ? '...' : ''}`);
+              });
+
+              if (paragraphs.length !== batch.length) {
+                console.warn(`   ⚠️ Count Mismatch: Expected ${batch.length}, got ${paragraphs.length}`);
+              }
+
+              // Map paragraphs to regions by index (client-side structuring)
+              batch.forEach((region: TextRegion, batchIdx: number) => {
+                const generatedText = batchIdx < paragraphs.length ? paragraphs[batchIdx] : region.chineseSequence;
                 
-                if (!result) {
-                  console.warn(`   Missing content for region ${region.id} (index ${region.index}), using original text.`);
+                if (batchIdx >= paragraphs.length) {
+                  console.warn(`   ⚠️ Missing content for region ${region.id} (index ${region.index}), using original text.`);
                 }
                 
                 newTextRegions.push({
@@ -754,6 +748,9 @@ ${JSON.stringify(batchPrompts, null, 2)}
    * Uses DOM parser to robustly identify leaf text nodes
    */
   const processTemplateHtml = (html: string): { taggedHtml: string; textRegions: TextRegion[] } => {
+    console.log('[processTemplateHtml] Input HTML length:', html.length);
+    console.log('[processTemplateHtml] Input HTML preview:', html.slice(0, 300) + '...');
+    
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     const regions: TextRegion[] = [];
@@ -837,8 +834,17 @@ ${JSON.stringify(batchPrompts, null, 2)}
 
     traverse(doc.body);
 
+    const taggedHtml = doc.body.innerHTML;
+    console.log('[processTemplateHtml] Tagged HTML length:', taggedHtml.length);
+    console.log('[processTemplateHtml] Regions found:', regions.length);
+    console.log('[processTemplateHtml] data-ai-id count in HTML:', (taggedHtml.match(/data-ai-id=/g) || []).length);
+    if (regions.length > 0) {
+      console.log('[processTemplateHtml] First region:', { id: regions[0].id, type: regions[0].type, textPreview: regions[0].originalText.slice(0, 50) });
+      console.log('[processTemplateHtml] Last region:', { id: regions[regions.length - 1].id, type: regions[regions.length - 1].type, textPreview: regions[regions.length - 1].originalText.slice(0, 50) });
+    }
+
     return {
-      taggedHtml: doc.body.innerHTML,
+      taggedHtml,
       textRegions: regions
     };
   };
@@ -849,10 +855,15 @@ ${JSON.stringify(batchPrompts, null, 2)}
    */
   const applyTemplateWithTextReplacement = (template: any, newTextRegions: TextRegion[]): string => {
     console.log('[applyTemplateWithTextReplacement] Starting DOM-based replacement');
+    console.log('[applyTemplateWithTextReplacement] Template originalHtml length:', template.originalHtml.length);
+    console.log('[applyTemplateWithTextReplacement] data-ai-id count in template HTML:', (template.originalHtml.match(/data-ai-id=/g) || []).length);
+    console.log('[applyTemplateWithTextReplacement] Regions to replace:', newTextRegions.length);
+    console.log('[applyTemplateWithTextReplacement] Regions with generatedChinese:', newTextRegions.filter(r => r.generatedChinese).length);
     
     const parser = new DOMParser();
     const doc = parser.parseFromString(template.originalHtml, 'text/html');
     let replacedCount = 0;
+    let notFoundCount = 0;
 
     // Restore SVG placeholders first (if any)
     if (template.svgBlocks) {
@@ -860,8 +871,11 @@ ${JSON.stringify(batchPrompts, null, 2)}
       // For now, let's keep SVGs as is, assuming they are preserved in doc.body.innerHTML
     }
 
-    newTextRegions.forEach(region => {
-      if (!region.generatedChinese) return;
+    newTextRegions.forEach((region, idx) => {
+      if (!region.generatedChinese) {
+        console.warn(`[applyTemplateWithTextReplacement] Region ${idx} (${region.id}): no generatedChinese, skipping`);
+        return;
+      }
 
       // Find element by data-ai-id
       const el = doc.querySelector(`[data-ai-id="${region.id}"]`);
@@ -876,12 +890,13 @@ ${JSON.stringify(batchPrompts, null, 2)}
         
         replacedCount++;
       } else {
-        console.warn(`[applyTemplateWithTextReplacement] Could not find element with id ${region.id}`);
+        notFoundCount++;
+        console.warn(`[applyTemplateWithTextReplacement] Region ${idx}: Could not find element with data-ai-id="${region.id}"`);
       }
 
     });
 
-    console.log(`[applyTemplateWithTextReplacement] Replaced ${replacedCount} regions`);
+    console.log(`[applyTemplateWithTextReplacement] Result: ${replacedCount} replaced, ${notFoundCount} not found out of ${newTextRegions.length} total`);
     
     let resultHtml = doc.body.innerHTML;
 
