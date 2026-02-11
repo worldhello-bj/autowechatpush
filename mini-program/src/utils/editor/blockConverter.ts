@@ -5,11 +5,35 @@ import { getCalloutIcon } from './styleUtils';
 // Default header level when not specified
 const DEFAULT_HEADER_LEVEL = 2;
 
+// --- Helper: Convert inline markdown formatting to HTML ---
+const convertInlineMarkdown = (text: string): string => {
+  if (!text) return text;
+  // Convert **bold** to <strong>bold</strong>
+  return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+};
+
+// --- Helper: Preprocess block text content, converting markdown to HTML ---
+const preprocessBlockMarkdown = (block: ArticleBlock): ArticleBlock => {
+  if ([BlockType.IMAGE, BlockType.CODE, BlockType.DIVIDER].includes(block.type)) {
+    return block;
+  }
+  return {
+    ...block,
+    content: convertInlineMarkdown(block.content),
+    title: block.title ? convertInlineMarkdown(block.title) : block.title,
+    items: block.items?.map((item: string) => convertInlineMarkdown(item)),
+    answers: block.answers?.map((answer: string) => convertInlineMarkdown(answer)),
+    headers: block.headers?.map((h: string) => convertInlineMarkdown(h)),
+    rows: block.rows?.map((row: string[]) => row.map((cell: string) => convertInlineMarkdown(cell))),
+  };
+};
+
 // --- Helper: Convert Blocks to WeChat-compatible HTML ---
 export const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
   if (!blocks || blocks.length === 0) return '';
   
-  return blocks.map(block => {
+  return blocks.map(rawBlock => {
+    const block = preprocessBlockMarkdown(rawBlock);
     const colors = getStyleColors(block.style);
     const isGradient = block.style === 'gradient';
     const alignment = block.alignment || 'left';
