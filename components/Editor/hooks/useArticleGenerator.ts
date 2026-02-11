@@ -242,21 +242,23 @@ export const useArticleGenerator = ({
 
           // Build a simplified prompt list showing only index, type, and charLimit
           const simplifiedList = batchPrompts
-            .map(p => `[${p.index}] ${p.type}（${p.charLimit}字）：${p.originalText}`)
+            .map(p => `[${p.index}] ${p.type}（约${p.charLimit}字）`)
             .join('\n');
 
-          const prompt = `请为主题"${topic}"创作一篇新文章，严格按照以下${batch.length}个段落的顺序和类型输出。
+          const prompt = `你是一个内容创作者。请围绕主题"${topic}"创作一篇全新的文章。
 
-要求：
-1. 按顺序输出${batch.length}个段落，每个段落之间用 ${PARAGRAPH_SEPARATOR} 分隔。
-2. 每个段落字数必须与原文长度基本一致（允许±10%波动）。
-3. 不要输出编号、标签或任何额外格式，只输出纯文本内容。
-4. 不要增加或减少段落数量，必须恰好${batch.length}个。
+重要：你必须创作关于"${topic}"的全新内容，不要复制或改写下面的参考文本。参考文本仅用于展示文章结构和每段的字数要求。
 
-原始段落列表：
+文章结构（共${batch.length}个段落）：
 ${simplifiedList}
 
-请直接输出内容，段落间用 ${PARAGRAPH_SEPARATOR} 分隔：`;
+输出规则：
+1. 必须恰好输出${batch.length}个段落，用 ${PARAGRAPH_SEPARATOR} 分隔。
+2. 每段字数严格遵循上面括号中的字数要求（允许±10%波动）。
+3. 只输出纯文本，不要输出编号、标签或任何格式标记。
+4. 所有内容必须围绕"${topic}"这个主题展开。
+
+请直接输出${batch.length}个段落，用 ${PARAGRAPH_SEPARATOR} 分隔：`;
 
           try {
             console.group('[useArticleGenerator] Template Generation Process');
