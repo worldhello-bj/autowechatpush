@@ -996,6 +996,30 @@ ${simplifiedList}
     });
   };
 
+  // Process content template HTML and set as article template for AI generation
+  const handleSelectContentTemplate = (name: string, html: string): void => {
+    console.log('[handleSelectContentTemplate] Processing content template:', name);
+    const { taggedHtml, textRegions } = processTemplateHtml(html);
+    console.log('[handleSelectContentTemplate] Extracted', textRegions.length, 'text regions');
+
+    const templateObj = {
+      title: name,
+      digest: '',
+      originalHtml: taggedHtml,
+      textRegions,
+      svgBlocks: [],
+      statistics: {
+        totalBlocks: textRegions.length,
+        textRegions: textRegions.length,
+        imageBlocks: 0,
+        codeBlocks: 0
+      }
+    };
+
+    setArticleTemplate(templateObj);
+    setUseTemplate(true);
+  };
+
   // Check for existing draft on mount
   const checkForDraft = () => {
     const raw = localStorage.getItem('wechat_editor_draft');
@@ -1075,6 +1099,7 @@ ${simplifiedList}
     performImport,
     handleRewrite,
     handleSaveTemplate,
+    handleSelectContentTemplate,
     saveLocalDraft,
     loadLocalDraft,
     handleInsertHookContent,

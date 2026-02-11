@@ -436,7 +436,13 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         <ContentTemplateModal
           onClose={() => setShowContentTemplateModal(false)}
           onInsertTemplate={(template, smartMode) => {
-            handleInsertTemplate(template, smartMode);
+            if (articleGenerator.useTemplate) {
+              // "套用模板" mode: process template for AI generation (same as user templates)
+              articleGenerator.handleSelectContentTemplate(template.nameZh || template.name, template.html);
+            } else {
+              // Direct insert mode: insert HTML into editor
+              handleInsertTemplate(template, smartMode);
+            }
             setShowContentTemplateModal(false);
           }}
         />
@@ -531,6 +537,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         templateUrl={articleGenerator.templateUrl}
         setTemplateUrl={articleGenerator.setTemplateUrl}
         isExtractingTemplate={articleGenerator.isExtractingTemplate}
+        articleTemplateName={articleGenerator.articleTemplate?.title || articleGenerator.articleTemplate?.name || null}
         onOpenUserTemplatePicker={() => setShowUserTemplatePicker(true)}
         onOpenContentTemplates={() => setShowContentTemplateModal(true)}
         wechatAccounts={wechatManager.wechatAccounts}
