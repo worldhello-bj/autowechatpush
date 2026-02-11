@@ -169,11 +169,12 @@ export function injectRewrittenContent(
   });
 
   // 从第一个根元素获取更新后的HTML
-  // 注意：domRef现在指向Text节点，需要向上遍历找到根容器
+  // 注意：domRef现在指向Text节点，需要向上遍历找到根容器（tempDiv）
   if (originalBlocks.length > 0 && originalBlocks[0].domRef) {
     let rootNode: Node = originalBlocks[0].domRef;
-    // 向上遍历找到最顶层的容器（即extractContentBlocksFromHTML创建的tempDiv）
-    while (rootNode.parentNode) {
+    // 向上遍历找到最顶层的容器（即extractContentBlocksFromHTML创建的disconnected tempDiv）
+    // tempDiv.parentNode为null（因为未连接到document），所以循环会在tempDiv处停止
+    while (rootNode.parentNode && rootNode.parentNode.nodeType !== Node.DOCUMENT_NODE) {
       rootNode = rootNode.parentNode;
     }
     if (rootNode instanceof Element) {
