@@ -480,8 +480,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             <span className="material-icons text-pink-600 text-2xl group-hover:scale-110 transition-transform">palette</span>
             <span className="text-[10px] bg-pink-100 text-pink-700 px-1.5 py-0.5 rounded-full">{allDesignTemplates.length}+</span>
           </div>
-          <span className="font-semibold text-sm text-gray-800">设计模板</span>
-          <span className="text-xs text-gray-500 mt-0.5">精美排版库</span>
+          <span className="font-semibold text-sm text-gray-800">设计格式</span>
+          <span className="text-xs text-gray-500 mt-0.5">组件格式库</span>
         </button>
       </div>
     </div>

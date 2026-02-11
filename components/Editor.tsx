@@ -635,7 +635,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
             <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-pink-50 to-orange-50">
               <div className="flex items-center gap-2">
                 <span className="material-icons text-pink-600">palette</span>
-                <span className="font-bold text-lg text-gray-800">精美设计格式库</span>
+                <span className="font-bold text-lg text-gray-800">设计格式库</span>
                 <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">{allDesignTemplates.length}+</span>
               </div>
               <button 
