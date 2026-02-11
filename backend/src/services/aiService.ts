@@ -570,6 +570,55 @@ const callQwenForTemplateFill = async (
 };
 
 /**
+ * Generate plain text response from AI without tool calling.
+ * Used for custom prompts where structured article layout is not needed.
+ */
+export const generatePlainText = async (
+  prompt: string,
+  provider: AIProvider
+): Promise<string> => {
+  const apiKey = await getApiKeyFromPool(provider);
+  let success = false;
+  let errorMessage: string | undefined;
+
+  const baseUrl = provider === AIProvider.DEEPSEEK ? DEEPSEEK_BASE_URL : QWEN_BASE_URL;
+  const model = provider === AIProvider.DEEPSEEK ? 'deepseek-chat' : 'qwen-plus';
+
+  try {
+    const response = await fetchWithTimeout(baseUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'user', content: prompt },
+        ],
+        // No tools/tool_choice — plain text completion
+      }),
+    }, 60000);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } };
+      errorMessage = `${provider} API Error: ${errorData.error?.message || response.statusText}`;
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json() as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+
+    const content = data.choices?.[0]?.message?.content || '';
+    success = true;
+    return content;
+  } finally {
+    releaseApiKey(apiKey, success, errorMessage);
+  }
+};
+
+/**
  * Parallel AI generation with race strategy
  * Uses Promise.race to return the first successful response
  */

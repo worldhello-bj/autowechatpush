@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { sendSuccess, sendError, createLogger } from '../utils/index.js';
-import { generateArticle, generateArticleParallel } from '../services/index.js';
+import { generateArticle, generateArticleParallel, generatePlainText } from '../services/index.js';
 import { checkQuota, consumeQuota, getUserQuotaStatus } from '../services/index.js';
 import { getApiConfigStatus, isQwenAvailable, isProviderAvailable } from '../services/index.js';
 import { AIChatRequest, SSEEvent, AIProvider, AIRewriteRequest, aiRewriteRequestSchema } from '../types/index.js';
@@ -488,14 +488,44 @@ export const aiHelper = async (req: Request, res: Response) => {
     }
 
     // Call AI service with the constructed prompt
-    const result = await generateArticle({
-      message: prompt,
-      provider: selectedProvider,
-      useSearch: false,
-      isFormattingMode: false,
-      thinkingMode: false,
-      multiRoundMode: false,
-    });
+    let responseData: unknown;
+
+    if (action === 'custom') {
+      // Custom action uses plain text completion (no tool calling)
+      // so the AI response is returned as-is without being split into blocks
+      const plainResult = await generatePlainText(prompt, selectedProvider);
+      responseData = plainResult;
+    } else {
+      const result = await generateArticle({
+        message: prompt,
+        provider: selectedProvider,
+        useSearch: false,
+        isFormattingMode: false,
+        thinkingMode: false,
+        multiRoundMode: false,
+      });
+
+      // Extract result based on action type
+      if (action === 'generateTitles' || action === 'extractKeywords' || action === 'suggestStyles') {
+        // Try to parse JSON from the AI response
+        try {
+          const textContent = result.blocks.map(b => b.content).join('\n');
+          // Look for JSON array in the response (non-greedy match)
+          const jsonMatch = textContent.match(/\[[\s\S]*?\]/);
+          if (jsonMatch) {
+            responseData = JSON.parse(jsonMatch[0]);
+          } else {
+            // Fallback: split by newlines
+            responseData = textContent.split('\n').filter(line => line.trim());
+          }
+        } catch {
+          responseData = result.blocks.map(b => b.content).filter(c => c.trim());
+        }
+      } else {
+        // Return the full text content
+        responseData = result.blocks.map(b => b.content).join('\n\n');
+      }
+    }
 
     // Consume quota (user is guaranteed to exist)
     consumeQuota(req.user.userId, 0.1, 'ai_generation', {
@@ -503,28 +533,6 @@ export const aiHelper = async (req: Request, res: Response) => {
       provider: selectedProvider,
       contentLength: content.length,
     }, req.requestId);
-
-    // Extract result based on action type
-    let responseData: unknown;
-    if (action === 'generateTitles' || action === 'extractKeywords' || action === 'suggestStyles') {
-      // Try to parse JSON from the AI response
-      try {
-        const textContent = result.blocks.map(b => b.content).join('\n');
-        // Look for JSON array in the response (non-greedy match)
-        const jsonMatch = textContent.match(/\[[\s\S]*?\]/);
-        if (jsonMatch) {
-          responseData = JSON.parse(jsonMatch[0]);
-        } else {
-          // Fallback: split by newlines
-          responseData = textContent.split('\n').filter(line => line.trim());
-        }
-      } catch {
-        responseData = result.blocks.map(b => b.content).filter(c => c.trim());
-      }
-    } else {
-      // Return the full text content
-      responseData = result.blocks.map(b => b.content).join('\n\n');
-    }
 
     logger.info('AI helper completed', { action, requestId: req.requestId });
 
