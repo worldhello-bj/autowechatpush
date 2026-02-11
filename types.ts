@@ -114,7 +114,7 @@ export interface ContentBlock {
   type: 'title' | 'subtitle' | 'paragraph' | 'quote' | 'list-item'; // 语义类型
   originalText: string; // 原文内容 (用于参考字数)
   charLimit: number;    // 建议字数限制 (原文长度 ±20%)
-  domRef?: Element;     // DOM节点引用 (仅在内存中保留，不发给AI)
+  domRef?: Node;        // DOM节点引用 (仅在内存中保留，不发给AI) - 存储Text节点以避免textContent破坏子元素
 }
 
 // AI Rewriting Request/Response types
