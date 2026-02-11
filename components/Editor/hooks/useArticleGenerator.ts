@@ -935,8 +935,12 @@ ${simplifiedList}
       // Find element by data-ai-id
       const el = doc.querySelector(`[data-ai-id="${region.id}"]`);
       if (el) {
-        // Direct text replacement
-        el.textContent = region.generatedChinese;
+        // Convert basic markdown formatting to HTML before injection
+        const htmlContent = region.generatedChinese
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.+?)\*/g, '<em>$1</em>')
+          .replace(/~~(.+?)~~/g, '<del>$1</del>');
+        el.innerHTML = htmlContent;
         
         // Clean up template markers
         el.removeAttribute('data-ai-id');
