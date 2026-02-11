@@ -847,14 +847,12 @@ ${simplifiedList}
             // Detect semantic type from tag name and styling
             let regionType = el.tagName.toLowerCase();
             const style = el.getAttribute('style') || '';
-            const isBold = style.includes('font-weight') && (style.includes('bold') || /font-weight:\s*[6-9]00/.test(style));
+            const isBold = /font-weight:\s*(bold|[6-9]00)/.test(style);
             const fontSizeMatch = style.match(/font-size:\s*(\d+)/);
             const fontSize = fontSizeMatch ? parseInt(fontSizeMatch[1]) : 14;
-            // Treat as heading if it's a heading tag, or a bold element with large font and short text
-            if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(regionType)) {
-              regionType = regionType; // already a heading
-            } else if (isBold && fontSize >= 17 && text.trim().length < 50) {
-              regionType = 'h2'; // promote styled title to heading
+            // Promote styled <p> to heading if it looks like a title (bold + large font + short text)
+            if (!['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(regionType) && isBold && fontSize >= 17 && text.trim().length < 50) {
+              regionType = 'h2';
             }
 
             regions.push({
