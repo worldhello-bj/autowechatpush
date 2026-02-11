@@ -268,7 +268,11 @@ ${simplifiedList}
             console.log('2. Calling AI API...');
             const startTime = Date.now();
             const batchResponse = await aiApi.helper('custom', prompt, aiProvider);
-            console.log(`   API Latency: ${Date.now() - startTime}ms`);
+            const latency = Date.now() - startTime;
+            console.log(`   API Latency: ${latency}ms`);
+            console.log('   Response success:', batchResponse.success);
+            console.log('   Response data:', batchResponse.data ? 'present' : 'missing');
+            console.log('   Response error:', batchResponse.error || 'none');
 
             if (batchResponse.success && batchResponse.data) {
               const rawResult = batchResponse.data.result as string;
@@ -276,8 +280,13 @@ ${simplifiedList}
               console.log('3. Response Received');
               console.log(`   Type: ${typeof rawResult}`);
               console.log(`   Length: ${rawResult.length} chars`);
+              console.log(`   Is empty: ${!rawResult || rawResult.length === 0}`);
               console.log(`   Contains ===SPLIT===: ${rawResult.includes(PARAGRAPH_SEPARATOR)}`);
               console.log('   Full Raw Response:', rawResult);
+
+              if (!rawResult || rawResult.length === 0) {
+                console.error('   ❌ AI returned empty response! Check backend logs for details.');
+              }
 
               // Client-side parsing: split by separator and map by index
               let paragraphs: string[];
