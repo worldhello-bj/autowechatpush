@@ -8,8 +8,16 @@ const DEFAULT_HEADER_LEVEL = 2;
 // --- Helper: Convert inline markdown formatting to HTML ---
 const convertInlineMarkdown = (text: string): string => {
   if (!text) return text;
-  // Convert **bold** to <strong>bold</strong>
-  return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  let result = text;
+  // Convert **bold** to <strong>bold</strong> (must be before italic)
+  result = result.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Convert *italic* to <em>italic</em> (after bold to avoid conflicts)
+  result = result.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // Convert ~~strikethrough~~ to <del>strikethrough</del>
+  result = result.replace(/~~(.+?)~~/g, '<del>$1</del>');
+  // Convert `code` to <code>code</code>
+  result = result.replace(/`(.+?)`/g, '<code style="background-color: #f5f5f5; padding: 2px 4px; border-radius: 3px; font-size: 90%; font-family: monospace;">$1</code>');
+  return result;
 };
 
 // --- Helper: Preprocess block text content, converting markdown to HTML ---
