@@ -6,6 +6,38 @@ import { getCalloutIcon } from './styleUtils';
 // Default header level when not specified
 const DEFAULT_HEADER_LEVEL = 2;
 
+// --- Helper: Convert inline markdown formatting to HTML ---
+const convertInlineMarkdown = (text: string): string => {
+  if (!text) return text;
+  let result = text;
+  // Convert **bold** to <strong>bold</strong> (must be before italic)
+  result = result.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Convert *italic* to <em>italic</em> (after bold to avoid conflicts)
+  result = result.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // Convert ~~strikethrough~~ to <del>strikethrough</del>
+  result = result.replace(/~~(.+?)~~/g, '<del>$1</del>');
+  // Convert `code` to <code>code</code>
+  result = result.replace(/`(.+?)`/g, '<code style="background-color: #f5f5f5; padding: 2px 4px; border-radius: 3px; font-size: 90%; font-family: monospace;">$1</code>');
+  return result;
+};
+
+// --- Helper: Preprocess block text content, converting markdown to HTML ---
+const preprocessBlockMarkdown = (block: ArticleBlock): ArticleBlock => {
+  if ([BlockType.IMAGE, BlockType.CODE, BlockType.DIVIDER].includes(block.type)) {
+    return block;
+  }
+  return {
+    ...block,
+    content: convertInlineMarkdown(block.content),
+    title: block.title ? convertInlineMarkdown(block.title) : block.title,
+    items: block.items?.map((item: string) => convertInlineMarkdown(item)),
+    answers: block.answers?.map((answer: string) => convertInlineMarkdown(answer)),
+    headers: block.headers?.map((h: string) => convertInlineMarkdown(h)),
+    rows: block.rows?.map((row: string[]) => row.map((cell: string) => convertInlineMarkdown(cell))),
+    children: block.children?.map(child => preprocessBlockMarkdown(child)),
+  };
+};
+
 // WeChat-standard text styles
 const WX_TEXT_BASE = 'font-size: 15px; letter-spacing: 1px; line-height: 1.75; color: #333;';
 const WX_TEXT_SECONDARY = 'font-size: 14px; letter-spacing: 1px; line-height: 1.75; color: #555;';
@@ -68,7 +100,8 @@ const renderChildBlock = (child: ArticleBlock): string => {
 export const convertBlocksToHtml = (blocks: ArticleBlock[]): string => {
   if (!blocks || blocks.length === 0) return '';
   
-  return blocks.map(block => {
+  return blocks.map(rawBlock => {
+    const block = preprocessBlockMarkdown(rawBlock);
     const colors = getStyleColors(block.style);
     const isGradient = block.style === 'gradient' || (block.style?.startsWith('gradient_') ?? false);
     const alignment = block.alignment || 'left';
