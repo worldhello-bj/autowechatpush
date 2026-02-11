@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { DesignTemplate, getCategories, getTemplatesByCategory } from '../../../services/designTemplates';
-import { ContentTemplate, getContentCategories, getContentTemplatesByCategory, allContentTemplates } from '../../../services/contentTemplates';
 import { templateApi, UserTemplate } from '../../../services/apiClient';
 
 interface TemplateModalProps {
@@ -16,13 +15,11 @@ const TemplateModal: React.FC<TemplateModalProps> = ({
   selectedCategory, 
   onCategoryChange 
 }) => {
-  const [activeTab, setActiveTab] = useState<'design' | 'content' | 'custom'>('design');
+  const [activeTab, setActiveTab] = useState<'system' | 'custom'>('system');
   const [userTemplates, setUserTemplates] = useState<UserTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [smartMode, setSmartMode] = useState(true);
-  const [selectedContentCategory, setSelectedContentCategory] = useState<ContentTemplate['category']>('tutorial');
-  const designCategories = getCategories();
-  const contentCategories = getContentCategories();
+  const templateCategories = getCategories();
 
   useEffect(() => {
     if (activeTab === 'custom') {
@@ -59,21 +56,6 @@ const TemplateModal: React.FC<TemplateModalProps> = ({
     onClose();
   };
 
-  const handleContentTemplateClick = (contentTemplate: ContentTemplate) => {
-    // Adapt ContentTemplate to DesignTemplate format for insertion
-    const designTemplate: DesignTemplate = {
-      id: contentTemplate.id,
-      name: contentTemplate.name,
-      nameZh: contentTemplate.nameZh,
-      category: 'special',
-      preview: contentTemplate.preview,
-      previewZh: contentTemplate.previewZh,
-      html: contentTemplate.html
-    };
-    onInsertTemplate(designTemplate, smartMode);
-    onClose();
-  };
-
   return (
     <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -82,57 +64,43 @@ const TemplateModal: React.FC<TemplateModalProps> = ({
           <div>
             <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
               <span className="material-icons text-pink-500">palette</span>
-              格式与模板库
+              设计格式库
             </h3>
-            <p className="text-sm text-gray-500 mt-1">选择设计格式或文章模板插入到文章中</p>
+            <p className="text-sm text-gray-500 mt-1">点击任意组件格式即可插入到文章中</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition">
             <span className="material-icons text-gray-400">close</span>
           </button>
         </div>
 
-        {/* Main Tabs - 3 tabs: Design Formats, Article Templates, My Templates */}
+        {/* Main Tabs */}
         <div className="flex border-b border-gray-200">
           <button
-            onClick={() => setActiveTab('design')}
-            className={`flex-1 py-3 text-sm font-medium transition flex items-center justify-center gap-1 ${
-              activeTab === 'design'
+            onClick={() => setActiveTab('system')}
+            className={`flex-1 py-3 text-sm font-medium transition ${
+              activeTab === 'system'
                 ? 'text-pink-600 border-b-2 border-pink-500 bg-pink-50'
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
-            <span className="material-icons text-sm">brush</span>
-            设计格式
-          </button>
-          <button
-            onClick={() => setActiveTab('content')}
-            className={`flex-1 py-3 text-sm font-medium transition flex items-center justify-center gap-1 ${
-              activeTab === 'content'
-                ? 'text-orange-600 border-b-2 border-orange-500 bg-orange-50'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <span className="material-icons text-sm">article</span>
-            文章模板
-            <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full">{allContentTemplates.length}</span>
+            系统格式
           </button>
           <button
             onClick={() => setActiveTab('custom')}
-            className={`flex-1 py-3 text-sm font-medium transition flex items-center justify-center gap-1 ${
+            className={`flex-1 py-3 text-sm font-medium transition ${
               activeTab === 'custom'
-                ? 'text-blue-600 border-b-2 border-blue-500 bg-blue-50'
+                ? 'text-pink-600 border-b-2 border-pink-500 bg-pink-50'
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
-            <span className="material-icons text-sm">folder_special</span>
-            我的模板
+            我的格式
           </button>
         </div>
         
-        {/* Category Tabs (Design Formats) */}
-        {activeTab === 'design' && (
+        {/* Category Tabs (System Only) */}
+        {activeTab === 'system' && (
           <div className="flex gap-2 p-4 bg-gray-50 border-b border-gray-100 overflow-x-auto">
-            {designCategories.map((cat) => (
+            {templateCategories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => onCategoryChange(cat.id)}
@@ -148,30 +116,10 @@ const TemplateModal: React.FC<TemplateModalProps> = ({
             ))}
           </div>
         )}
-
-        {/* Category Tabs (Article Templates) */}
-        {activeTab === 'content' && (
-          <div className="flex gap-2 p-4 bg-gray-50 border-b border-gray-100 overflow-x-auto">
-            {contentCategories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedContentCategory(cat.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition whitespace-nowrap ${
-                  selectedContentCategory === cat.id 
-                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg' 
-                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                }`}
-              >
-                <span className="text-lg">{cat.icon}</span>
-                <span>{cat.nameZh}</span>
-              </button>
-            ))}
-          </div>
-        )}
         
         {/* Templates Grid */}
         <div className="flex-1 overflow-y-auto p-5">
-          {activeTab === 'design' ? (
+          {activeTab === 'system' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {getTemplatesByCategory(selectedCategory).map((template) => (
                 <div 
@@ -202,42 +150,11 @@ const TemplateModal: React.FC<TemplateModalProps> = ({
                 </div>
               ))}
             </div>
-          ) : activeTab === 'content' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {getContentTemplatesByCategory(selectedContentCategory).map((template) => (
-                <div 
-                  key={template.id}
-                  className="border border-gray-200 rounded-xl overflow-hidden hover:border-orange-300 hover:shadow-lg transition-all cursor-pointer group"
-                  onClick={() => handleContentTemplateClick(template)}
-                >
-                  {/* Template Info */}
-                  <div className="p-4 bg-white border-b border-gray-100">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-bold text-gray-800">{template.nameZh}</h4>
-                        <p className="text-xs text-gray-500 mt-1">{template.previewZh}</p>
-                      </div>
-                      <span className="text-xs bg-orange-100 text-orange-600 px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition font-medium">
-                        点击插入
-                      </span>
-                    </div>
-                  </div>
-                  {/* Live Preview - Scaled down for full article templates (scale 0.35 → container 1/0.35 ≈ 286% to fill space) */}
-                  <div className="h-48 bg-gray-50 relative overflow-hidden flex items-center justify-center">
-                    <div 
-                      className="absolute inset-0 w-full h-full p-4 overflow-hidden bg-white pointer-events-none opacity-80"
-                      style={{ transform: 'scale(0.35)', transformOrigin: 'top left', width: '286%', height: '286%' }}
-                      dangerouslySetInnerHTML={{ __html: template.html }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
           ) : (
             // User Templates Grid
             loading ? (
               <div className="flex justify-center items-center h-40">
-                <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin h-8 w-8 text-pink-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
@@ -253,7 +170,7 @@ const TemplateModal: React.FC<TemplateModalProps> = ({
                 {userTemplates.map((template) => (
                   <div 
                     key={template.id}
-                    className="border border-gray-200 rounded-xl overflow-hidden hover:border-blue-300 hover:shadow-lg transition-all cursor-pointer group"
+                    className="border border-gray-200 rounded-xl overflow-hidden hover:border-pink-300 hover:shadow-lg transition-all cursor-pointer group"
                     onClick={() => handleUserTemplateClick(template)}
                   >
                     <div className="p-4 bg-white border-b border-gray-100">
@@ -262,7 +179,7 @@ const TemplateModal: React.FC<TemplateModalProps> = ({
                           <h4 className="font-bold text-gray-800">{template.name}</h4>
                           <p className="text-xs text-gray-500 mt-1">{template.preview}</p>
                         </div>
-                        <span className="text-xs bg-blue-100 text-blue-600 px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition font-medium">
+                        <span className="text-xs bg-pink-100 text-pink-600 px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition font-medium">
                           点击插入
                         </span>
                       </div>
@@ -287,7 +204,7 @@ const TemplateModal: React.FC<TemplateModalProps> = ({
           <div className="flex items-center gap-4">
             <div className="text-sm text-gray-500 flex items-center gap-2">
               <span className="material-icons text-lg text-pink-400">lightbulb</span>
-              {activeTab === 'design' ? '格式插入后可在预览中编辑内容' : '模板插入后可在预览中编辑内容'}
+              模板插入后可在右侧预览中编辑内容
             </div>
             
             {/* Smart Mode Toggle */}
