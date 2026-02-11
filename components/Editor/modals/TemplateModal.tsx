@@ -204,7 +204,7 @@ const TemplateModal: React.FC<TemplateModalProps> = ({
           <div className="flex items-center gap-4">
             <div className="text-sm text-gray-500 flex items-center gap-2">
               <span className="material-icons text-lg text-pink-400">lightbulb</span>
-              模板插入后可在右侧预览中编辑内容
+              格式插入后可在预览中编辑内容
             </div>
             
             {/* Smart Mode Toggle */}
