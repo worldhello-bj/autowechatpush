@@ -222,7 +222,7 @@ const TemplateModal: React.FC<TemplateModalProps> = ({
                       </span>
                     </div>
                   </div>
-                  {/* Live Preview - Scaled down for full article templates */}
+                  {/* Live Preview - Scaled down for full article templates (scale 0.35 → container 1/0.35 ≈ 286% to fill space) */}
                   <div className="h-48 bg-gray-50 relative overflow-hidden flex items-center justify-center">
                     <div 
                       className="absolute inset-0 w-full h-full p-4 overflow-hidden bg-white pointer-events-none opacity-80"
