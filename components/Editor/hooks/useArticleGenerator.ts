@@ -240,9 +240,9 @@ export const useArticleGenerator = ({
             let charRange: string | undefined;
             if (isContentTemplate) {
               if (isHeading) {
-                charRange = '8-25字';
+                charRange = '5-30字';
               } else {
-                charRange = '50-200字';
+                charRange = '80-300字';
               }
             }
 
@@ -260,7 +260,9 @@ export const useArticleGenerator = ({
           const simplifiedList = batchPrompts
             .map(p => {
               if (p.charRange) {
-                return `[${p.index}] ${p.type}（${p.charRange}）`;
+                // Content template: include placeholder text as semantic hint
+                const hint = p.originalText.replace(/[^\u4e00-\u9fff\w\s，。、：]/g, '').trim();
+                return `[${p.index}] ${p.type}（${p.charRange}）— 提示：${hint}`;
               }
               return `[${p.index}] ${p.type}（约${p.charLimit}字）`;
             })
@@ -268,18 +270,21 @@ export const useArticleGenerator = ({
 
           let prompt: string;
           if (isContentTemplate) {
-            // Content template prompt: flexible, role-aware
-            prompt = `你是一个内容创作者。请围绕主题"${topic}"创作一篇全新的文章，遵循以下版式结构。
+            // Content template prompt: flexible, role-aware, encourage expansion
+            prompt = `你是一个专业内容创作者。请围绕主题"${topic}"创作一篇高质量的完整文章，严格遵循以下预设版式结构。
+
+这是一个预先设计好的文章版式模板，每个区域的"提示"说明了该位置应该放什么类型的内容。请根据提示创作对应内容。
 
 文章版式结构（共${batch.length}个区域）：
 ${simplifiedList}
 
 输出规则：
 1. 必须恰好输出${batch.length}个段落，用 ${PARAGRAPH_SEPARATOR} 分隔。
-2. "标题"区域输出简短有力的标题文本（8-25字）。
-3. "正文段落"区域可以自由发挥，充分展开论述（50-200字），内容要充实有深度。
-4. 只输出纯文本，不要输出编号、标签或任何格式标记。
-5. 所有内容必须围绕"${topic}"这个主题展开。
+2. "标题"区域：输出简短有力的标题（5-30字），要吸引读者。
+3. "正文段落"区域：自由发挥，充分展开论述（80-300字），内容要充实、有深度、有价值。不要受限于提示文字的长度，大胆扩充内容。
+4. 参考每个区域的"提示"来决定写什么类型的内容（如简介、步骤说明、总结等）。
+5. 只输出纯文本，不要输出编号、标签或任何格式标记。
+6. 所有内容必须围绕"${topic}"这个主题展开。
 
 请直接输出${batch.length}个段落，用 ${PARAGRAPH_SEPARATOR} 分隔：`;
           } else {
