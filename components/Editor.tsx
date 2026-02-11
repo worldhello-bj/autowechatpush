@@ -6,6 +6,7 @@ import MaterialLibrary from './MaterialLibrary';
 import AIToolsPanel, { AISettings, DEFAULT_AI_SETTINGS } from './AIToolsPanel';
 import GuideModal from './Editor/modals/GuideModal';
 import TemplateModal from './Editor/modals/TemplateModal';
+import ContentTemplateModal from './Editor/modals/ContentTemplateModal';
 import ImportDialog from './Editor/modals/ImportDialog';
 import DisclaimerDialog from './Editor/modals/DisclaimerDialog';
 import RewriteDialog from './Editor/modals/RewriteDialog';
@@ -129,6 +130,9 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
   // Template Preview Modal State
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<DesignTemplate | null>(null);
+
+  // Content Template Modal State (Full Article Templates)
+  const [showContentTemplateModal, setShowContentTemplateModal] = useState(false);
 
   // Material Library Panel State
   const [showMaterialLibrary, setShowMaterialLibrary] = useState(false);
@@ -427,6 +431,17 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         />
       )}
 
+      {/* Full Article Template Modal (全文模板) */}
+      {showContentTemplateModal && (
+        <ContentTemplateModal
+          onClose={() => setShowContentTemplateModal(false)}
+          onInsertTemplate={(template, smartMode) => {
+            handleInsertTemplate(template, smartMode);
+            setShowContentTemplateModal(false);
+          }}
+        />
+      )}
+
       {/* User Template Picker Modal */}
       {showUserTemplatePicker && (
         <UserTemplatePicker
@@ -517,6 +532,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
         setTemplateUrl={articleGenerator.setTemplateUrl}
         isExtractingTemplate={articleGenerator.isExtractingTemplate}
         onOpenUserTemplatePicker={() => setShowUserTemplatePicker(true)}
+        onOpenContentTemplates={() => setShowContentTemplateModal(true)}
         wechatAccounts={wechatManager.wechatAccounts}
         openWeChatAccountManager={wechatManager.openWeChatAccountManager}
         setShowAITools={aiTools.setShowAITools}
@@ -635,7 +651,7 @@ const Editor: React.FC<EditorProps> = ({ onError }) => {
             <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-pink-50 to-orange-50">
               <div className="flex items-center gap-2">
                 <span className="material-icons text-pink-600">palette</span>
-                <span className="font-bold text-lg text-gray-800">精美设计格式库</span>
+                <span className="font-bold text-lg text-gray-800">设计格式库</span>
                 <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">{allDesignTemplates.length}+</span>
               </div>
               <button 

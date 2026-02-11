@@ -64,9 +64,9 @@ const TemplateModal: React.FC<TemplateModalProps> = ({
           <div>
             <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
               <span className="material-icons text-pink-500">palette</span>
-              精美设计格式库
+              设计格式库
             </h3>
-            <p className="text-sm text-gray-500 mt-1">点击任意模板即可插入到文章中</p>
+            <p className="text-sm text-gray-500 mt-1">点击任意组件格式即可插入到文章中</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition">
             <span className="material-icons text-gray-400">close</span>
@@ -83,7 +83,7 @@ const TemplateModal: React.FC<TemplateModalProps> = ({
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
-            系统模板
+            系统格式
           </button>
           <button
             onClick={() => setActiveTab('custom')}
@@ -93,7 +93,7 @@ const TemplateModal: React.FC<TemplateModalProps> = ({
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
-            我的模板
+            我的格式
           </button>
         </div>
         
@@ -204,7 +204,7 @@ const TemplateModal: React.FC<TemplateModalProps> = ({
           <div className="flex items-center gap-4">
             <div className="text-sm text-gray-500 flex items-center gap-2">
               <span className="material-icons text-lg text-pink-400">lightbulb</span>
-              模板插入后可在右侧预览中编辑内容
+              格式插入后可在预览中编辑内容
             </div>
             
             {/* Smart Mode Toggle */}
