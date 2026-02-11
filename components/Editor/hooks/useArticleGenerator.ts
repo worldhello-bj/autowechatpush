@@ -227,25 +227,64 @@ export const useArticleGenerator = ({
           const batch = templateTextRegions;
           
           // Construct prompt with full context
-          const batchPrompts: Array<{ id: string; index: number; type: string; originalText: string; charLimit: number }> = batch.map((region: TextRegion, idx: number) => {
-            const paragraphType = region.type === 'header' ? '标题' :
-                                 region.type === 'quote' ? '引用段落' :
+          const isContentTemplate = !!articleTemplate.isContentTemplate;
+          
+          const batchPrompts: Array<{ id: string; index: number; type: string; originalText: string; charLimit: number; charRange?: string }> = batch.map((region: TextRegion, idx: number) => {
+            const isHeading = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(region.type);
+            const paragraphType = isHeading ? '标题' :
+                                 region.type === 'blockquote' ? '引用段落' :
                                  '正文段落';
+
+            // For content templates: use flexible ranges based on semantic role
+            // For user templates ("我的模板"): use exact char counts from real content
+            let charRange: string | undefined;
+            if (isContentTemplate) {
+              if (isHeading) {
+                charRange = '8-25字';
+              } else {
+                charRange = '50-200字';
+              }
+            }
+
             return {
               id: region.id,
               index: idx + 1,
               type: paragraphType,
-              originalText: region.originalText, // Include full text for context
-              charLimit: region.chineseSequence.length
+              originalText: region.originalText,
+              charLimit: region.chineseSequence.length,
+              charRange
             };
           });
 
-          // Build a simplified prompt list showing only index, type, and charLimit
+          // Build prompt list with appropriate constraints
           const simplifiedList = batchPrompts
-            .map(p => `[${p.index}] ${p.type}（约${p.charLimit}字）`)
+            .map(p => {
+              if (p.charRange) {
+                return `[${p.index}] ${p.type}（${p.charRange}）`;
+              }
+              return `[${p.index}] ${p.type}（约${p.charLimit}字）`;
+            })
             .join('\n');
 
-          const prompt = `你是一个内容创作者。请围绕主题"${topic}"创作一篇全新的文章。
+          let prompt: string;
+          if (isContentTemplate) {
+            // Content template prompt: flexible, role-aware
+            prompt = `你是一个内容创作者。请围绕主题"${topic}"创作一篇全新的文章，遵循以下版式结构。
+
+文章版式结构（共${batch.length}个区域）：
+${simplifiedList}
+
+输出规则：
+1. 必须恰好输出${batch.length}个段落，用 ${PARAGRAPH_SEPARATOR} 分隔。
+2. "标题"区域输出简短有力的标题文本（8-25字）。
+3. "正文段落"区域可以自由发挥，充分展开论述（50-200字），内容要充实有深度。
+4. 只输出纯文本，不要输出编号、标签或任何格式标记。
+5. 所有内容必须围绕"${topic}"这个主题展开。
+
+请直接输出${batch.length}个段落，用 ${PARAGRAPH_SEPARATOR} 分隔：`;
+          } else {
+            // User template prompt: strict character alignment
+            prompt = `你是一个内容创作者。请围绕主题"${topic}"创作一篇全新的文章。
 
 重要：你必须创作关于"${topic}"的全新内容，不要复制或改写下面的参考文本。参考文本仅用于展示文章结构和每段的字数要求。
 
@@ -259,6 +298,7 @@ ${simplifiedList}
 4. 所有内容必须围绕"${topic}"这个主题展开。
 
 请直接输出${batch.length}个段落，用 ${PARAGRAPH_SEPARATOR} 分隔：`;
+          }
 
           try {
             console.group('[useArticleGenerator] Template Generation Process');
@@ -804,14 +844,26 @@ ${simplifiedList}
             el.setAttribute('title', '点击查看原始内容'); // Tooltip hint
             el.classList.add('ai-template-region'); // Add class for styling/identification
             
+            // Detect semantic type from tag name and styling
+            let regionType = el.tagName.toLowerCase();
+            const style = el.getAttribute('style') || '';
+            const isBold = style.includes('font-weight') && (style.includes('bold') || /font-weight:\s*[6-9]00/.test(style));
+            const fontSizeMatch = style.match(/font-size:\s*(\d+)/);
+            const fontSize = fontSizeMatch ? parseInt(fontSizeMatch[1]) : 14;
+            // Treat as heading if it's a heading tag, or a bold element with large font and short text
+            if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(regionType)) {
+              regionType = regionType; // already a heading
+            } else if (isBold && fontSize >= 17 && text.trim().length < 50) {
+              regionType = 'h2'; // promote styled title to heading
+            }
+
             regions.push({
               id,
               index: regionIndex,
-              type: el.tagName.toLowerCase(),
+              type: regionType,
               originalText: text,
               chineseSequence: text.replace(/[^\u4e00-\u9fff]/g, ''),
-              htmlContent: el.outerHTML, // This will capture the element BEFORE placeholder replacement? No, reference.
-              // Wait, el.outerHTML is dynamic. I need to capture it NOW or ensure I replace AFTER.
+              htmlContent: el.outerHTML,
               level: 1,
               marker: id
             });
@@ -1008,6 +1060,7 @@ ${simplifiedList}
       originalHtml: taggedHtml,
       textRegions,
       svgBlocks: [],
+      isContentTemplate: true, // Content templates have placeholder text, not real content
       statistics: {
         totalBlocks: textRegions.length,
         textRegions: textRegions.length,
